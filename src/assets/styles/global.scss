@@ -1,0 +1,181 @@
+/* ========== 亮色主题（默认） ========== */
+:root,
+[data-theme='light'] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f7fa;
+  --bg-tertiary: #ebeef5;
+  --bg-card: #ffffff;
+  --bg-sidebar: #f8f9fb;
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-active: rgba(64, 158, 255, 0.08);
+
+  --text-primary: #303133;
+  --text-secondary: #606266;
+  --text-tertiary: #909399;
+  --text-placeholder: #c0c4cc;
+
+  --border-color: #e4e7ed;
+  --border-color-light: #ebeef5;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+
+  --color-primary: #409EFF;
+  --color-primary-light: #53a8ff;
+  --color-primary-bg: rgba(64, 158, 255, 0.1);
+  --color-success: #67C23A;
+  --color-warning: #E6A23C;
+  --color-danger: #F56C6C;
+  --color-info: #909399;
+}
+
+/* ========== 暗色主题 ========== */
+[data-theme='dark'] {
+  --bg-primary: #141414;
+  --bg-secondary: #1d1d1d;
+  --bg-tertiary: #262626;
+  --bg-card: #1d1d1d;
+  --bg-sidebar: #191919;
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(64, 158, 255, 0.15);
+
+  --text-primary: #e5eaf3;
+  --text-secondary: #a3a6ad;
+  --text-tertiary: #6c6e72;
+  --text-placeholder: #4c4d4f;
+
+  --border-color: #333333;
+  --border-color-light: #2c2c2c;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  --color-primary: #409EFF;
+  --color-primary-light: #66b1ff;
+  --color-primary-bg: rgba(64, 158, 255, 0.2);
+  --color-success: #67C23A;
+  --color-warning: #E6A23C;
+  --color-danger: #F56C6C;
+  --color-info: #73767a;
+}
+
+/* ========== 全局样式 ========== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Segoe UI', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* 页面过渡动画 */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.2s ease;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateX(10px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+/* Element Plus 暗色主题覆盖 */
+[data-theme='dark'] {
+  --el-bg-color: #1d1d1d;
+  --el-bg-color-overlay: #262626;
+  --el-bg-color-page: #141414;
+  --el-text-color-primary: #e5eaf3;
+  --el-text-color-regular: #a3a6ad;
+  --el-text-color-secondary: #6c6e72;
+  --el-text-color-placeholder: #4c4d4f;
+  --el-border-color: #333333;
+  --el-border-color-light: #2c2c2c;
+  --el-border-color-lighter: #262626;
+  --el-fill-color: #262626;
+  --el-fill-color-light: #1d1d1d;
+  --el-fill-color-lighter: #191919;
+  --el-fill-color-blank: #141414;
+  --el-mask-color: rgba(0, 0, 0, 0.6);
+
+  .el-input__wrapper,
+  .el-textarea__inner {
+    background-color: var(--bg-tertiary) !important;
+    box-shadow: 0 0 0 1px var(--border-color) inset !important;
+  }
+
+  .el-select-dropdown,
+  .el-picker-panel,
+  .el-dialog {
+    background-color: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+  }
+
+  .el-button--default {
+    background-color: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+  }
+
+  .el-card {
+    background-color: var(--bg-card);
+    border-color: var(--border-color);
+  }
+
+  .el-switch {
+    --el-switch-off-color: #4c4d4f;
+  }
+}
+
+/* 通用卡片样式 */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color-light);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}

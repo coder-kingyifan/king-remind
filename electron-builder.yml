@@ -1,0 +1,40 @@
+appId: com.kingyifan.king-remind
+productName: king提醒助手
+copyright: Copyright (c) 2025 kingyifan
+
+directories:
+  buildResources: resources
+  output: dist
+
+files:
+  - "out/**/*"
+  - "resources/**/*"
+  - "node_modules/sql.js/**/*"
+  - "node_modules/chinese-days/**/*"
+  - "package.json"
+
+extraResources:
+  - from: "resources/"
+    to: "resources/"
+    filter:
+      - "**/*"
+
+win:
+  icon: resources/icon.png
+  target:
+    - target: portable
+      arch:
+        - x64
+    - target: nsis
+      arch:
+        - x64
+
+portable:
+  artifactName: "king提醒助手.exe"
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: king提醒助手

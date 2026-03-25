@@ -1,0 +1,80 @@
+import { BrowserWindow } from 'electron'
+import { notificationConfigsDb } from '../db/notification-configs'
+import { reminderLogsDb } from '../db/reminder-logs'
+import { Reminder } from '../db/reminders'
+import { DesktopNotifier } from './desktop'
+import { EmailNotifier } from './email'
+import { TelegramNotifier } from './telegram'
+import { WeChatWorkNotifier } from './wechat-work'
+import { WebhookNotifier } from './webhook'
+import { NotificationChannel, NotificationMessage } from './types'
+
+export class NotificationDispatcher {
+  private channels: Map<string, NotificationChannel>
+
+  constructor(mainWindow: BrowserWindow | null) {
+    this.channels = new Map([
+      ['desktop', new DesktopNotifier(mainWindow)],
+      ['email', new EmailNotifier()],
+      ['telegram', new TelegramNotifier()],
+      ['wechat_work', new WeChatWorkNotifier()],
+      ['webhook', new WebhookNotifier()]
+    ])
+  }
+
+  async dispatch(reminder: Reminder): Promise<void> {
+    let channelIds: string[]
+    try {
+      channelIds = JSON.parse(reminder.channels)
+    } catch {
+      channelIds = ['desktop']
+    }
+
+    for (const channelId of channelIds) {
+      // 检查渠道是否已启用（桌面通知始终允许）
+      if (channelId !== 'desktop' && !notificationConfigsDb.isChannelEnabled(channelId)) {
+        continue
+      }
+
+      const channel = this.channels.get(channelId)
+      if (!channel) continue
+
+      const message: NotificationMessage = {
+        title: reminder.title,
+        body: reminder.description || reminder.title,
+        icon: reminder.icon,
+        color: reminder.color,
+        reminderId: reminder.id
+      }
+
+      try {
+        await channel.send(message)
+        reminderLogsDb.create(reminder.id, channelId, 'sent')
+      } catch (error: any) {
+        console.error(`[${channelId}] 发送通知失败:`, error.message)
+        reminderLogsDb.create(reminder.id, channelId, 'failed', error.message)
+      }
+    }
+  }
+
+  async testChannel(channelId: string): Promise<{ success: boolean; error?: string }> {
+    const channel = this.channels.get(channelId)
+    if (!channel) {
+      return { success: false, error: '未知的通知渠道' }
+    }
+
+    const testMessage: NotificationMessage = {
+      title: '测试通知',
+      body: '这是一条来自 king提醒助手的测试通知，如果您收到此消息，说明该通知渠道配置成功！',
+      icon: '🔔',
+      reminderId: 0
+    }
+
+    try {
+      await channel.send(testMessage)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  }
+}

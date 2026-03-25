@@ -1,0 +1,20 @@
+node_modules
+out
+dist
+dist-electron
+*.log
+.DS_Store
+Thumbs.db
+.env
+.env.*
+
+# electron-vite temp files
+electron.vite.config.*.mjs
+
+# database (local data, do not commit)
+remind.db
+
+# Windows junk
+nul
+.claude
+.idea/
