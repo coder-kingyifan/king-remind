@@ -1,7 +1,7 @@
 {
   "name": "king-remind",
   "version": "1.0.0",
-  "description": "king提醒助手 - 桌面提醒助手，支持桌面通知、邮件、Telegram、企业微信等多渠道提醒",
+  "description": "King-remind - Desktop reminder with multi-channel notifications",
   "main": "./out/main/index.js",
   "author": "kingyifan",
   "license": "MIT",
