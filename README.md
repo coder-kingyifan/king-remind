@@ -286,6 +286,8 @@ king-remind/
 [Issues](https://github.com/coder-kingyifan/king-remind/issues)
 
 ---
+##特别鸣谢
+[Linux.do](https://linux.do/)
 
 <p align="center">
   如果这个项目对你有帮助，欢迎给一个 Star
