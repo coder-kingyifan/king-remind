@@ -132,6 +132,29 @@
           </el-form>
         </div>
 
+        <!-- 企业微信消息推送配置 -->
+        <div v-if="channel.key === 'wechat_work_webhook' && notificationsStore.isEnabled(channel.key) && expandedChannels['wechat_work_webhook']" class="channel-config">
+          <div class="config-guide">
+            <div class="guide-title">配置步骤</div>
+            <ol class="guide-steps">
+              <li>在企业微信群聊中，点击右上角 <b>...</b> → <b>消息推送</b> → <b>添加消息推送</b></li>
+              <li>创建后复制 <b>Webhook 地址</b>，粘贴到下方</li>
+              <li>每个消息推送的 Webhook 地址是唯一的，请妥善保管</li>
+            </ol>
+          </div>
+          <el-form :model="wechatWebhookConfig" label-position="top" size="small">
+            <el-form-item label="Webhook URL">
+              <el-input v-model="wechatWebhookConfig.webhook_url" placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx" />
+            </el-form-item>
+            <div class="config-actions">
+              <el-button size="small" @click="saveConfig('wechat_work_webhook', wechatWebhookConfig)">保存配置</el-button>
+              <el-button size="small" type="success" plain :loading="testing === 'wechat_work_webhook'" @click="testChannel('wechat_work_webhook')">
+                发送测试
+              </el-button>
+            </div>
+          </el-form>
+        </div>
+
         <!-- Webhook 配置 -->
         <div v-if="channel.key === 'webhook' && notificationsStore.isEnabled(channel.key) && expandedChannels['webhook']" class="channel-config">
           <div class="config-guide">
@@ -214,6 +237,7 @@ const emailToStr = ref('')
 
 const telegramConfig = ref({ bot_token: '', chat_id: '', proxy_url: '' })
 const wechatConfig = ref({ corp_id: '', corp_secret: '', agent_id: '', to_user: '@all' })
+const wechatWebhookConfig = ref({ webhook_url: '' })
 const webhookConfig = ref({ url: '', method: 'POST', headers: '{}', body_template: '' })
 
 watch(emailToStr, (val) => {
@@ -232,6 +256,8 @@ function loadConfigFromStore(channel: string) {
       Object.assign(telegramConfig.value, json)
     } else if (channel === 'wechat_work') {
       Object.assign(wechatConfig.value, json)
+    } else if (channel === 'wechat_work_webhook') {
+      Object.assign(wechatWebhookConfig.value, json)
     } else if (channel === 'webhook') {
       Object.assign(webhookConfig.value, json)
     }
@@ -263,6 +289,7 @@ async function testChannel(channel: string) {
       email: emailConfig.value,
       telegram: telegramConfig.value,
       wechat_work: wechatConfig.value,
+      wechat_work_webhook: wechatWebhookConfig.value,
       webhook: webhookConfig.value
     }
     if (configs[channel]) {

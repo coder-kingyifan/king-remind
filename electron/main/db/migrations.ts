@@ -126,6 +126,21 @@ export function runMigrations(): void {
         INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
           ('webhook', 0, '{"url": "", "method": "POST", "headers": "{}", "body_template": ""}');
       `
+    },
+    {
+      version: 6,
+      sql: `
+        INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
+          ('wechat_work_webhook', 0, '{"webhook_url": ""}');
+      `
+    },
+    {
+      version: 7,
+      sql: `
+        UPDATE notification_configs SET channel = 'wechat_work_webhook' WHERE channel = 'wechat_work_bot';
+        INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
+          ('wechat_work_webhook', 0, '{"webhook_url": ""}');
+      `
     }
   ]
 
