@@ -119,7 +119,7 @@ if (!gotTheLock) {
 
       // 注册IPC处理器（headless 模式下跳过，无渲染进程）
       if (win) {
-        registerIpcHandlers(win, dispatcher)
+        registerIpcHandlers(win, dispatcher, scheduler)
         console.log('[主进程] IPC处理器已注册')
       }
 

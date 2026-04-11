@@ -7,6 +7,9 @@ import { reminderLogsDb } from './db/reminder-logs'
 import { workdaysDb } from './db/workdays'
 import { NotificationDispatcher } from './notifications/dispatcher'
 import { getSolarDateFromLunar } from 'chinese-days'
+import { chatWithLLM, PROVIDERS } from './llm'
+import { chatHistoryDb } from './db/chat-history'
+import { modelConfigsDb } from './db/model-configs'
 
 // sql.js 返回的对象可能含有不可被 structured clone 序列化的属性（如 Uint8Array 等）
 // 在 IPC 返回前必须转为纯 JS 对象
@@ -27,7 +30,7 @@ function safeHandle(channel: string, handler: (...args: any[]) => any): void {
   })
 }
 
-export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: NotificationDispatcher): void {
+export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: NotificationDispatcher, scheduler: any): void {
   // ========== 提醒 ==========
   safeHandle('reminders:list', (_event, filters?) => {
     return remindersDb.list(filters)
@@ -197,5 +200,58 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
     } catch {
       return null
     }
+  })
+
+  // ========== AI 对话 ==========
+  safeHandle('ai:chat', async (_event, messages: Array<{ role: string; content: string }>, _configId?: number) => {
+    const result = await chatWithLLM(messages, scheduler, _configId)
+    // 只保存最后一条用户消息（前端已 push 到 messages）
+    const lastUser = messages[messages.length - 1]
+    if (lastUser?.role === 'user') {
+      chatHistoryDb.append([lastUser])
+    }
+    if (result.reply) {
+      chatHistoryDb.append([{ role: 'assistant', content: result.reply }])
+    }
+    return result
+  })
+
+  safeHandle('ai:providers', () => {
+    return PROVIDERS.map(p => ({ id: p.id, name: p.name, baseUrl: p.baseUrl, apiKeyRequired: p.apiKeyRequired, defaultModel: p.defaultModel }))
+  })
+
+  safeHandle('ai:chat-history:load', () => {
+    return chatHistoryDb.load()
+  })
+
+  safeHandle('ai:chat-history:clear', () => {
+    chatHistoryDb.clear()
+    return true
+  })
+
+  // ========== 模型配置 ==========
+  safeHandle('models:list', () => {
+    return modelConfigsDb.list()
+  })
+
+  safeHandle('models:get', (_event, id: number) => {
+    return modelConfigsDb.get(id)
+  })
+
+  safeHandle('models:create', (_event, data: any) => {
+    return modelConfigsDb.create(data)
+  })
+
+  safeHandle('models:update', (_event, id: number, data: any) => {
+    return modelConfigsDb.update(id, data)
+  })
+
+  safeHandle('models:delete', (_event, id: number) => {
+    return modelConfigsDb.delete(id)
+  })
+
+  safeHandle('models:set-default', (_event, id: number) => {
+    modelConfigsDb.setDefault(id)
+    return true
   })
 }

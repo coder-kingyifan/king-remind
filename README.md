@@ -168,6 +168,76 @@ npm run pack:dir    # 打包为免安装目录
 
 <br />
 
+## Docker 部署
+
+适用于 Linux 服务器、NAS、云主机等无图形界面环境，以 Headless 模式运行后台服务（调度器 + HTTP API）。
+
+### 环境要求
+
+- Docker
+- Docker Compose
+
+### 快速启动
+
+```bash
+# 克隆项目
+git clone https://github.com/coder-kingyifan/king-remind.git
+cd king-remind
+
+# 构建并启动（后台运行）
+docker compose up -d --build
+```
+
+### 验证服务
+
+```bash
+curl http://localhost:33333/api/ping
+# 返回: {"success":true,"data":{"message":"pong","version":"1.0.0"}}
+```
+
+### 常用命令
+
+```bash
+docker compose logs -f          # 查看实时日志
+docker compose restart          # 重启服务
+docker compose down             # 停止并移除容器
+docker compose up -d --build    # 重新构建并启动
+```
+
+### 自定义端口
+
+默认 API 端口为 `33333`，可通过环境变量修改：
+
+```bash
+API_PORT=30000 docker compose up -d
+```
+
+或创建 `.env` 文件：
+
+```
+API_PORT=30000
+```
+
+### 数据持久化
+
+数据库文件存储在 Docker volume `remind-data` 中（挂载路径 `/app/data`），**停止或删除容器不会丢失数据**。
+
+如需备份数据库：
+
+```bash
+docker cp king-remind:/app/data/remind.db ./remind.db.bak
+```
+
+### 环境变量
+
+| 变量 | 默认值 | 说明 |
+|:-----|:-------|:-----|
+| `API_HOST` | `127.0.0.1` | API 监听地址，Docker 中自动设为 `0.0.0.0` |
+| `API_PORT` | `33333` | 宿主机映射端口 |
+| `DB_DIR` | 当前目录 | 数据库文件目录，Docker 中自动设为 `/app/data` |
+
+<br />
+
 ## Headless 模式
 
 不创建主窗口，仅运行后台服务（数据库、调度器、API Server）并保留系统托盘图标（仅显示退出菜单）。

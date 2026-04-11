@@ -371,9 +371,9 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 
 const settingsStore = useSettingsStore()
 const showBlessing = ref(false)

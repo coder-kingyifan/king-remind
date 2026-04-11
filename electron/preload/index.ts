@@ -89,7 +89,26 @@ const electronAPI = {
   },
 
   // 农历转换
-  lunarToSolar: (lunarDateStr: string) => safeInvoke('lunar:to-solar', lunarDateStr)
+  lunarToSolar: (lunarDateStr: string) => safeInvoke('lunar:to-solar', lunarDateStr),
+
+  // AI 对话
+  ai: {
+    chat: (messages: Array<{ role: string; content: string }>, configId?: number) =>
+      safeInvoke('ai:chat', messages, configId),
+    getProviders: () => safeInvoke('ai:providers'),
+    loadHistory: () => safeInvoke('ai:chat-history:load'),
+    clearHistory: () => safeInvoke('ai:chat-history:clear')
+  },
+
+  // 模型配置
+  models: {
+    list: () => safeInvoke('models:list'),
+    get: (id: number) => safeInvoke('models:get', id),
+    create: (data: any) => safeInvoke('models:create', data),
+    update: (id: number, data: any) => safeInvoke('models:update', id, data),
+    delete: (id: number) => safeInvoke('models:delete', id),
+    setDefault: (id: number) => safeInvoke('models:set-default', id)
+  }
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

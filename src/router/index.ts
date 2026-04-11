@@ -26,6 +26,18 @@ const router = createRouter({
       name: 'settings',
       component: () => import('@/pages/SystemSettingsPage.vue'),
       meta: { title: '系统设置', icon: 'Setting' }
+    },
+    {
+      path: '/model-config',
+      name: 'model-config',
+      component: () => import('@/pages/ModelConfigPage.vue'),
+      meta: { title: '模型配置', icon: 'Cpu' }
+    },
+    {
+      path: '/ai-chat',
+      name: 'ai-chat',
+      component: () => import('@/pages/AiChatPage.vue'),
+      meta: { title: 'AI 助手', icon: 'ChatDotRound' }
     }
   ]
 })

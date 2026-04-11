@@ -141,6 +141,29 @@ export function runMigrations(): void {
         INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
           ('wechat_work_webhook', 0, '{"webhook_url": ""}');
       `
+    },
+    {
+      version: 8,
+      sql: `
+        CREATE TABLE IF NOT EXISTS chat_messages (
+          id         INTEGER PRIMARY KEY AUTOINCREMENT,
+          role       TEXT    NOT NULL,
+          content    TEXT    NOT NULL,
+          created_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
+        );
+
+        CREATE TABLE IF NOT EXISTS model_configs (
+          id          INTEGER PRIMARY KEY AUTOINCREMENT,
+          name        TEXT    NOT NULL,
+          provider    TEXT    NOT NULL DEFAULT 'ollama',
+          base_url    TEXT    NOT NULL DEFAULT '',
+          api_key     TEXT    NOT NULL DEFAULT '',
+          model       TEXT    NOT NULL DEFAULT '',
+          is_default  INTEGER NOT NULL DEFAULT 0,
+          created_at  TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
+          updated_at  TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
+        );
+      `
     }
   ]
 
