@@ -34,8 +34,8 @@ export async function initDatabase(): Promise<SqlJsDatabase> {
   }
   console.log('[数据库] sql.js 加载成功')
 
-  // 数据库放到当前运行目录
-  const dbDir = process.cwd()
+  // 数据库路径：优先使用环境变量，其次使用当前运行目录
+  const dbDir = process.env['DB_DIR'] || process.cwd()
   dbPath = join(dbDir, 'remind.db')
   console.log('[数据库] 路径:', dbPath)
 

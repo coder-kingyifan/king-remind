@@ -1,0 +1,14 @@
+services:
+  king-remind:
+    build: .
+    container_name: king-remind
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-33333}:33333"
+    volumes:
+      - remind-data:/app/data
+    environment:
+      - API_HOST=0.0.0.0
+
+volumes:
+  remind-data:
