@@ -594,7 +594,7 @@ async function send() {
         selectedModel.value
     )
 
-    const reply = result.reply || streamingContent.value || (streamError.value ? `请求失败: ${streamError.value}` : '已为你完成操作！')
+    const reply = result.reply || streamingContent.value || '已为你完成操作！'
     const thinking = streamingThinking.value
 
     messages.value.push({

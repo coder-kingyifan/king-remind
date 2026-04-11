@@ -496,13 +496,25 @@ function parseSSEChunk(raw: string, buffer: string): {
 
 // ======================== 结果构建 ========================
 
+function extractTextContent(content: any): string {
+    if (typeof content === 'string') return content
+    if (Array.isArray(content)) {
+        return content
+            .filter((b: any) => b.type === 'text' && b.text)
+            .map((b: any) => b.text)
+            .join('\n')
+    }
+    return ''
+}
+
 function buildResult(
     allMessages: Array<Record<string, any>>,
     lastReply: string
 ): { reply: string; messages: Array<{ role: string; content: string }> } {
     const filtered = allMessages
-        .filter(m => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim())
-        .map(m => ({role: m.role, content: m.content.trim()}))
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => ({role: m.role, content: extractTextContent(m.content).trim()}))
+        .filter(m => m.content)
     return {reply: lastReply, messages: filtered}
 }
 
@@ -518,17 +530,65 @@ async function chatOpenAIStream(
     const headers: Record<string, string> = {'Content-Type': 'application/json'}
     if (config.apiKey) headers['Authorization'] = `Bearer ${config.apiKey}`
 
+    // Detect strict VL models (e.g., qwen-vl) that don't support system role and require array content
+    const modelLower = config.model.toLowerCase()
+    const isStrictVL = modelLower.includes('qwen-vl') || modelLower.includes('qwenvl')
+
+    if (isStrictVL || vlStrictDetected) {
+        // Merge system message into first user message
+        const systemIdx = allMessages.findIndex((m: any) => m.role === 'system')
+        if (systemIdx >= 0) {
+            const sysMsg = allMessages.splice(systemIdx, 1)[0]
+            const sysText = typeof sysMsg.content === 'string'
+                ? sysMsg.content
+                : Array.isArray(sysMsg.content)
+                    ? sysMsg.content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('\n')
+                    : ''
+            const firstUser = allMessages.find((m: any) => m.role === 'user')
+            if (firstUser && sysText) {
+                const existingText = typeof firstUser.content === 'string'
+                    ? firstUser.content
+                    : Array.isArray(firstUser.content)
+                        ? firstUser.content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('\n')
+                        : ''
+                firstUser.content = [{type: 'text', text: sysText + '\n\n' + existingText}]
+            }
+        }
+    }
+
+    let vlStrictDetected = false
     let lastReply = ''
     let iterations = 0
     const maxIterations = 5
+    const executedToolNames: string[] = []
 
     while (iterations < maxIterations) {
         iterations++
         onEvent({type: 'status', text: iterations > 1 ? '继续处理中...' : '正在思考...'})
 
+        // Build request messages: convert for strict VL models
+        const requestMessages = allMessages.map((m: any) => {
+            if ((isStrictVL || vlStrictDetected) && m.role !== 'tool') {
+                let role = m.role
+                let content = m.content
+                // Convert assistant to user for strict VL models
+                if (role === 'assistant') {
+                    role = 'user'
+                    const text = typeof content === 'string' ? content
+                        : Array.isArray(content) ? content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('\n')
+                        : ''
+                    content = text ? [{type: 'text', text: `[AI]: ${text}`}] : []
+                } else if (typeof content === 'string') {
+                    content = content ? [{type: 'text', text: content}] : []
+                }
+                return {...m, role, content}
+            }
+            return m
+        })
+
         const body: any = {
             model: config.model,
-            messages: allMessages,
+            messages: requestMessages,
             tools: OPENAI_TOOLS,
             stream: true
         }
@@ -576,7 +636,23 @@ async function chatOpenAIStream(
                     if (evt.data === '[DONE]') continue
                     try {
                         const parsed = JSON.parse(evt.data)
-                        const delta = parsed.choices?.[0]?.delta
+
+                        // Handle error responses from provider
+                        if (parsed.error) {
+                            const errMsg = parsed.error.message || parsed.error.msg || JSON.stringify(parsed.error)
+                            console.error('[LLM/OpenAI Stream] API error in stream:', errMsg)
+                            // Auto-detect strict VL format requirements and retry
+                            if (!isStrictVL && !vlStrictDetected && isVisionModel(config.model) &&
+                                (errMsg.includes("should be 'user'") || errMsg.includes('valid list') || errMsg.includes('role'))) {
+                                vlStrictDetected = true
+                                console.log('[LLM/OpenAI Stream] Detected strict VL format, retrying...')
+                                break
+                            }
+                            throw new Error(errMsg)
+                        }
+
+                        // Handle non-standard response formats
+                        const delta = parsed.choices?.[0]?.delta || parsed.output?.choices?.[0]?.delta
                         if (!delta) continue
 
                         if (delta.content) {
@@ -603,6 +679,12 @@ async function chatOpenAIStream(
         } catch (e) {
             stream.destroy?.()
             throw e
+        }
+
+        // If strict VL format was detected during streaming, retry this iteration
+        if (vlStrictDetected && !content && toolCallsMap.size === 0) {
+            iterations--  // Don't count the failed iteration
+            continue
         }
 
         // Non-streaming fallback: API returned plain JSON
@@ -643,6 +725,7 @@ async function chatOpenAIStream(
                 }
 
                 console.log(`[LLM/OpenAI Stream] 调用工具: ${tc.name}`, JSON.stringify(fnArgs))
+                executedToolNames.push(getToolDisplayName(tc.name))
                 onEvent({type: 'status', text: `正在${getToolDisplayName(tc.name)}...`})
                 onEvent({type: 'tool_start', name: tc.name, args: fnArgs})
 
@@ -661,6 +744,11 @@ async function chatOpenAIStream(
 
         lastReply = content
         break
+    }
+
+    // Fallback: if tools were executed but no final text, summarize what was done
+    if (!lastReply && executedToolNames.length > 0) {
+        lastReply = `${executedToolNames.join('、')}完成`
     }
 
     return buildResult(allMessages, lastReply)
@@ -687,6 +775,7 @@ async function chatAnthropicStream(
     let lastReply = ''
     let iterations = 0
     const maxIterations = 5
+    const executedToolNames: string[] = []
 
     while (iterations < maxIterations) {
         iterations++
@@ -843,6 +932,7 @@ async function chatAnthropicStream(
                 }
 
                 console.log(`[LLM/Anthropic Stream] 调用工具: ${tu.name}`, JSON.stringify(toolInput))
+                executedToolNames.push(getToolDisplayName(tu.name))
                 onEvent({type: 'status', text: `正在${getToolDisplayName(tu.name)}...`})
                 onEvent({type: 'tool_start', name: tu.name, args: toolInput})
 
@@ -862,6 +952,11 @@ async function chatAnthropicStream(
 
         lastReply = textReply
         break
+    }
+
+    // Fallback: if tools were executed but no final text, summarize what was done
+    if (!lastReply && executedToolNames.length > 0) {
+        lastReply = `${executedToolNames.join('、')}完成`
     }
 
     const displayMessages: Array<{ role: string; content: string }> = []
@@ -907,8 +1002,9 @@ export async function chatWithLLM(
         }
         return await chatOpenAIStream(config, allMessages, scheduler, eventHandler)
     } catch (e: any) {
-        eventHandler({type: 'error', message: e.message || '请求失败'})
-        return {reply: '', messages: []}
+        const errorMsg = e.message || '请求失败'
+        eventHandler({type: 'error', message: errorMsg})
+        return {reply: `请求失败: ${errorMsg}`, messages: []}
     }
 }
 
