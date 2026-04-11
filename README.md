@@ -142,6 +142,9 @@ git clone https://github.com/coder-kingyifan/king-remind.git
 cd king-remind
 
 # 安装依赖
+可以设置一个国内镜像源：
+npm config set registry https://registry.npmmirror.com
+进行安装
 npm install
 
 # 启动开发模式（带界面）

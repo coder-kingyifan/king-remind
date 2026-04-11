@@ -67,6 +67,23 @@
             <el-form-item label="收件人地址（多个用逗号分隔）">
               <el-input v-model="emailToStr" placeholder="多个地址用逗号分隔" />
             </el-form-item>
+            <div class="template-section">
+              <div class="template-header" @click="templateExpanded.email = !templateExpanded.email">
+                <span class="template-header-title">消息模板</span>
+                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.email }"><ArrowDown /></el-icon>
+              </div>
+              <div v-if="templateExpanded.email" class="template-body">
+                <div class="template-vars-tip" v-pre>
+                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 · <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名
+                </div>
+                <el-form-item label="邮件主题模板">
+                  <el-input v-model="emailConfig.subject_template" placeholder="[{{app_name}}] {{title}}" />
+                </el-form-item>
+                <el-form-item label="邮件正文模板（HTML）">
+                  <el-input v-model="emailConfig.body_template" type="textarea" :rows="5" placeholder="留空使用默认精美模板" />
+                </el-form-item>
+              </div>
+            </div>
             <div class="config-actions">
               <el-button size="small" @click="saveConfig('email', emailConfig)">保存配置</el-button>
               <el-button size="small" type="success" plain :loading="testing === 'email'" @click="testChannel('email')">
@@ -97,6 +114,20 @@
             <el-form-item label="代理地址（国内网络需要）">
               <el-input v-model="telegramConfig.proxy_url" placeholder="http://127.0.0.1:7890" />
             </el-form-item>
+            <div class="template-section">
+              <div class="template-header" @click="templateExpanded.telegram = !templateExpanded.telegram">
+                <span class="template-header-title">消息模板</span>
+                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.telegram }"><ArrowDown /></el-icon>
+              </div>
+              <div v-if="templateExpanded.telegram" class="template-body">
+                <div class="template-vars-tip" v-pre>
+                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 · <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名。支持 HTML 标签如 <code>&lt;b&gt;</code> <code>&lt;i&gt;</code>
+                </div>
+                <el-form-item label="消息模板">
+                  <el-input v-model="telegramConfig.message_template" type="textarea" :rows="3" placeholder="{{icon}} <b>{{title}}</b>\n\n{{body}}\n\n<i>来自 {{app_name}} · {{time}}</i>" />
+                </el-form-item>
+              </div>
+            </div>
             <div class="config-actions">
               <el-button size="small" @click="saveConfig('telegram', telegramConfig)">保存配置</el-button>
               <el-button size="small" type="success" plain :loading="testing === 'telegram'" @click="testChannel('telegram')">
@@ -123,6 +154,29 @@
                 <el-input v-model="wechatConfig.to_user" placeholder="@all 或 user1|user2" />
               </el-form-item>
             </div>
+            <el-form-item label="消息格式">
+              <el-radio-group v-model="wechatConfig.msg_type">
+                <el-radio value="text">文本消息</el-radio>
+                <el-radio value="markdown">Markdown</el-radio>
+              </el-radio-group>
+            </el-form-item>
+            <div class="template-section">
+              <div class="template-header" @click="templateExpanded.wechat_work = !templateExpanded.wechat_work">
+                <span class="template-header-title">消息模板</span>
+                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.wechat_work }"><ArrowDown /></el-icon>
+              </div>
+              <div v-if="templateExpanded.wechat_work" class="template-body">
+                <div class="template-vars-tip" v-pre>
+                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 · <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名
+                </div>
+                <el-form-item v-if="wechatConfig.msg_type === 'text'" label="文本消息模板">
+                  <el-input v-model="wechatConfig.message_template" type="textarea" :rows="3" placeholder="{{icon}} {{title}}&#10;&#10;{{body}}&#10;&#10;{{app_name}} · {{time}}" />
+                </el-form-item>
+                <el-form-item v-else label="Markdown 消息模板">
+                  <el-input v-model="wechatConfig.markdown_template" type="textarea" :rows="4" placeholder="# {{icon}} {{title}}&#10;&#10;{{body}}&#10;&#10;> {{app_name}} · {{time}}" />
+                </el-form-item>
+              </div>
+            </div>
             <div class="config-actions">
               <el-button size="small" @click="saveConfig('wechat_work', wechatConfig)">保存配置</el-button>
               <el-button size="small" type="success" plain :loading="testing === 'wechat_work'" @click="testChannel('wechat_work')">
@@ -146,6 +200,46 @@
             <el-form-item label="Webhook URL">
               <el-input v-model="wechatWebhookConfig.webhook_url" placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx" />
             </el-form-item>
+            <el-form-item label="消息格式">
+              <el-radio-group v-model="wechatWebhookConfig.msg_type">
+                <el-radio value="text">文本消息</el-radio>
+                <el-radio value="markdown">Markdown</el-radio>
+              </el-radio-group>
+            </el-form-item>
+            <template v-if="wechatWebhookConfig.msg_type === 'text'">
+              <el-form-item label="@提醒">
+                <el-radio-group v-model="wechatWebhookConfig.mention_mode">
+                  <el-radio value="none">不提醒</el-radio>
+                  <el-radio value="all">@所有人</el-radio>
+                  <el-radio value="custom">指定成员</el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <div v-if="wechatWebhookConfig.mention_mode === 'custom'" class="config-row">
+                <el-form-item label="成员 UserID（逗号分隔）">
+                  <el-input v-model="wechatWebhookConfig.mention_userids" placeholder="zhangsan,lisi" />
+                </el-form-item>
+                <el-form-item label="成员手机号（逗号分隔）">
+                  <el-input v-model="wechatWebhookConfig.mention_mobiles" placeholder="13800138000,13900139000" />
+                </el-form-item>
+              </div>
+            </template>
+            <div class="template-section">
+              <div class="template-header" @click="templateExpanded.wechat_work_webhook = !templateExpanded.wechat_work_webhook">
+                <span class="template-header-title">消息模板</span>
+                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.wechat_work_webhook }"><ArrowDown /></el-icon>
+              </div>
+              <div v-if="templateExpanded.wechat_work_webhook" class="template-body">
+                <div class="template-vars-tip" v-pre>
+                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 · <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名
+                </div>
+                <el-form-item v-if="wechatWebhookConfig.msg_type === 'text'" label="文本消息模板">
+                  <el-input v-model="wechatWebhookConfig.message_template" type="textarea" :rows="3" placeholder="{{icon}} {{title}}&#10;&#10;{{body}}&#10;&#10;{{app_name}} · {{time}}" />
+                </el-form-item>
+                <el-form-item v-else label="Markdown 消息模板">
+                  <el-input v-model="wechatWebhookConfig.markdown_template" type="textarea" :rows="4" placeholder="# {{icon}} {{title}}&#10;&#10;{{body}}&#10;&#10;> {{app_name}} · {{time}}" />
+                </el-form-item>
+              </div>
+            </div>
             <div class="config-actions">
               <el-button size="small" @click="saveConfig('wechat_work_webhook', wechatWebhookConfig)">保存配置</el-button>
               <el-button size="small" type="success" plain :loading="testing === 'wechat_work_webhook'" @click="testChannel('wechat_work_webhook')">
@@ -223,6 +317,7 @@ const notificationsStore = useNotificationsStore()
 const testing = ref('')
 const testResults = ref<Record<string, { success: boolean; error?: string } | null>>({})
 const expandedChannels = reactive<Record<string, boolean>>({})
+const templateExpanded = reactive<Record<string, boolean>>({})
 
 function toggleExpand(key: string) {
   expandedChannels[key] = !expandedChannels[key]
@@ -231,13 +326,14 @@ function toggleExpand(key: string) {
 // 各渠道配置
 const emailConfig = ref({
   smtp_host: '', smtp_port: 587, smtp_secure: false,
-  smtp_user: '', smtp_pass: '', from_address: '', to_addresses: [] as string[]
+  smtp_user: '', smtp_pass: '', from_address: '', to_addresses: [] as string[],
+  subject_template: '', body_template: ''
 })
 const emailToStr = ref('')
 
-const telegramConfig = ref({ bot_token: '', chat_id: '', proxy_url: '' })
-const wechatConfig = ref({ corp_id: '', corp_secret: '', agent_id: '', to_user: '@all' })
-const wechatWebhookConfig = ref({ webhook_url: '' })
+const telegramConfig = ref({ bot_token: '', chat_id: '', proxy_url: '', message_template: '' })
+const wechatConfig = ref({ corp_id: '', corp_secret: '', agent_id: '', to_user: '@all', msg_type: 'text', message_template: '', markdown_template: '' })
+const wechatWebhookConfig = ref({ webhook_url: '', msg_type: 'text', mention_mode: 'none', mention_userids: '', mention_mobiles: '', message_template: '', markdown_template: '' })
 const webhookConfig = ref({ url: '', method: 'POST', headers: '{}', body_template: '' })
 
 watch(emailToStr, (val) => {
@@ -496,5 +592,60 @@ onMounted(async () => {
 .test-result.error {
   background: rgba(245, 108, 108, 0.1);
   color: #F56C6C;
+}
+
+.template-section {
+  margin-top: 8px;
+  border: 1px solid var(--border-color-light);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.template-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: var(--bg-secondary);
+  transition: background 0.2s ease;
+}
+
+.template-header:hover {
+  background: var(--bg-hover);
+}
+
+.template-header-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.template-arrow {
+  transition: transform 0.2s ease;
+  color: var(--text-tertiary);
+}
+
+.template-arrow.expanded {
+  transform: rotate(180deg);
+}
+
+.template-body {
+  padding: 14px;
+}
+
+.template-vars-tip {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+
+.template-vars-tip code {
+  background: var(--bg-hover);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  color: var(--text-secondary);
 }
 </style>

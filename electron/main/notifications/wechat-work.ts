@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { notificationConfigsDb } from '../db/notification-configs'
 import { NotificationChannel, NotificationMessage } from './types'
+import { buildTemplateVars, renderTemplate, getTemplate } from './template'
 
 export class WeChatWorkNotifier implements NotificationChannel {
   private accessToken: string | null = null
@@ -14,23 +15,40 @@ export class WeChatWorkNotifier implements NotificationChannel {
     }
 
     const token = await this.getAccessToken(config)
+    const vars = buildTemplateVars(message)
+    const msgType = config.msg_type || 'text'
 
-    // 支持多个接收人（| 分隔），逐个发送
-    const toUsers = String(config.to_user || '@all').split('|').map((s: string) => s.trim()).filter(Boolean)
+    let body: any
+
+    if (msgType === 'markdown') {
+      const template = getTemplate(config, 'wechat_work', 'markdown_template')
+      const content = renderTemplate(template, vars)
+      body = {
+        touser: config.to_user || '@all',
+        msgtype: 'markdown',
+        agentid: parseInt(config.agent_id),
+        markdown: { content }
+      }
+    } else {
+      const template = getTemplate(config, 'wechat_work', 'message_template')
+      const content = renderTemplate(template, vars)
+      body = {
+        touser: config.to_user || '@all',
+        msgtype: 'text',
+        agentid: parseInt(config.agent_id),
+        text: { content }
+      }
+    }
+
+    // 支持多个接收人（| 分隔）
+    const toUsers = String(body.touser).split('|').map((s: string) => s.trim()).filter(Boolean)
     const errors: string[] = []
 
     for (const toUser of toUsers) {
       try {
         const response = await axios.post(
           `https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=${token}`,
-          {
-            touser: toUser,
-            msgtype: 'text',
-            agentid: parseInt(config.agent_id),
-            text: {
-              content: `🔔 ${message.title}\n\n${message.body}\n\n来自 king提醒助手`
-            }
-          },
+          { ...body, touser: toUser },
           { timeout: 10000 }
         )
         if (response.data.errcode !== 0) {

@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { notificationConfigsDb } from '../db/notification-configs'
 import { NotificationChannel, NotificationMessage } from './types'
+import { buildTemplateVars, renderTemplate, getTemplate } from './template'
 
 export class TelegramNotifier implements NotificationChannel {
   async send(message: NotificationMessage): Promise<void> {
@@ -10,7 +11,15 @@ export class TelegramNotifier implements NotificationChannel {
       throw new Error('Telegram配置不完整，请先配置Bot Token和Chat ID')
     }
 
-    const text = `🔔 <b>${this.escapeHtml(message.title)}</b>\n\n${this.escapeHtml(message.body)}\n\n<i>来自 king提醒助手</i>`
+    const vars = buildTemplateVars(message)
+    // 对变量进行 HTML 转义后再渲染模板
+    const escapedVars = {
+      ...vars,
+      title: this.escapeHtml(vars.title),
+      body: this.escapeHtml(vars.body)
+    }
+    const template = getTemplate(config, 'telegram', 'message_template')
+    const text = renderTemplate(template, escapedVars)
 
     const axiosConfig: any = { timeout: 15000 }
 
