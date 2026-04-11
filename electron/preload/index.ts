@@ -93,8 +93,8 @@ const electronAPI = {
 
   // AI 对话
   ai: {
-    chat: (messages: Array<{ role: string; content: string }>, configId?: number, sessionId?: number) =>
-      safeInvoke('ai:chat', messages, configId, sessionId),
+    chat: (messages: Array<{ role: string; content: string }>, configId?: number, sessionId?: number, modelOverride?: string) =>
+      safeInvoke('ai:chat', messages, configId, sessionId, modelOverride),
     getProviders: () => safeInvoke('ai:providers'),
     loadHistory: () => safeInvoke('ai:chat-history:load'),
     clearHistory: () => safeInvoke('ai:chat-history:clear'),
@@ -116,7 +116,9 @@ const electronAPI = {
     create: (data: any) => safeInvoke('models:create', data),
     update: (id: number, data: any) => safeInvoke('models:update', id, data),
     delete: (id: number) => safeInvoke('models:delete', id),
-    setDefault: (id: number) => safeInvoke('models:set-default', id)
+    setDefault: (id: number) => safeInvoke('models:set-default', id),
+    test: (data: { provider: string; base_url: string; api_key: string; model: string }) =>
+      safeInvoke('models:test', data)
   }
 }
 

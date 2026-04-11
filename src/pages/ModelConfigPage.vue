@@ -18,7 +18,16 @@
                 {{ cfg.name }}
                 <el-tag v-if="cfg.is_default" size="small" type="success">默认</el-tag>
               </div>
-              <div class="model-meta">{{ getProviderName(cfg.provider) }} &middot; {{ cfg.model }}</div>
+              <div class="model-meta">{{ getProviderName(cfg.provider) }} &middot; {{ cfg.base_url || '未配置' }}</div>
+              <div class="model-tags" v-if="parseModels(cfg.models).length">
+                <el-tag
+                  v-for="m in parseModels(cfg.models)"
+                  :key="m"
+                  size="small"
+                  :type="m === cfg.model ? 'primary' : 'info'"
+                  class="model-tag"
+                >{{ m }}</el-tag>
+              </div>
             </div>
           </div>
           <div class="model-actions">
@@ -38,7 +47,7 @@
     <el-dialog
       v-model="showForm"
       :title="editingId ? '编辑模型' : '添加模型'"
-      width="500px"
+      width="560px"
       :close-on-click-modal="false"
     >
       <el-form :model="form" label-position="top" size="default">
@@ -49,22 +58,40 @@
         </el-form-item>
 
         <el-form-item label="名称" required>
-          <el-input v-model="form.name" placeholder="给这个模型起个名字，如：DeepSeek-V3" />
+          <el-input v-model="form.name" placeholder="给这个配置起个名字，如：Ollama" />
         </el-form-item>
 
-        <el-form-item label="模型" required>
-          <el-select
-            v-if="currentProviderModels.length > 0"
-            v-model="form.model"
-            style="width: 100%;"
-            filterable
-            allow-create
-            default-first-option
-            :placeholder="'选择或输入模型名称'"
-          >
-            <el-option v-for="m in currentProviderModels" :key="m" :label="m" :value="m" />
-          </el-select>
-          <el-input v-else v-model="form.model" :placeholder="currentProviderPreset?.defaultModel || '输入模型名称'" />
+        <el-form-item label="模型列表" required>
+          <div class="model-input-list">
+            <div class="model-list-header">
+              <span class="model-list-hint">点击左侧星标设为默认模型</span>
+            </div>
+            <div v-for="(m, idx) in form.models" :key="idx" class="model-input-row">
+              <span
+                class="model-default-star"
+                :class="{ active: form.defaultModelIndex === idx }"
+                @click="form.defaultModelIndex = idx"
+                :title="form.defaultModelIndex === idx ? '当前默认模型' : '点击设为默认'"
+              >{{ form.defaultModelIndex === idx ? '★' : '☆' }}</span>
+              <el-input
+                v-model="form.models[idx]"
+                placeholder="输入模型名称，如 deepseek-chat"
+                @keydown.enter.prevent="addModelInput"
+              />
+              <el-button
+                v-if="form.models.length > 1"
+                :icon="Minus"
+                circle
+                size="small"
+                plain
+                type="danger"
+                @click="removeModelInput(idx)"
+              />
+            </div>
+            <el-button size="small" plain @click="addModelInput" style="margin-top: 4px;">
+              <el-icon style="margin-right:4px"><Plus /></el-icon>添加模型
+            </el-button>
+          </div>
         </el-form-item>
 
         <el-form-item label="API 地址">
@@ -81,8 +108,15 @@
       </el-form>
 
       <template #footer>
-        <el-button @click="showForm = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+        <div class="dialog-footer">
+          <el-button @click="handleTestModel" :loading="testing">
+            <el-icon style="margin-right:4px"><Connection /></el-icon>测试连接
+          </el-button>
+          <div>
+            <el-button @click="showForm = false">取消</el-button>
+            <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+          </div>
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -91,6 +125,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Minus, Connection } from '@element-plus/icons-vue'
 
 interface ModelConfigRow {
   id: number
@@ -99,6 +134,7 @@ interface ModelConfigRow {
   base_url: string
   api_key: string
   model: string
+  models: string   // JSON array string
   is_default: number
 }
 
@@ -116,13 +152,15 @@ const providers = ref<ProviderInfo[]>([])
 const showForm = ref(false)
 const editingId = ref<number | null>(null)
 const saving = ref(false)
+const testing = ref(false)
 
 const form = ref({
   name: '',
   provider: 'ollama',
   base_url: '',
   api_key: '',
-  model: '',
+  models: [''] as string[],
+  defaultModelIndex: 0,
   is_default: false
 })
 
@@ -130,9 +168,15 @@ const currentProviderPreset = computed(() =>
   providers.value.find(p => p.id === form.value.provider)
 )
 
-const currentProviderModels = computed(() =>
-  currentProviderPreset.value?.models || []
-)
+function parseModels(modelsJson: string): string[] {
+  if (!modelsJson) return []
+  try {
+    const arr = JSON.parse(modelsJson)
+    return Array.isArray(arr) ? arr.filter(Boolean) : []
+  } catch {
+    return []
+  }
+}
 
 function getProviderName(id: string): string {
   return providers.value.find(p => p.id === id)?.name || id
@@ -177,47 +221,107 @@ onMounted(() => {
 function onProviderChange(id: string) {
   const p = providers.value.find(p => p.id === id)
   if (!p) return
-  if (!form.value.base_url) form.value.base_url = p.baseUrl
-  if (!form.value.model) form.value.model = p.defaultModel
-  if (!form.value.name && p.defaultModel) {
-    form.value.name = p.defaultModel
+  // Always update base_url when switching provider
+  form.value.base_url = p.baseUrl
+  // Always update name to match provider id
+  form.value.name = id
+}
+
+function addModelInput() {
+  form.value.models.push('')
+}
+
+function removeModelInput(idx: number) {
+  form.value.models.splice(idx, 1)
+  // Adjust defaultModelIndex
+  if (form.value.defaultModelIndex === idx) {
+    form.value.defaultModelIndex = 0
+  } else if (form.value.defaultModelIndex > idx) {
+    form.value.defaultModelIndex--
   }
 }
 
 function openForm(cfg?: ModelConfigRow) {
   if (cfg) {
     editingId.value = cfg.id
+    const parsed = parseModels(cfg.models)
+    const models = parsed.length > 0 ? parsed : [cfg.model || '']
+    // Find default model index
+    let defaultIdx = 0
+    if (cfg.model) {
+      const idx = models.indexOf(cfg.model)
+      if (idx >= 0) defaultIdx = idx
+    }
     form.value = {
       name: cfg.name,
       provider: cfg.provider,
       base_url: cfg.base_url,
       api_key: cfg.api_key,
-      model: cfg.model,
+      models,
+      defaultModelIndex: defaultIdx,
       is_default: !!cfg.is_default
     }
   } else {
     editingId.value = null
     const p = providers.value[0]
     form.value = {
-      name: p?.defaultModel || '',
+      name: p?.id || 'ollama',
       provider: p?.id || 'ollama',
       base_url: p?.baseUrl || '',
       api_key: '',
-      model: p?.defaultModel || '',
+      models: [''],
+      defaultModelIndex: 0,
       is_default: configs.value.length === 0
     }
   }
   showForm.value = true
 }
 
-async function handleSave() {
-  if (!form.value.name || !form.value.model) {
-    ElMessage.warning('请填写名称和模型')
+async function handleTestModel() {
+  const validModels = form.value.models.filter(m => m.trim())
+  if (validModels.length === 0) {
+    ElMessage.warning('请先填写至少一个模型名称')
     return
   }
+  const testModelName = validModels[form.value.defaultModelIndex] || validModels[0]
+  testing.value = true
+  try {
+    const result = await window.electronAPI.models.test({
+      provider: form.value.provider,
+      base_url: form.value.base_url,
+      api_key: form.value.api_key,
+      model: testModelName
+    })
+    if (result.ok) {
+      ElMessage.success(`连接成功${result.reply ? '：' + result.reply : ''}`)
+    } else {
+      ElMessage.error(`连接失败：${result.message}`)
+    }
+  } catch (e: any) {
+    ElMessage.error('测试失败: ' + e.message)
+  } finally {
+    testing.value = false
+  }
+}
+
+async function handleSave() {
+  const validModels = form.value.models.filter(m => m.trim())
+  if (!form.value.name || validModels.length === 0) {
+    ElMessage.warning('请填写名称和至少一个模型')
+    return
+  }
+  const defaultIdx = Math.min(form.value.defaultModelIndex, validModels.length - 1)
   saving.value = true
   try {
-    const data = JSON.parse(JSON.stringify(form.value))
+    const data = {
+      name: form.value.name,
+      provider: form.value.provider,
+      base_url: form.value.base_url,
+      api_key: form.value.api_key,
+      model: validModels[defaultIdx] || validModels[0],
+      models: validModels,
+      is_default: form.value.is_default
+    }
     if (editingId.value) {
       await window.electronAPI.models.update(editingId.value, data)
     } else {
@@ -296,7 +400,7 @@ async function setDefault(id: number) {
 
 .model-info {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -309,6 +413,7 @@ async function setDefault(id: number) {
   justify-content: center;
   background: var(--bg-secondary);
   border-radius: 10px;
+  flex-shrink: 0;
 }
 
 .model-name {
@@ -326,10 +431,71 @@ async function setDefault(id: number) {
   margin-top: 2px;
 }
 
+.model-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.model-tag {
+  font-size: 11px;
+}
+
 .model-actions {
   display: flex;
   gap: 6px;
   flex-shrink: 0;
+}
+
+.model-input-list {
+  width: 100%;
+}
+
+.model-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.model-list-header {
+  margin-bottom: 4px;
+}
+
+.model-list-hint {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.model-default-star {
+  flex-shrink: 0;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  width: 24px;
+  text-align: center;
+  user-select: none;
+  transition: color 0.2s;
+}
+
+.model-default-star:hover {
+  color: var(--color-primary);
+}
+
+.model-default-star.active {
+  color: #e6a23c;
+}
+
+.model-input-row .el-input {
+  flex: 1;
+}
+
+.dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .empty-hint {

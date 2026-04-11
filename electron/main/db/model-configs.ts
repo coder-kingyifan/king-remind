@@ -39,6 +39,7 @@ export interface ModelConfig {
   base_url: string
   api_key: string
   model: string
+  models: string   // JSON array string, e.g. '["gpt-4o","gpt-4o-mini"]'
   is_default: number
   created_at: string
   updated_at: string
@@ -57,18 +58,19 @@ export const modelConfigsDb = {
     return queryOne('SELECT * FROM model_configs WHERE is_default = 1') as ModelConfig | undefined
   },
 
-  create(input: { name: string; provider: string; base_url: string; api_key: string; model: string; is_default?: boolean }): ModelConfig {
+  create(input: { name: string; provider: string; base_url: string; api_key: string; model: string; models?: string[]; is_default?: boolean }): ModelConfig {
     if (input.is_default) {
       run('UPDATE model_configs SET is_default = 0')
     }
+    const modelsJson = JSON.stringify(input.models || [])
     run(
-      'INSERT INTO model_configs (name, provider, base_url, api_key, model, is_default) VALUES (?, ?, ?, ?, ?, ?)',
-      [input.name, input.provider, input.base_url, input.api_key, input.model, input.is_default ? 1 : 0]
+      'INSERT INTO model_configs (name, provider, base_url, api_key, model, models, is_default) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [input.name, input.provider, input.base_url, input.api_key, input.model, modelsJson, input.is_default ? 1 : 0]
     )
     return this.get(getLastInsertId())!
   },
 
-  update(id: number, input: Partial<{ name: string; provider: string; base_url: string; api_key: string; model: string; is_default: boolean }>): ModelConfig | undefined {
+  update(id: number, input: Partial<{ name: string; provider: string; base_url: string; api_key: string; model: string; models?: string[]; is_default: boolean }>): ModelConfig | undefined {
     const existing = this.get(id)
     if (!existing) return undefined
 
@@ -76,14 +78,19 @@ export const modelConfigsDb = {
       run('UPDATE model_configs SET is_default = 0')
     }
 
+    const modelsJson = input.models !== undefined
+      ? JSON.stringify(input.models)
+      : existing.models
+
     run(
-      `UPDATE model_configs SET name=?, provider=?, base_url=?, api_key=?, model=?, is_default=?, updated_at=datetime('now','localtime') WHERE id=?`,
+      `UPDATE model_configs SET name=?, provider=?, base_url=?, api_key=?, model=?, models=?, is_default=?, updated_at=datetime('now','localtime') WHERE id=?`,
       [
         input.name ?? existing.name,
         input.provider ?? existing.provider,
         input.base_url ?? existing.base_url,
         input.api_key ?? existing.api_key,
         input.model ?? existing.model,
+        modelsJson,
         input.is_default !== undefined ? (input.is_default ? 1 : 0) : existing.is_default,
         id
       ]

@@ -7,7 +7,7 @@ import { reminderLogsDb } from './db/reminder-logs'
 import { workdaysDb } from './db/workdays'
 import { NotificationDispatcher } from './notifications/dispatcher'
 import { getSolarDateFromLunar } from 'chinese-days'
-import { chatWithLLM, PROVIDERS } from './llm'
+import { chatWithLLM, PROVIDERS, testModelConnection } from './llm'
 import { chatHistoryDb } from './db/chat-history'
 import { modelConfigsDb } from './db/model-configs'
 
@@ -203,8 +203,8 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
   })
 
   // ========== AI 对话 ==========
-  safeHandle('ai:chat', async (_event, messages: Array<{ role: string; content: string }>, _configId?: number, _sessionId?: number) => {
-    const result = await chatWithLLM(messages, scheduler, _configId)
+  safeHandle('ai:chat', async (_event, messages: Array<{ role: string; content: string }>, _configId?: number, _sessionId?: number, _modelOverride?: string) => {
+    const result = await chatWithLLM(messages, scheduler, _configId, _modelOverride)
     if (_sessionId) {
       const lastUser = messages[messages.length - 1]
       if (lastUser?.role === 'user') {
@@ -290,5 +290,9 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
   safeHandle('models:set-default', (_event, id: number) => {
     modelConfigsDb.setDefault(id)
     return true
+  })
+
+  safeHandle('models:test', async (_event, data: { provider: string; base_url: string; api_key: string; model: string }) => {
+    return await testModelConnection(data)
   })
 }

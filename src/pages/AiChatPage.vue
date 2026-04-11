@@ -5,16 +5,33 @@
       <div class="page-header-actions">
         <div class="header-left">
           <el-select
-            v-model="selectedModelId"
+            v-model="selectedConfigId"
             size="small"
-            style="width: 180px;"
-            placeholder="选择模型"
+            style="width: 160px;"
+            placeholder="选择服务商"
+            @change="onConfigChange"
           >
             <el-option
               v-for="m in modelList"
               :key="m.id"
               :label="m.name"
               :value="m.id"
+            />
+          </el-select>
+          <el-select
+            v-model="selectedModel"
+            size="small"
+            style="width: 180px;"
+            placeholder="选择模型"
+            filterable
+            allow-create
+            default-first-option
+          >
+            <el-option
+              v-for="m in currentModels"
+              :key="m"
+              :label="m"
+              :value="m"
             />
           </el-select>
         </div>
@@ -118,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { Promotion, Plus, Clock, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -130,7 +147,16 @@ interface ChatMessage {
 interface ModelItem {
   id: number
   name: string
+  provider: string
+  model: string
+  models: string   // JSON array string
   is_default: number
+}
+
+interface ProviderInfo {
+  id: string
+  name: string
+  models: string[]
 }
 
 interface SessionItem {
@@ -147,10 +173,30 @@ const loading = ref(false)
 const messageList = ref<HTMLElement | null>(null)
 const inputRef = ref<any>(null)
 const modelList = ref<ModelItem[]>([])
-const selectedModelId = ref<number | undefined>(undefined)
+const providers = ref<ProviderInfo[]>([])
+const selectedConfigId = ref<number | undefined>(undefined)
+const selectedModel = ref<string>('')
 const currentSessionId = ref<number | null>(null)
 const sessions = ref<SessionItem[]>([])
 const showHistory = ref(false)
+
+// 当前配置
+const currentConfig = computed(() =>
+  modelList.value.find(m => m.id === selectedConfigId.value)
+)
+
+// 当前配置的可用模型列表
+const currentModels = computed(() => {
+  const cfg = currentConfig.value
+  if (!cfg) return []
+  // Parse models from the config's models JSON field
+  try {
+    const arr = JSON.parse(cfg.models || '[]')
+    if (Array.isArray(arr) && arr.filter(Boolean).length > 0) return arr.filter(Boolean)
+  } catch { /* ignore */ }
+  // Fallback: use the single model field
+  return cfg.model ? [cfg.model] : []
+})
 
 const suggestions = [
   '每30分钟提醒我喝水',
@@ -181,19 +227,34 @@ async function scrollToBottom() {
 }
 
 onMounted(async () => {
+  // 加载服务商列表（含模型）
   try {
-    modelList.value = await window.electronAPI.models.list()
-    const defaultModel = modelList.value.find((m: any) => m.is_default)
-    if (defaultModel) selectedModelId.value = defaultModel.id
-    else if (modelList.value.length > 0) selectedModelId.value = modelList.value[0].id
+    providers.value = await window.electronAPI.ai.getProviders()
   } catch { /* ignore */ }
 
-  // 加载历史会话列表
-  await loadSessions()
+  // 加载模型配置列表
+  try {
+    modelList.value = await window.electronAPI.models.list()
+    const defaultCfg = modelList.value.find(m => m.is_default)
+    if (defaultCfg) {
+      selectedConfigId.value = defaultCfg.id
+      selectedModel.value = defaultCfg.model
+    } else if (modelList.value.length > 0) {
+      selectedConfigId.value = modelList.value[0].id
+      selectedModel.value = modelList.value[0].model
+    }
+  } catch { /* ignore */ }
 
-  // 每次进入创建新会话
-  await createNewSession()
+  await loadSessions()
+  // Don't create session on mount — only when user sends first message
 })
+
+function onConfigChange(id: number) {
+  const cfg = modelList.value.find(m => m.id === id)
+  if (cfg) {
+    selectedModel.value = cfg.model
+  }
+}
 
 async function loadSessions() {
   try {
@@ -203,7 +264,7 @@ async function loadSessions() {
 
 async function createNewSession() {
   try {
-    const session = await window.electronAPI.ai.createSession('新对话', selectedModelId.value)
+    const session = await window.electronAPI.ai.createSession('新对话', selectedConfigId.value)
     currentSessionId.value = session.id
     messages.value = []
   } catch { /* ignore */ }
@@ -215,7 +276,8 @@ function sendSuggestion(text: string) {
 }
 
 async function newChat() {
-  await createNewSession()
+  currentSessionId.value = null
+  messages.value = []
 }
 
 async function loadSession(s: SessionItem) {
@@ -244,8 +306,13 @@ async function send() {
   const text = inputText.value.trim()
   if (!text || loading.value) return
 
-  if (!selectedModelId.value) {
+  if (!selectedConfigId.value) {
     ElMessage.warning('请先在「模型配置」中添加模型')
+    return
+  }
+
+  if (!selectedModel.value) {
+    ElMessage.warning('请选择一个模型')
     return
   }
 
@@ -254,14 +321,22 @@ async function send() {
   loading.value = true
   await scrollToBottom()
 
-  // 如果是第一条消息，自动更新标题
+  // Create session on first message if not yet created
+  if (!currentSessionId.value) {
+    try {
+      const session = await window.electronAPI.ai.createSession('新对话', selectedConfigId.value)
+      currentSessionId.value = session.id
+    } catch { /* ignore */ }
+  }
+
   const isFirstMsg = messages.value.filter(m => m.role === 'user').length === 1
 
   try {
     const result = await window.electronAPI.ai.chat(
       JSON.parse(JSON.stringify(messages.value)),
-      selectedModelId.value,
-      currentSessionId.value || undefined
+      selectedConfigId.value,
+      currentSessionId.value || undefined,
+      selectedModel.value
     )
 
     if (result.reply) {
@@ -270,7 +345,6 @@ async function send() {
       messages.value.push({ role: 'assistant', content: '已为你完成操作！' })
     }
 
-    // 更新会话标题
     if (isFirstMsg && currentSessionId.value) {
       const title = text.length > 20 ? text.substring(0, 20) + '...' : text
       try {

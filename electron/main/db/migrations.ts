@@ -178,6 +178,12 @@ export function runMigrations(): void {
 
         ALTER TABLE chat_messages ADD COLUMN session_id INTEGER DEFAULT NULL;
       `
+    },
+    {
+      version: 10,
+      sql: `
+        ALTER TABLE model_configs ADD COLUMN models TEXT NOT NULL DEFAULT '[]';
+      `
     }
   ]
 
