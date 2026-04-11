@@ -1,10 +1,10 @@
 <template>
   <div class="layout">
-    <Sidebar />
+    <Sidebar/>
     <div class="layout-main">
-      <TitleBar />
+      <TitleBar/>
       <div class="layout-content">
-        <slot />
+        <slot/>
       </div>
     </div>
   </div>

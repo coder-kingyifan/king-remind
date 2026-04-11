@@ -20,13 +20,20 @@
               </div>
               <div class="model-meta">{{ getProviderName(cfg.provider) }} &middot; {{ cfg.base_url || '未配置' }}</div>
               <div class="model-tags" v-if="parseModels(cfg.models).length">
-                <el-tag
-                  v-for="m in parseModels(cfg.models)"
-                  :key="m"
-                  size="small"
-                  :type="m === cfg.model ? 'primary' : 'info'"
-                  class="model-tag"
-                >{{ m }}</el-tag>
+                <el-tooltip
+                    v-for="m in parseModels(cfg.models)"
+                    :key="m"
+                    :content="parseModelNotes(cfg.model_notes)[m] || ''"
+                    :disabled="!parseModelNotes(cfg.model_notes)[m]"
+                    placement="top"
+                >
+                  <el-tag
+                      size="small"
+                      :type="m === cfg.model ? 'primary' : 'info'"
+                      class="model-tag"
+                  >{{ m }}
+                  </el-tag>
+                </el-tooltip>
               </div>
             </div>
           </div>
@@ -45,72 +52,87 @@
 
     <!-- 编辑弹窗 -->
     <el-dialog
-      v-model="showForm"
-      :title="editingId ? '编辑模型' : '添加模型'"
-      width="560px"
-      :close-on-click-modal="false"
+        v-model="showForm"
+        :title="editingId ? '编辑模型' : '添加模型'"
+        width="580px"
+        :close-on-click-modal="false"
     >
       <el-form :model="form" label-position="top" size="default">
         <el-form-item label="服务商" required>
           <el-select v-model="form.provider" style="width: 100%;" filterable @change="onProviderChange">
-            <el-option v-for="p in providers" :key="p.id" :label="p.name" :value="p.id" />
+            <el-option v-for="p in providers" :key="p.id" :label="p.name" :value="p.id"/>
           </el-select>
         </el-form-item>
 
         <el-form-item label="名称" required>
-          <el-input v-model="form.name" placeholder="给这个配置起个名字，如：Ollama" />
+          <el-input v-model="form.name" placeholder="给这个配置起个名字，如：Ollama"/>
         </el-form-item>
 
         <el-form-item label="模型列表" required>
           <div class="model-input-list">
             <div class="model-list-header">
-              <span class="model-list-hint">点击左侧星标设为默认模型</span>
+              <span class="model-list-hint">点击左侧星标设为默认模型，右侧备注可填写模型说明</span>
             </div>
             <div v-for="(m, idx) in form.models" :key="idx" class="model-input-row">
               <span
-                class="model-default-star"
-                :class="{ active: form.defaultModelIndex === idx }"
-                @click="form.defaultModelIndex = idx"
-                :title="form.defaultModelIndex === idx ? '当前默认模型' : '点击设为默认'"
+                  class="model-default-star"
+                  :class="{ active: form.defaultModelIndex === idx }"
+                  @click="form.defaultModelIndex = idx"
+                  :title="form.defaultModelIndex === idx ? '当前默认模型' : '点击设为默认'"
               >{{ form.defaultModelIndex === idx ? '★' : '☆' }}</span>
               <el-input
-                v-model="form.models[idx]"
-                placeholder="输入模型名称，如 deepseek-chat"
-                @keydown.enter.prevent="addModelInput"
+                  v-model="form.models[idx]"
+                  placeholder="输入模型名称，如 deepseek-chat"
+                  @keydown.enter.prevent="addModelInput"
+                  style="flex: 1;"
+              />
+              <el-input
+                  v-model="form.modelNotes[form.models[idx] || `__idx_${idx}__`]"
+                  placeholder="备注，如：多模态"
+                  style="width: 120px;"
+                  @input="syncNoteKey(idx)"
               />
               <el-button
-                v-if="form.models.length > 1"
-                :icon="Minus"
-                circle
-                size="small"
-                plain
-                type="danger"
-                @click="removeModelInput(idx)"
+                  v-if="form.models.length > 1"
+                  :icon="Minus"
+                  circle
+                  size="small"
+                  plain
+                  type="danger"
+                  @click="removeModelInput(idx)"
               />
             </div>
             <el-button size="small" plain @click="addModelInput" style="margin-top: 4px;">
-              <el-icon style="margin-right:4px"><Plus /></el-icon>添加模型
+              <el-icon style="margin-right:4px">
+                <Plus/>
+              </el-icon>
+              添加模型
             </el-button>
           </div>
         </el-form-item>
 
         <el-form-item label="API 地址">
-          <el-input v-model="form.base_url" :placeholder="currentProviderPreset?.baseUrl || 'https://api.openai.com/v1'" />
+          <el-input v-model="form.base_url"
+                    :placeholder="currentProviderPreset?.baseUrl || 'https://api.openai.com/v1'"/>
         </el-form-item>
 
         <el-form-item label="API Key">
-          <el-input v-model="form.api_key" type="password" show-password :placeholder="currentProviderPreset?.apiKeyRequired ? 'sk-...' : '可选'" />
+          <el-input v-model="form.api_key" type="password" show-password
+                    :placeholder="currentProviderPreset?.apiKeyRequired ? 'sk-...' : '可选'"/>
         </el-form-item>
 
         <el-form-item>
-          <el-switch v-model="form.is_default" active-text="设为默认模型" />
+          <el-switch v-model="form.is_default" active-text="设为默认模型"/>
         </el-form-item>
       </el-form>
 
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="handleTestModel" :loading="testing">
-            <el-icon style="margin-right:4px"><Connection /></el-icon>测试连接
+            <el-icon style="margin-right:4px">
+              <Connection/>
+            </el-icon>
+            测试连接
           </el-button>
           <div>
             <el-button @click="showForm = false">取消</el-button>
@@ -123,9 +145,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Minus, Connection } from '@element-plus/icons-vue'
+import {computed, onMounted, ref} from 'vue'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {Connection, Minus, Plus} from '@element-plus/icons-vue'
 
 interface ModelConfigRow {
   id: number
@@ -134,7 +156,8 @@ interface ModelConfigRow {
   base_url: string
   api_key: string
   model: string
-  models: string   // JSON array string
+  models: string
+  model_notes: string
   is_default: number
 }
 
@@ -160,12 +183,13 @@ const form = ref({
   base_url: '',
   api_key: '',
   models: [''] as string[],
+  modelNotes: {} as Record<string, string>,
   defaultModelIndex: 0,
   is_default: false
 })
 
 const currentProviderPreset = computed(() =>
-  providers.value.find(p => p.id === form.value.provider)
+    providers.value.find(p => p.id === form.value.provider)
 )
 
 function parseModels(modelsJson: string): string[] {
@@ -175,6 +199,16 @@ function parseModels(modelsJson: string): string[] {
     return Array.isArray(arr) ? arr.filter(Boolean) : []
   } catch {
     return []
+  }
+}
+
+function parseModelNotes(notesJson: string): Record<string, string> {
+  if (!notesJson) return {}
+  try {
+    const obj = JSON.parse(notesJson)
+    return typeof obj === 'object' && obj !== null ? obj : {}
+  } catch {
+    return {}
   }
 }
 
@@ -198,7 +232,8 @@ const PROVIDER_ICONS: Record<string, string> = {
   siliconflow: '🔥',
   groq: '⚡',
   xiaomi: '📱',
-  custom: '⚙️'
+  custom: '⚙️',
+  custom_anthropic: '🧠'
 }
 
 function getProviderIcon(id: string): string {
@@ -221,9 +256,7 @@ onMounted(() => {
 function onProviderChange(id: string) {
   const p = providers.value.find(p => p.id === id)
   if (!p) return
-  // Always update base_url when switching provider
   form.value.base_url = p.baseUrl
-  // Always update name to match provider id
   form.value.name = id
 }
 
@@ -233,7 +266,6 @@ function addModelInput() {
 
 function removeModelInput(idx: number) {
   form.value.models.splice(idx, 1)
-  // Adjust defaultModelIndex
   if (form.value.defaultModelIndex === idx) {
     form.value.defaultModelIndex = 0
   } else if (form.value.defaultModelIndex > idx) {
@@ -241,12 +273,16 @@ function removeModelInput(idx: number) {
   }
 }
 
+// Keep notes in sync when model name changes
+function syncNoteKey(idx: number) {
+  // Notes are stored by model name key, handled in handleSave
+}
+
 function openForm(cfg?: ModelConfigRow) {
   if (cfg) {
     editingId.value = cfg.id
     const parsed = parseModels(cfg.models)
     const models = parsed.length > 0 ? parsed : [cfg.model || '']
-    // Find default model index
     let defaultIdx = 0
     if (cfg.model) {
       const idx = models.indexOf(cfg.model)
@@ -258,6 +294,7 @@ function openForm(cfg?: ModelConfigRow) {
       base_url: cfg.base_url,
       api_key: cfg.api_key,
       models,
+      modelNotes: parseModelNotes(cfg.model_notes),
       defaultModelIndex: defaultIdx,
       is_default: !!cfg.is_default
     }
@@ -270,6 +307,7 @@ function openForm(cfg?: ModelConfigRow) {
       base_url: p?.baseUrl || '',
       api_key: '',
       models: [''],
+      modelNotes: {},
       defaultModelIndex: 0,
       is_default: configs.value.length === 0
     }
@@ -311,6 +349,15 @@ async function handleSave() {
     return
   }
   const defaultIdx = Math.min(form.value.defaultModelIndex, validModels.length - 1)
+  // Build model notes: map model name -> note text
+  const notes: Record<string, string> = {}
+  for (const m of validModels) {
+    const note = form.value.modelNotes[m]
+    if (note && note.trim()) {
+      notes[m] = note.trim()
+    }
+  }
+
   saving.value = true
   try {
     const data = {
@@ -320,6 +367,7 @@ async function handleSave() {
       api_key: form.value.api_key,
       model: validModels[defaultIdx] || validModels[0],
       models: validModels,
+      model_notes: notes,
       is_default: form.value.is_default
     }
     if (editingId.value) {
@@ -339,11 +387,12 @@ async function handleSave() {
 
 async function handleDelete(cfg: ModelConfigRow) {
   try {
-    await ElMessageBox.confirm(`确定删除「${cfg.name}」？`, '删除确认', { type: 'warning' })
+    await ElMessageBox.confirm(`确定删除「${cfg.name}」？`, '删除确认', {type: 'warning'})
     await window.electronAPI.models.delete(cfg.id)
     await loadData()
     ElMessage.success('已删除')
-  } catch { /* cancel */ }
+  } catch { /* cancel */
+  }
 }
 
 async function setDefault(id: number) {
@@ -440,6 +489,7 @@ async function setDefault(id: number) {
 
 .model-tag {
   font-size: 11px;
+  cursor: default;
 }
 
 .model-actions {
@@ -455,7 +505,7 @@ async function setDefault(id: number) {
 .model-input-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 8px;
 }
 
@@ -485,10 +535,6 @@ async function setDefault(id: number) {
 
 .model-default-star.active {
   color: #e6a23c;
-}
-
-.model-input-row .el-input {
-  flex: 1;
 }
 
 .dialog-footer {

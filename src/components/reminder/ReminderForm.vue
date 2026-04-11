@@ -1,209 +1,219 @@
 <template>
   <el-dialog
-    :model-value="visible"
-    :title="isEdit ? '编辑提醒' : '新建提醒'"
-    width="520px"
-    :close-on-click-modal="false"
-    @update:model-value="$emit('update:visible', $event)"
-    @open="initForm"
-    class="reminder-dialog"
+      :model-value="visible"
+      :title="isEdit ? '编辑提醒' : '新建提醒'"
+      width="520px"
+      :close-on-click-modal="false"
+      @update:model-value="$emit('update:visible', $event)"
+      @open="initForm"
+      class="reminder-dialog"
   >
     <div class="dialog-scroll-body">
-    <el-form ref="formRef" :model="form" :rules="rules" label-position="top" size="default">
-      <el-form-item label="标题" prop="title">
-        <el-input v-model="form.title" placeholder="例如：喝水、吃药、休息、XX生日" maxlength="50" show-word-limit />
-      </el-form-item>
-
-      <el-form-item label="描述" prop="description">
-        <el-input v-model="form.description" type="textarea" :rows="2" placeholder="可选，补充说明" maxlength="200" />
-      </el-form-item>
-
-      <div class="form-row">
-        <el-form-item label="图标" class="form-item-sm">
-          <el-popover placement="bottom-start" :width="240" trigger="click">
-            <template #reference>
-              <el-button plain class="icon-picker-btn">{{ form.icon }}</el-button>
-            </template>
-            <div class="icon-grid">
-              <span
-                v-for="emoji in commonEmojis"
-                :key="emoji"
-                class="icon-option"
-                :class="{ active: form.icon === emoji }"
-                @click="form.icon = emoji"
-              >{{ emoji }}</span>
-            </div>
-          </el-popover>
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" size="default">
+        <el-form-item label="标题" prop="title">
+          <el-input v-model="form.title" placeholder="例如：喝水、吃药、休息、XX生日" maxlength="50" show-word-limit/>
         </el-form-item>
 
-        <el-form-item label="颜色" class="form-item-sm">
-          <el-color-picker v-model="form.color" :predefine="presetColors" size="default" />
+        <el-form-item label="描述" prop="description">
+          <el-input v-model="form.description" type="textarea" :rows="2" placeholder="可选，补充说明" maxlength="200"/>
         </el-form-item>
-      </div>
 
-      <!-- 提醒类型选择 -->
-      <el-form-item label="提醒类型" prop="remind_type">
-        <el-radio-group v-model="form.remind_type" @change="handleTypeChange">
-          <el-radio-button value="interval">
-            <el-icon style="vertical-align: -2px; margin-right: 4px;"><Refresh /></el-icon>
-            循环提醒
-          </el-radio-button>
-          <el-radio-button value="scheduled">
-            <el-icon style="vertical-align: -2px; margin-right: 4px;"><Calendar /></el-icon>
-            定时提醒
-          </el-radio-button>
-        </el-radio-group>
-        <div class="form-tip">
-          {{ form.remind_type === 'interval' ? '按固定间隔循环提醒（如每60分钟喝水）' : '在指定时间提醒一次（如生日、纪念日）' }}
-        </div>
-      </el-form-item>
-
-      <!-- 循环提醒：间隔设置 -->
-      <template v-if="form.remind_type === 'interval'">
         <div class="form-row">
-          <el-form-item label="提醒间隔" prop="interval_value" class="flex-1">
-            <div class="interval-picker">
-              <el-input-number v-model="form.interval_value" :min="1" :max="9999" controls-position="right" style="width: 120px;" />
-              <el-select v-model="form.interval_unit" style="width: 100px;">
-                <el-option label="分钟" value="minutes" />
-                <el-option label="小时" value="hours" />
-                <el-option label="天" value="days" />
-                <el-option label="月" value="months" />
-                <el-option label="年" value="years" />
-              </el-select>
-            </div>
+          <el-form-item label="图标" class="form-item-sm">
+            <el-popover placement="bottom-start" :width="240" trigger="click">
+              <template #reference>
+                <el-button plain class="icon-picker-btn">{{ form.icon }}</el-button>
+              </template>
+              <div class="icon-grid">
+              <span
+                  v-for="emoji in commonEmojis"
+                  :key="emoji"
+                  class="icon-option"
+                  :class="{ active: form.icon === emoji }"
+                  @click="form.icon = emoji"
+              >{{ emoji }}</span>
+              </div>
+            </el-popover>
+          </el-form-item>
+
+          <el-form-item label="颜色" class="form-item-sm">
+            <el-color-picker v-model="form.color" :predefine="presetColors" size="default"/>
           </el-form-item>
         </div>
 
-        <!-- 选择执行日 -->
-        <el-form-item label="选择执行日">
-          <el-radio-group v-model="executionDayMode" @change="handleExecutionDayChange">
-            <el-radio value="all">全部提醒</el-radio>
-            <el-radio value="weekdays">按星期</el-radio>
-            <el-radio value="workday">仅工作日</el-radio>
-            <el-radio value="holiday">仅节假日</el-radio>
+        <!-- 提醒类型选择 -->
+        <el-form-item label="提醒类型" prop="remind_type">
+          <el-radio-group v-model="form.remind_type" @change="handleTypeChange">
+            <el-radio-button value="interval">
+              <el-icon style="vertical-align: -2px; margin-right: 4px;">
+                <Refresh/>
+              </el-icon>
+              循环提醒
+            </el-radio-button>
+            <el-radio-button value="scheduled">
+              <el-icon style="vertical-align: -2px; margin-right: 4px;">
+                <Calendar/>
+              </el-icon>
+              定时提醒
+            </el-radio-button>
           </el-radio-group>
-
-          <!-- 星期选择（仅在"按星期"模式下显示） -->
-          <template v-if="executionDayMode === 'weekdays'">
-            <el-checkbox-group v-model="form.weekdays" style="margin-top: 8px;">
-              <el-checkbox v-for="d in weekdayOptions" :key="d.value" :value="d.value">{{ d.label }}</el-checkbox>
-            </el-checkbox-group>
-          </template>
           <div class="form-tip">
-            {{ executionDayTip }}
+            {{
+              form.remind_type === 'interval' ? '按固定间隔循环提醒（如每60分钟喝水）' : '在指定时间提醒一次（如生日、纪念日）'
+            }}
           </div>
         </el-form-item>
 
-        <el-form-item label="开始时间" prop="start_time">
-          <el-date-picker
-            v-model="form.start_time"
-            type="datetime"
-            placeholder="选择开始时间"
-            format="YYYY-MM-DD HH:mm"
-            value-format="YYYY-MM-DDTHH:mm:ss"
-            style="width: 100%;"
-          />
-        </el-form-item>
-
-        <el-form-item label="结束时间（可选）">
-          <el-date-picker
-            v-model="form.end_time"
-            type="datetime"
-            placeholder="不设置则永久循环"
-            format="YYYY-MM-DD HH:mm"
-            value-format="YYYY-MM-DDTHH:mm:ss"
-            style="width: 100%;"
-            clearable
-          />
-        </el-form-item>
-
-        <el-form-item label="活跃时段（可选）">
-          <div class="time-range">
-            <el-time-picker v-model="activeStart" placeholder="开始" format="HH:mm" value-format="HH:mm" clearable style="width: 48%;" />
-            <span class="time-separator">至</span>
-            <el-time-picker v-model="activeEnd" placeholder="结束" format="HH:mm" value-format="HH:mm" clearable style="width: 48%;" />
+        <!-- 循环提醒：间隔设置 -->
+        <template v-if="form.remind_type === 'interval'">
+          <div class="form-row">
+            <el-form-item label="提醒间隔" prop="interval_value" class="flex-1">
+              <div class="interval-picker">
+                <el-input-number v-model="form.interval_value" :min="1" :max="9999" controls-position="right"
+                                 style="width: 120px;"/>
+                <el-select v-model="form.interval_unit" style="width: 100px;">
+                  <el-option label="分钟" value="minutes"/>
+                  <el-option label="小时" value="hours"/>
+                  <el-option label="天" value="days"/>
+                  <el-option label="月" value="months"/>
+                  <el-option label="年" value="years"/>
+                </el-select>
+              </div>
+            </el-form-item>
           </div>
-          <div class="form-tip">设置后只在该时段内发送提醒，例如 08:00 - 22:00</div>
-        </el-form-item>
-      </template>
 
-      <!-- 定时提醒：指定时间 -->
-      <template v-else>
-        <!-- 农历提醒选项 -->
-        <el-form-item label="日期类型">
-          <el-radio-group v-model="form.is_lunar" @change="handleLunarChange">
-            <el-radio :value="false">公历</el-radio>
-            <el-radio :value="true">农历</el-radio>
-          </el-radio-group>
-        </el-form-item>
+          <!-- 选择执行日 -->
+          <el-form-item label="选择执行日">
+            <el-radio-group v-model="executionDayMode" @change="handleExecutionDayChange">
+              <el-radio value="all">全部提醒</el-radio>
+              <el-radio value="weekdays">按星期</el-radio>
+              <el-radio value="workday">仅工作日</el-radio>
+              <el-radio value="holiday">仅节假日</el-radio>
+            </el-radio-group>
 
-        <!-- 公历提醒时间 -->
-        <template v-if="!form.is_lunar">
-          <el-form-item label="提醒日期" prop="scheduled_date">
-            <el-date-picker
-              v-model="scheduledDate"
-              type="date"
-              placeholder="选择日期"
-              format="YYYY-MM-DD"
-              value-format="YYYY-MM-DD"
-              style="width: 100%;"
-            />
-          </el-form-item>
-          <el-form-item label="提醒时间" prop="scheduled_time">
-            <el-time-picker
-              v-model="scheduledTime"
-              placeholder="选择时间"
-              format="HH:mm"
-              value-format="HH:mm"
-              style="width: 100%;"
-            />
-          </el-form-item>
-          <el-form-item>
-            <el-checkbox v-model="form.solar_repeat">每年此日提醒</el-checkbox>
-            <div class="form-tip">开启后每年到达该日期自动提醒（如生日、纪念日）</div>
-          </el-form-item>
-        </template>
-
-        <!-- 农历提醒设置 -->
-        <template v-if="form.is_lunar">
-          <el-form-item label="农历日期">
-            <div class="lunar-picker">
-              <el-select v-model="lunarMonth" placeholder="月" style="width: 120px;">
-                <el-option v-for="m in lunarMonthOptions" :key="m.value" :label="m.label" :value="m.value" />
-              </el-select>
-              <el-select v-model="lunarDay" placeholder="日" style="width: 120px;">
-                <el-option v-for="d in lunarDayOptions" :key="d.value" :label="d.label" :value="d.value" />
-              </el-select>
+            <!-- 星期选择（仅在"按星期"模式下显示） -->
+            <template v-if="executionDayMode === 'weekdays'">
+              <el-checkbox-group v-model="form.weekdays" style="margin-top: 8px;">
+                <el-checkbox v-for="d in weekdayOptions" :key="d.value" :value="d.value">{{ d.label }}</el-checkbox>
+              </el-checkbox-group>
+            </template>
+            <div class="form-tip">
+              {{ executionDayTip }}
             </div>
-            <div class="form-tip">{{ lunarDateLabel }}</div>
           </el-form-item>
-          <el-form-item label="提醒时间">
-            <el-time-picker v-model="lunarTime" placeholder="选择时间" format="HH:mm" value-format="HH:mm" style="width: 100%;" />
+
+          <el-form-item label="开始时间" prop="start_time">
+            <el-date-picker
+                v-model="form.start_time"
+                type="datetime"
+                placeholder="选择开始时间"
+                format="YYYY-MM-DD HH:mm"
+                value-format="YYYY-MM-DDTHH:mm:ss"
+                style="width: 100%;"
+            />
           </el-form-item>
-          <el-form-item>
-            <el-checkbox v-model="form.lunar_repeat">每年农历此日提醒</el-checkbox>
-            <div class="form-tip">开启后每年到达该农历日期自动提醒（如每年正月初一）</div>
+
+          <el-form-item label="结束时间（可选）">
+            <el-date-picker
+                v-model="form.end_time"
+                type="datetime"
+                placeholder="不设置则永久循环"
+                format="YYYY-MM-DD HH:mm"
+                value-format="YYYY-MM-DDTHH:mm:ss"
+                style="width: 100%;"
+                clearable
+            />
+          </el-form-item>
+
+          <el-form-item label="活跃时段（可选）">
+            <div class="time-range">
+              <el-time-picker v-model="activeStart" placeholder="开始" format="HH:mm" value-format="HH:mm" clearable
+                              style="width: 48%;"/>
+              <span class="time-separator">至</span>
+              <el-time-picker v-model="activeEnd" placeholder="结束" format="HH:mm" value-format="HH:mm" clearable
+                              style="width: 48%;"/>
+            </div>
+            <div class="form-tip">设置后只在该时段内发送提醒，例如 08:00 - 22:00</div>
           </el-form-item>
         </template>
-      </template>
 
-      <el-form-item label="通知渠道" prop="channels">
-        <el-checkbox-group v-model="form.channels">
-          <el-checkbox
-            v-for="ch in channelOptions"
-            :key="ch.key"
-            :value="ch.key"
-            :disabled="ch.key !== 'desktop' && !notificationsStore.isEnabled(ch.key)"
-          >
-            <img v-if="ch.key === 'wechat_work'" :src="wechatWorkIcon" class="channel-checkbox-img" />
-            <template v-else>{{ ch.icon }}</template>
-            {{ ch.name }}
-            <span v-if="ch.key !== 'desktop' && !notificationsStore.isEnabled(ch.key)" class="channel-disabled-tip">（未启用）</span>
-          </el-checkbox>
-        </el-checkbox-group>
-      </el-form-item>
-    </el-form>
+        <!-- 定时提醒：指定时间 -->
+        <template v-else>
+          <!-- 农历提醒选项 -->
+          <el-form-item label="日期类型">
+            <el-radio-group v-model="form.is_lunar" @change="handleLunarChange">
+              <el-radio :value="false">公历</el-radio>
+              <el-radio :value="true">农历</el-radio>
+            </el-radio-group>
+          </el-form-item>
+
+          <!-- 公历提醒时间 -->
+          <template v-if="!form.is_lunar">
+            <el-form-item label="提醒日期" prop="scheduled_date">
+              <el-date-picker
+                  v-model="scheduledDate"
+                  type="date"
+                  placeholder="选择日期"
+                  format="YYYY-MM-DD"
+                  value-format="YYYY-MM-DD"
+                  style="width: 100%;"
+              />
+            </el-form-item>
+            <el-form-item label="提醒时间" prop="scheduled_time">
+              <el-time-picker
+                  v-model="scheduledTime"
+                  placeholder="选择时间"
+                  format="HH:mm"
+                  value-format="HH:mm"
+                  style="width: 100%;"
+              />
+            </el-form-item>
+            <el-form-item>
+              <el-checkbox v-model="form.solar_repeat">每年此日提醒</el-checkbox>
+              <div class="form-tip">开启后每年到达该日期自动提醒（如生日、纪念日）</div>
+            </el-form-item>
+          </template>
+
+          <!-- 农历提醒设置 -->
+          <template v-if="form.is_lunar">
+            <el-form-item label="农历日期">
+              <div class="lunar-picker">
+                <el-select v-model="lunarMonth" placeholder="月" style="width: 120px;">
+                  <el-option v-for="m in lunarMonthOptions" :key="m.value" :label="m.label" :value="m.value"/>
+                </el-select>
+                <el-select v-model="lunarDay" placeholder="日" style="width: 120px;">
+                  <el-option v-for="d in lunarDayOptions" :key="d.value" :label="d.label" :value="d.value"/>
+                </el-select>
+              </div>
+              <div class="form-tip">{{ lunarDateLabel }}</div>
+            </el-form-item>
+            <el-form-item label="提醒时间">
+              <el-time-picker v-model="lunarTime" placeholder="选择时间" format="HH:mm" value-format="HH:mm"
+                              style="width: 100%;"/>
+            </el-form-item>
+            <el-form-item>
+              <el-checkbox v-model="form.lunar_repeat">每年农历此日提醒</el-checkbox>
+              <div class="form-tip">开启后每年到达该农历日期自动提醒（如每年正月初一）</div>
+            </el-form-item>
+          </template>
+        </template>
+
+        <el-form-item label="通知渠道" prop="channels">
+          <el-checkbox-group v-model="form.channels">
+            <el-checkbox
+                v-for="ch in channelOptions"
+                :key="ch.key"
+                :value="ch.key"
+                :disabled="ch.key !== 'desktop' && !notificationsStore.isEnabled(ch.key)"
+            >
+              <img v-if="ch.key === 'wechat_work'" :src="wechatWorkIcon" class="channel-checkbox-img"/>
+              <template v-else>{{ ch.icon }}</template>
+              {{ ch.name }}
+              <span v-if="ch.key !== 'desktop' && !notificationsStore.isEnabled(ch.key)" class="channel-disabled-tip">（未启用）</span>
+            </el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
+      </el-form>
     </div>
 
     <template #footer>
@@ -216,13 +226,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { useRemindersStore } from '@/stores/reminders'
-import { useNotificationsStore } from '@/stores/notifications'
-import { CHANNELS } from '@/types/notification'
-import type { Reminder } from '@/types/reminder'
-import { ElMessage } from 'element-plus'
-import { Refresh, Calendar } from '@element-plus/icons-vue'
+import {computed, ref} from 'vue'
+import {useRemindersStore} from '@/stores/reminders'
+import {useNotificationsStore} from '@/stores/notifications'
+import {CHANNELS} from '@/types/notification'
+import type {Reminder} from '@/types/reminder'
+import {ElMessage} from 'element-plus'
+import {Calendar, Refresh} from '@element-plus/icons-vue'
 import wechatWorkIcon from '@/../resources/wechat-work.png'
 
 const props = defineProps<{
@@ -287,10 +297,10 @@ const lunarDayNames = [
   '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十'
 ]
 
-const lunarMonthOptions = lunarMonthNames.map((label, i) => ({ label, value: i + 1 }))
+const lunarMonthOptions = lunarMonthNames.map((label, i) => ({label, value: i + 1}))
 const lunarDayOptions = computed(() => {
   const count = lunarMonth.value === 12 ? 30 : 30
-  return lunarDayNames.slice(0, count).map((label, i) => ({ label, value: i + 1 }))
+  return lunarDayNames.slice(0, count).map((label, i) => ({label, value: i + 1}))
 })
 
 const lunarDateLabel = computed(() => {
@@ -315,19 +325,20 @@ function lunarToSolarStartTime(): string {
     if (result) {
       return `${result}T${lunarTime.value || '09:00'}:00`
     }
-  } catch { /* ignore */ }
+  } catch { /* ignore */
+  }
   // 回退：用当年公历近似
   return `${year}-${mm}-${dd}T${lunarTime.value || '09:00'}:00`
 }
 
 const weekdayOptions = [
-  { label: '周一', value: 1 },
-  { label: '周二', value: 2 },
-  { label: '周三', value: 3 },
-  { label: '周四', value: 4 },
-  { label: '周五', value: 5 },
-  { label: '周六', value: 6 },
-  { label: '周日', value: 0 }
+  {label: '周一', value: 1},
+  {label: '周二', value: 2},
+  {label: '周三', value: 3},
+  {label: '周四', value: 4},
+  {label: '周五', value: 5},
+  {label: '周六', value: 6},
+  {label: '周日', value: 0}
 ]
 
 const commonEmojis = [
@@ -362,10 +373,10 @@ const form = ref({
 })
 
 const rules = {
-  title: [{ required: true, message: '请输入提醒标题', trigger: 'blur' }],
-  interval_value: [{ required: true, message: '请设置提醒间隔', trigger: 'change' }],
-  start_time: [{ required: true, message: '请选择时间', trigger: 'change' }],
-  channels: [{ required: true, message: '请选择至少一个通知渠道', trigger: 'change', type: 'array', min: 1 }]
+  title: [{required: true, message: '请输入提醒标题', trigger: 'blur'}],
+  interval_value: [{required: true, message: '请设置提醒间隔', trigger: 'change'}],
+  start_time: [{required: true, message: '请选择时间', trigger: 'change'}],
+  channels: [{required: true, message: '请选择至少一个通知渠道', trigger: 'change', type: 'array', min: 1}]
 }
 
 function handleTypeChange(type: string | number | boolean) {
@@ -402,7 +413,10 @@ function initForm() {
     const r = props.reminder
     let weekdays: number[] = []
     if (r.weekdays) {
-      try { weekdays = JSON.parse(r.weekdays) } catch { /* ignore */ }
+      try {
+        weekdays = JSON.parse(r.weekdays)
+      } catch { /* ignore */
+      }
     }
     form.value = {
       title: r.title,
@@ -420,7 +434,13 @@ function initForm() {
       solar_repeat: false,
       start_time: r.start_time,
       end_time: r.end_time,
-      channels: (() => { try { return JSON.parse(r.channels) } catch { return ['desktop'] } })()
+      channels: (() => {
+        try {
+          return JSON.parse(r.channels)
+        } catch {
+          return ['desktop']
+        }
+      })()
     }
     activeStart.value = r.active_hours_start
     activeEnd.value = r.active_hours_end
@@ -507,12 +527,13 @@ async function handleSave() {
           // 通过 IPC 转换农历到阳历来计算 start_time
           try {
             const solarDate = await window.electronAPI.lunarToSolar(
-              `${new Date().getFullYear()}-${mm}-${dd}`
+                `${new Date().getFullYear()}-${mm}-${dd}`
             )
             if (solarDate) {
               data.start_time = `${solarDate}T${lunarTime.value || '09:00'}:00`
             }
-          } catch { /* use form start_time as fallback */ }
+          } catch { /* use form start_time as fallback */
+          }
 
           if (form.value.lunar_repeat) {
             // 每年农历提醒 = 循环提醒，间隔1年

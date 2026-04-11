@@ -1,178 +1,179 @@
-import { remindersDb, Reminder } from './db/reminders'
-import { workdaysDb } from './db/workdays'
-import { getSolarDateFromLunar } from 'chinese-days'
-import { NotificationDispatcher } from './notifications/dispatcher'
+import {Reminder, remindersDb} from './db/reminders'
+import {workdaysDb} from './db/workdays'
+import {getSolarDateFromLunar} from 'chinese-days'
+import {NotificationDispatcher} from './notifications/dispatcher'
 
 export class ReminderScheduler {
-  private intervalId: NodeJS.Timeout | null = null
-  private dispatcher: NotificationDispatcher
+    private intervalId: NodeJS.Timeout | null = null
+    private dispatcher: NotificationDispatcher
 
-  constructor(dispatcher: NotificationDispatcher) {
-    this.dispatcher = dispatcher
-  }
-
-  start(intervalMs: number = 60000): void {
-    this.checkReminders()
-    this.intervalId = setInterval(() => this.checkReminders(), intervalMs)
-    console.log(`[调度器] 已启动，检查间隔: ${intervalMs / 1000}秒`)
-  }
-
-  stop(): void {
-    if (this.intervalId) {
-      clearInterval(this.intervalId)
-      this.intervalId = null
-      console.log('[调度器] 已停止')
+    constructor(dispatcher: NotificationDispatcher) {
+        this.dispatcher = dispatcher
     }
-  }
 
-  restart(intervalMs: number = 60000): void {
-    this.stop()
-    this.start(intervalMs)
-  }
+    start(intervalMs: number = 60000): void {
+        this.checkReminders()
+        this.intervalId = setInterval(() => this.checkReminders(), intervalMs)
+        console.log(`[调度器] 已启动，检查间隔: ${intervalMs / 1000}秒`)
+    }
 
-  triggerNow(): void {
-    this.checkReminders()
-  }
-
-  private checkReminders(): void {
-    try {
-      const dueReminders = remindersDb.getDueReminders()
-
-      for (const reminder of dueReminders) {
-        if (!this.isWithinActiveHours(reminder)) continue
-        if (!this.matchesWeekday(reminder)) {
-          // 不符合星期条件，跳到下一个触发时间
-          const nextTrigger = this.calculateNextTrigger(reminder)
-          remindersDb.updateAfterTrigger(reminder.id, nextTrigger)
-          continue
+    stop(): void {
+        if (this.intervalId) {
+            clearInterval(this.intervalId)
+            this.intervalId = null
+            console.log('[调度器] 已停止')
         }
-        if (!this.matchesWorkday(reminder)) {
-          // 不是工作日，跳到下一个触发时间
-          const nextTrigger = this.calculateNextTrigger(reminder)
-          remindersDb.updateAfterTrigger(reminder.id, nextTrigger)
-          continue
+    }
+
+    restart(intervalMs: number = 60000): void {
+        this.stop()
+        this.start(intervalMs)
+    }
+
+    triggerNow(): void {
+        this.checkReminders()
+    }
+
+    private checkReminders(): void {
+        try {
+            const dueReminders = remindersDb.getDueReminders()
+
+            for (const reminder of dueReminders) {
+                if (!this.isWithinActiveHours(reminder)) continue
+                if (!this.matchesWeekday(reminder)) {
+                    // 不符合星期条件，跳到下一个触发时间
+                    const nextTrigger = this.calculateNextTrigger(reminder)
+                    remindersDb.updateAfterTrigger(reminder.id, nextTrigger)
+                    continue
+                }
+                if (!this.matchesWorkday(reminder)) {
+                    // 不是工作日，跳到下一个触发时间
+                    const nextTrigger = this.calculateNextTrigger(reminder)
+                    remindersDb.updateAfterTrigger(reminder.id, nextTrigger)
+                    continue
+                }
+                if (!this.matchesHoliday(reminder)) {
+                    // 不是节假日，跳到下一个触发时间
+                    const nextTrigger = this.calculateNextTrigger(reminder)
+                    remindersDb.updateAfterTrigger(reminder.id, nextTrigger)
+                    continue
+                }
+
+                this.dispatcher.dispatch(reminder).catch(err => {
+                    console.error(`[调度器] 发送提醒失败 [${reminder.title}]:`, err.message)
+                })
+
+                if (reminder.remind_type === 'scheduled') {
+                    remindersDb.updateAfterTrigger(reminder.id, null)
+                } else {
+                    let nextTrigger: string
+                    if (reminder.lunar_date) {
+                        // 农历提醒：计算下一年同农历日期的阳历日期
+                        nextTrigger = this.calculateNextLunarTrigger(reminder)
+                    } else {
+                        nextTrigger = this.calculateNextTrigger(reminder)
+                    }
+                    remindersDb.updateAfterTrigger(reminder.id, nextTrigger)
+                }
+            }
+
+            if (dueReminders.length > 0) {
+                console.log(`[调度器] 触发了 ${dueReminders.length} 个提醒`)
+            }
+        } catch (error: any) {
+            console.error('[调度器] 检查提醒时出错:', error.message)
         }
-        if (!this.matchesHoliday(reminder)) {
-          // 不是节假日，跳到下一个触发时间
-          const nextTrigger = this.calculateNextTrigger(reminder)
-          remindersDb.updateAfterTrigger(reminder.id, nextTrigger)
-          continue
+    }
+
+    private calculateNextTrigger(reminder: Reminder): string {
+        const unit = reminder.interval_unit
+        const value = reminder.interval_value
+
+        if (['minutes', 'hours', 'days'].includes(unit)) {
+            const multipliers: Record<string, number> = {
+                minutes: 60 * 1000,
+                hours: 60 * 60 * 1000,
+                days: 24 * 60 * 60 * 1000
+            }
+            const intervalMs = value * multipliers[unit]
+            return new Date(Date.now() + intervalMs).toISOString()
         }
 
-        this.dispatcher.dispatch(reminder).catch(err => {
-          console.error(`[调度器] 发送提醒失败 [${reminder.title}]:`, err.message)
-        })
-
-        if (reminder.remind_type === 'scheduled') {
-          remindersDb.updateAfterTrigger(reminder.id, null)
-        } else {
-          let nextTrigger: string
-          if (reminder.lunar_date) {
-            // 农历提醒：计算下一年同农历日期的阳历日期
-            nextTrigger = this.calculateNextLunarTrigger(reminder)
-          } else {
-            nextTrigger = this.calculateNextTrigger(reminder)
-          }
-          remindersDb.updateAfterTrigger(reminder.id, nextTrigger)
+        // months / years
+        const next = new Date()
+        if (unit === 'months') {
+            next.setMonth(next.getMonth() + value)
+        } else if (unit === 'years') {
+            next.setFullYear(next.getFullYear() + value)
         }
-      }
-
-      if (dueReminders.length > 0) {
-        console.log(`[调度器] 触发了 ${dueReminders.length} 个提醒`)
-      }
-    } catch (error: any) {
-      console.error('[调度器] 检查提醒时出错:', error.message)
-    }
-  }
-
-  private calculateNextTrigger(reminder: Reminder): string {
-    const unit = reminder.interval_unit
-    const value = reminder.interval_value
-
-    if (['minutes', 'hours', 'days'].includes(unit)) {
-      const multipliers: Record<string, number> = {
-        minutes: 60 * 1000,
-        hours: 60 * 60 * 1000,
-        days: 24 * 60 * 60 * 1000
-      }
-      const intervalMs = value * multipliers[unit]
-      return new Date(Date.now() + intervalMs).toISOString()
+        return next.toISOString()
     }
 
-    // months / years
-    const next = new Date()
-    if (unit === 'months') {
-      next.setMonth(next.getMonth() + value)
-    } else if (unit === 'years') {
-      next.setFullYear(next.getFullYear() + value)
+    private isWithinActiveHours(reminder: Reminder): boolean {
+        if (!reminder.active_hours_start || !reminder.active_hours_end) return true
+
+        const now = new Date()
+        const currentMinutes = now.getHours() * 60 + now.getMinutes()
+
+        const [startH, startM] = reminder.active_hours_start.split(':').map(Number)
+        const [endH, endM] = reminder.active_hours_end.split(':').map(Number)
+        const startMinutes = startH * 60 + startM
+        const endMinutes = endH * 60 + endM
+
+        return currentMinutes >= startMinutes && currentMinutes <= endMinutes
     }
-    return next.toISOString()
-  }
 
-  private isWithinActiveHours(reminder: Reminder): boolean {
-    if (!reminder.active_hours_start || !reminder.active_hours_end) return true
-
-    const now = new Date()
-    const currentMinutes = now.getHours() * 60 + now.getMinutes()
-
-    const [startH, startM] = reminder.active_hours_start.split(':').map(Number)
-    const [endH, endM] = reminder.active_hours_end.split(':').map(Number)
-    const startMinutes = startH * 60 + startM
-    const endMinutes = endH * 60 + endM
-
-    return currentMinutes >= startMinutes && currentMinutes <= endMinutes
-  }
-
-  /** 检查当前星期几是否在提醒的 weekdays 列表中 */
-  private matchesWeekday(reminder: Reminder): boolean {
-    if (!reminder.weekdays) return true
-    try {
-      const days: number[] = JSON.parse(reminder.weekdays)
-      if (days.length === 0) return true
-      const today = new Date().getDay() // 0=周日, 1=周一, ..., 6=周六
-      return days.includes(today)
-    } catch {
-      return true
-    }
-  }
-
-  /** 检查今天是否是工作日（当 workday_only 开启时） */
-  private matchesWorkday(reminder: Reminder): boolean {
-    if (!reminder.workday_only) return true
-    const today = new Date().toISOString().slice(0, 10)
-    return workdaysDb.isWorkday(today)
-  }
-
-  /** 检查今天是否是节假日（当 holiday_only 开启时） */
-  private matchesHoliday(reminder: Reminder): boolean {
-    if (!reminder.holiday_only) return true
-    const today = new Date().toISOString().slice(0, 10)
-    return !workdaysDb.isWorkday(today)
-  }
-
-  /** 计算下一个农历日期对应的阳历触发时间 */
-  private calculateNextLunarTrigger(reminder: Reminder): string {
-    const lunarDate = reminder.lunar_date! // 格式: "01-01"
-    const now = new Date()
-    const currentYear = now.getFullYear()
-    const time = reminder.start_time ? reminder.start_time.slice(11, 16) : '09:00'
-
-    // 尝试当年和下一年
-    for (let y = currentYear; y <= currentYear + 1; y++) {
-      try {
-        const result = getSolarDateFromLunar(`${y}-${lunarDate}`)
-        if (result?.date) {
-          const triggerDate = new Date(`${result.date}T${time}:00`)
-          if (triggerDate > now) {
-            return triggerDate.toISOString()
-          }
+    /** 检查当前星期几是否在提醒的 weekdays 列表中 */
+    private matchesWeekday(reminder: Reminder): boolean {
+        if (!reminder.weekdays) return true
+        try {
+            const days: number[] = JSON.parse(reminder.weekdays)
+            if (days.length === 0) return true
+            const today = new Date().getDay() // 0=周日, 1=周一, ..., 6=周六
+            return days.includes(today)
+        } catch {
+            return true
         }
-      } catch { /* ignore */ }
     }
 
-    // 回退：1年后
-    const next = new Date(now)
-    next.setFullYear(next.getFullYear() + 1)
-    return next.toISOString()
-  }
+    /** 检查今天是否是工作日（当 workday_only 开启时） */
+    private matchesWorkday(reminder: Reminder): boolean {
+        if (!reminder.workday_only) return true
+        const today = new Date().toISOString().slice(0, 10)
+        return workdaysDb.isWorkday(today)
+    }
+
+    /** 检查今天是否是节假日（当 holiday_only 开启时） */
+    private matchesHoliday(reminder: Reminder): boolean {
+        if (!reminder.holiday_only) return true
+        const today = new Date().toISOString().slice(0, 10)
+        return !workdaysDb.isWorkday(today)
+    }
+
+    /** 计算下一个农历日期对应的阳历触发时间 */
+    private calculateNextLunarTrigger(reminder: Reminder): string {
+        const lunarDate = reminder.lunar_date! // 格式: "01-01"
+        const now = new Date()
+        const currentYear = now.getFullYear()
+        const time = reminder.start_time ? reminder.start_time.slice(11, 16) : '09:00'
+
+        // 尝试当年和下一年
+        for (let y = currentYear; y <= currentYear + 1; y++) {
+            try {
+                const result = getSolarDateFromLunar(`${y}-${lunarDate}`)
+                if (result?.date) {
+                    const triggerDate = new Date(`${result.date}T${time}:00`)
+                    if (triggerDate > now) {
+                        return triggerDate.toISOString()
+                    }
+                }
+            } catch { /* ignore */
+            }
+        }
+
+        // 回退：1年后
+        const next = new Date(now)
+        next.setFullYear(next.getFullYear() + 1)
+        return next.toISOString()
+    }
 }

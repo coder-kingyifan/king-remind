@@ -16,9 +16,9 @@
             <div class="setting-desc">选择应用的外观主题</div>
           </div>
           <el-segmented
-            :model-value="settingsStore.theme"
-            :options="themeOptions"
-            @change="(val: string) => settingsStore.setSetting('theme', val)"
+              :model-value="settingsStore.theme"
+              :options="themeOptions"
+              @change="(val: string) => settingsStore.setSetting('theme', val)"
           />
         </div>
       </div>
@@ -33,8 +33,8 @@
             <div class="setting-desc">Windows 启动时自动打开 king提醒助手</div>
           </div>
           <el-switch
-            :model-value="settingsStore.settings.launch_at_startup === 'true'"
-            @change="(val: boolean) => settingsStore.setSetting('launch_at_startup', String(val))"
+              :model-value="settingsStore.settings.launch_at_startup === 'true'"
+              @change="(val: boolean) => settingsStore.setSetting('launch_at_startup', String(val))"
           />
         </div>
 
@@ -44,8 +44,8 @@
             <div class="setting-desc">点击关闭按钮时隐藏到系统托盘而非退出</div>
           </div>
           <el-switch
-            :model-value="settingsStore.settings.minimize_to_tray !== 'false'"
-            @change="(val: boolean) => settingsStore.setSetting('minimize_to_tray', String(val))"
+              :model-value="settingsStore.settings.minimize_to_tray !== 'false'"
+              @change="(val: boolean) => settingsStore.setSetting('minimize_to_tray', String(val))"
           />
         </div>
 
@@ -55,8 +55,8 @@
             <div class="setting-desc">桌面通知时播放提示音</div>
           </div>
           <el-switch
-            :model-value="settingsStore.settings.notification_sound !== 'false'"
-            @change="(val: boolean) => settingsStore.setSetting('notification_sound', String(val))"
+              :model-value="settingsStore.settings.notification_sound !== 'false'"
+              @change="(val: boolean) => settingsStore.setSetting('notification_sound', String(val))"
           />
         </div>
       </div>
@@ -71,13 +71,13 @@
             <div class="setting-desc">调度器多久检查一次是否有到期的提醒</div>
           </div>
           <el-input-number
-            :model-value="Number(settingsStore.settings.scheduler_interval || 60)"
-            :min="10"
-            :max="600"
-            :step="10"
-            size="small"
-            controls-position="right"
-            @change="(val: number) => settingsStore.setSetting('scheduler_interval', String(val))"
+              :model-value="Number(settingsStore.settings.scheduler_interval || 60)"
+              :min="10"
+              :max="600"
+              :step="10"
+              size="small"
+              controls-position="right"
+              @change="(val: number) => settingsStore.setSetting('scheduler_interval', String(val))"
           />
         </div>
       </div>
@@ -153,7 +153,8 @@
           </div>
           <div class="api-row">
             <span class="api-label">响应格式</span>
-            <span class="api-value">JSON &nbsp;<span class="api-code">{ success, data } / { success, error }</span></span>
+            <span class="api-value">JSON &nbsp;<span
+                class="api-code">{ success, data } / { success, error }</span></span>
           </div>
 
           <!-- 接口列表 -->
@@ -178,7 +179,8 @@
           </div>
           <div class="api-query-params">
             <span class="api-query-item"><span class="api-code">?search=关键词</span> 按标题/描述模糊搜索</span>
-            <span class="api-query-item"><span class="api-code">?is_active=1</span> 只返回启用中的提醒（0 = 已禁用）</span>
+            <span class="api-query-item"><span
+                class="api-code">?is_active=1</span> 只返回启用中的提醒（0 = 已禁用）</span>
             <span class="api-query-item">不传参数则返回全部</span>
           </div>
 
@@ -243,13 +245,16 @@
               <span class="api-field-name api-code">interval_unit</span>
               <span class="api-field-type">string</span>
               <span class="api-field-req">-</span>
-              <span class="api-field-desc"><span class="api-code">minutes</span> / <span class="api-code">hours</span> / <span class="api-code">days</span> / <span class="api-code">months</span> / <span class="api-code">years</span></span>
+              <span class="api-field-desc"><span class="api-code">minutes</span> / <span class="api-code">hours</span> / <span
+                  class="api-code">days</span> / <span class="api-code">months</span> / <span
+                  class="api-code">years</span></span>
             </div>
             <div class="api-field-row">
               <span class="api-field-name api-code">weekdays</span>
               <span class="api-field-type">number[]</span>
               <span class="api-field-req">-</span>
-              <span class="api-field-desc">仅指定星期触发，0=周日 … 6=周六，如 <span class="api-code">[1,3,5]</span></span>
+              <span class="api-field-desc">仅指定星期触发，0=周日 … 6=周六，如 <span
+                  class="api-code">[1,3,5]</span></span>
             </div>
             <div class="api-field-row">
               <span class="api-field-name api-code">workday_only</span>
@@ -267,13 +272,15 @@
               <span class="api-field-name api-code">lunar_date</span>
               <span class="api-field-type">string</span>
               <span class="api-field-req">-</span>
-              <span class="api-field-desc">农历日期 <span class="api-code">MM-DD</span>，如 <span class="api-code">01-01</span>（正月初一）</span>
+              <span class="api-field-desc">农历日期 <span class="api-code">MM-DD</span>，如 <span
+                  class="api-code">01-01</span>（正月初一）</span>
             </div>
             <div class="api-field-row">
               <span class="api-field-name api-code">active_hours_start</span>
               <span class="api-field-type">string</span>
               <span class="api-field-req">-</span>
-              <span class="api-field-desc">活跃时段开始，格式 <span class="api-code">HH:mm</span>，如 <span class="api-code">09:00</span></span>
+              <span class="api-field-desc">活跃时段开始，格式 <span class="api-code">HH:mm</span>，如 <span
+                  class="api-code">09:00</span></span>
             </div>
             <div class="api-field-row">
               <span class="api-field-name api-code">active_hours_end</span>
@@ -285,7 +292,9 @@
               <span class="api-field-name api-code">channels</span>
               <span class="api-field-type">string[]</span>
               <span class="api-field-req">-</span>
-              <span class="api-field-desc">通知渠道，默认 <span class="api-code">["desktop"]</span>，可选：<span class="api-code">desktop</span> / <span class="api-code">email</span> / <span class="api-code">telegram</span> / <span class="api-code">wechat_work</span> / <span class="api-code">webhook</span> / <span class="api-code">sms</span></span>
+              <span class="api-field-desc">通知渠道，默认 <span class="api-code">["desktop"]</span>，可选：<span
+                  class="api-code">desktop</span> / <span class="api-code">email</span> / <span class="api-code">telegram</span> / <span
+                  class="api-code">wechat_work</span> / <span class="api-code">webhook</span> / <span class="api-code">sms</span></span>
             </div>
             <div class="api-field-row">
               <span class="api-field-name api-code">icon</span>
@@ -303,7 +312,9 @@
 
           <!-- 调用示例 -->
           <div class="api-example-title" style="margin-top:14px;">调用示例（curl）</div>
-          <pre class="api-pre">curl -X POST http://127.0.0.1:{{ settingsStore.settings.api_port || '33333' }}/api/reminders \
+          <pre class="api-pre">curl -X POST http://127.0.0.1:{{
+              settingsStore.settings.api_port || '33333'
+            }}/api/reminders \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer &lt;your_token&gt;" \
   -d '{
@@ -322,23 +333,28 @@
             <span class="api-field-name">状态码</span>
             <span style="flex:1">含义</span>
           </div>
-          <div class="api-field-row"><span class="api-field-name api-code">200</span><span style="flex:1">成功</span></div>
-          <div class="api-field-row"><span class="api-field-name api-code">400</span><span style="flex:1">请求参数错误</span></div>
-          <div class="api-field-row"><span class="api-field-name api-code">401</span><span style="flex:1">Token 验证失败</span></div>
-          <div class="api-field-row"><span class="api-field-name api-code">404</span><span style="flex:1">资源不存在</span></div>
-          <div class="api-field-row"><span class="api-field-name api-code">500</span><span style="flex:1">服务器内部错误</span></div>
+          <div class="api-field-row"><span class="api-field-name api-code">200</span><span style="flex:1">成功</span>
+          </div>
+          <div class="api-field-row"><span class="api-field-name api-code">400</span><span
+              style="flex:1">请求参数错误</span></div>
+          <div class="api-field-row"><span class="api-field-name api-code">401</span><span
+              style="flex:1">Token 验证失败</span></div>
+          <div class="api-field-row"><span class="api-field-name api-code">404</span><span
+              style="flex:1">资源不存在</span></div>
+          <div class="api-field-row"><span class="api-field-name api-code">500</span><span
+              style="flex:1">服务器内部错误</span></div>
         </div>
       </div>
     </div>
 
     <!-- 祝福弹窗 -->
     <el-dialog
-      v-model="showBlessing"
-      title=""
-      width="460px"
-      :show-close="true"
-      class="blessing-dialog"
-      :close-on-click-modal="true"
+        v-model="showBlessing"
+        title=""
+        width="460px"
+        :show-close="true"
+        class="blessing-dialog"
+        :close-on-click-modal="true"
     >
       <div class="blessing-page">
         <div class="blessing-stars">
@@ -371,9 +387,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useSettingsStore } from '@/stores/settings'
-import { ElMessage } from 'element-plus'
+import {ref} from 'vue'
+import {useSettingsStore} from '@/stores/settings'
+import {ElMessage} from 'element-plus'
 
 const settingsStore = useSettingsStore()
 const showBlessing = ref(false)
@@ -395,9 +411,9 @@ function starStyle(i: number) {
 }
 
 const themeOptions = [
-  { label: '☀️ 亮色', value: 'light' },
-  { label: '🌙 暗色', value: 'dark' },
-  { label: '💻 跟随系统', value: 'system' }
+  {label: '☀️ 亮色', value: 'light'},
+  {label: '🌙 暗色', value: 'dark'},
+  {label: '💻 跟随系统', value: 'system'}
 ]
 
 async function cleanupLogs() {
@@ -548,8 +564,14 @@ async function cleanupLogs() {
 }
 
 @keyframes twinkle {
-  0%, 100% { opacity: 0; transform: scale(0.5); }
-  50% { opacity: 0.8; transform: scale(1); }
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
 }
 
 .blessing-gift {
@@ -577,8 +599,12 @@ async function cleanupLogs() {
 }
 
 @keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
 }
 
 .blessing-ribbon {
@@ -629,8 +655,12 @@ async function cleanupLogs() {
 }
 
 @keyframes heartbeat {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.25); }
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.25);
+  }
 }
 
 .blessing-from {
@@ -768,9 +798,20 @@ async function cleanupLogs() {
   font-family: monospace;
 }
 
-.api-method.get { background: #e8f4fd; color: #409EFF; }
-.api-method.post { background: #e8f9ef; color: #67C23A; }
-.api-method.delete { background: #fef0f0; color: #F56C6C; }
+.api-method.get {
+  background: #e8f4fd;
+  color: #409EFF;
+}
+
+.api-method.post {
+  background: #e8f9ef;
+  color: #67C23A;
+}
+
+.api-method.delete {
+  background: #fef0f0;
+  color: #F56C6C;
+}
 
 .api-path {
   background: var(--bg-secondary, #f5f5f5);

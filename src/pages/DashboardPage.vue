@@ -9,7 +9,9 @@
     <div class="stats-row">
       <div class="stat-card">
         <div class="stat-icon" style="background: rgba(64, 158, 255, 0.1); color: #409EFF;">
-          <el-icon :size="22"><Bell /></el-icon>
+          <el-icon :size="22">
+            <Bell/>
+          </el-icon>
         </div>
         <div class="stat-info">
           <div class="stat-value">{{ stats.total }}</div>
@@ -19,7 +21,9 @@
 
       <div class="stat-card">
         <div class="stat-icon" style="background: rgba(103, 194, 58, 0.1); color: #67C23A;">
-          <el-icon :size="22"><CircleCheck /></el-icon>
+          <el-icon :size="22">
+            <CircleCheck/>
+          </el-icon>
         </div>
         <div class="stat-info">
           <div class="stat-value">{{ stats.active }}</div>
@@ -29,7 +33,9 @@
 
       <div class="stat-card">
         <div class="stat-icon" style="background: rgba(230, 162, 60, 0.1); color: #E6A23C;">
-          <el-icon :size="22"><Finished /></el-icon>
+          <el-icon :size="22">
+            <Finished/>
+          </el-icon>
         </div>
         <div class="stat-info">
           <div class="stat-value">{{ stats.triggeredToday }}</div>
@@ -39,7 +45,9 @@
 
       <div class="stat-card">
         <div class="stat-icon" style="background: rgba(144, 147, 153, 0.1); color: #909399;">
-          <el-icon :size="22"><Timer /></el-icon>
+          <el-icon :size="22">
+            <Timer/>
+          </el-icon>
         </div>
         <div class="stat-info">
           <div class="stat-value">{{ nextReminderText }}</div>
@@ -67,29 +75,32 @@
 
       <div v-else class="reminder-grid">
         <div
-          v-for="reminder in activeReminders"
-          :key="reminder.id"
-          class="reminder-card"
-          :style="{ borderLeftColor: reminder.color }"
+            v-for="reminder in activeReminders"
+            :key="reminder.id"
+            class="reminder-card"
+            :style="{ borderLeftColor: reminder.color }"
         >
           <div class="reminder-card-header">
             <span class="reminder-icon">{{ reminder.icon }}</span>
             <span class="reminder-title">{{ reminder.title }}</span>
             <el-switch
-              :model-value="reminder.is_active === 1"
-              size="small"
-              @change="() => remindersStore.toggleReminder(reminder.id)"
+                :model-value="reminder.is_active === 1"
+                size="small"
+                @change="() => remindersStore.toggleReminder(reminder.id)"
             />
           </div>
           <div class="reminder-card-body">
             <div class="reminder-interval">
               <el-tag
-                :type="reminder.remind_type === 'scheduled' ? 'warning' : 'primary'"
-                size="small"
-                effect="plain"
-                style="margin-right: 6px;"
-              >{{ reminder.remind_type === 'scheduled' ? '定时' : '循环' }}</el-tag>
-              <el-icon :size="14"><Timer /></el-icon>
+                  :type="reminder.remind_type === 'scheduled' ? 'warning' : 'primary'"
+                  size="small"
+                  effect="plain"
+                  style="margin-right: 6px;"
+              >{{ reminder.remind_type === 'scheduled' ? '定时' : '循环' }}
+              </el-tag>
+              <el-icon :size="14">
+                <Timer/>
+              </el-icon>
               <template v-if="reminder.remind_type === 'interval'">
                 每 {{ reminder.interval_value }} {{ unitLabel(reminder.interval_unit) }}
               </template>
@@ -104,9 +115,9 @@
           <div class="reminder-card-footer">
             <div class="channel-badges">
               <span
-                v-for="ch in parseChannels(reminder.channels)"
-                :key="ch"
-                class="channel-badge"
+                  v-for="ch in parseChannels(reminder.channels)"
+                  :key="ch"
+                  class="channel-badge"
               >
                 {{ channelIcon(ch) }}
               </span>
@@ -136,12 +147,12 @@
             <span class="log-channel">{{ channelIcon(log.channel) }} {{ channelName(log.channel) }}</span>
             <span class="log-time">{{ formatTime(log.sent_at) }}</span>
             <span
-              v-if="log.status === 'failed' && log.error_message"
-              class="log-expand-arrow"
-              :class="{ expanded: expandedErrors[log.id] }"
-              @click="toggleLogError(log.id)"
+                v-if="log.status === 'failed' && log.error_message"
+                class="log-expand-arrow"
+                :class="{ expanded: expandedErrors[log.id] }"
+                @click="toggleLogError(log.id)"
             >
-              <el-icon :size="14"><ArrowDown /></el-icon>
+              <el-icon :size="14"><ArrowDown/></el-icon>
             </span>
           </div>
           <div v-if="log.status === 'failed' && log.error_message && expandedErrors[log.id]" class="log-error-detail">
@@ -154,11 +165,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed, ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
-import { useRemindersStore } from '@/stores/reminders'
-import { Bell, CircleCheck, Finished, Timer, ArrowDown } from '@element-plus/icons-vue'
-import { CHANNELS } from '@/types/notification'
+import {computed, onMounted, onUnmounted, reactive, ref} from 'vue'
+import {useRouter} from 'vue-router'
+import {useRemindersStore} from '@/stores/reminders'
+import {ArrowDown, Bell, CircleCheck, Finished, Timer} from '@element-plus/icons-vue'
+import {CHANNELS} from '@/types/notification'
 
 const router = useRouter()
 const remindersStore = useRemindersStore()
@@ -176,11 +187,12 @@ async function refreshData() {
   await remindersStore.fetchStats()
   try {
     recentLogs.value = await window.electronAPI.logs.recent(10)
-  } catch { /* ignore */ }
+  } catch { /* ignore */
+  }
 }
 
 const activeReminders = computed(() =>
-  remindersStore.reminders.filter(r => r.is_active === 1)
+    remindersStore.reminders.filter(r => r.is_active === 1)
 )
 
 const greeting = computed(() => {
@@ -193,8 +205,8 @@ const greeting = computed(() => {
 
 const nextReminderText = computed(() => {
   const active = activeReminders.value
-    .filter(r => r.next_trigger_at)
-    .sort((a, b) => new Date(a.next_trigger_at!).getTime() - new Date(b.next_trigger_at!).getTime())
+      .filter(r => r.next_trigger_at)
+      .sort((a, b) => new Date(a.next_trigger_at!).getTime() - new Date(b.next_trigger_at!).getTime())
 
   if (active.length === 0) return '--'
 
@@ -210,12 +222,16 @@ const nextReminderText = computed(() => {
 })
 
 function unitLabel(unit: string): string {
-  const map: Record<string, string> = { minutes: '分钟', hours: '小时', days: '天', months: '月', years: '年' }
+  const map: Record<string, string> = {minutes: '分钟', hours: '小时', days: '天', months: '月', years: '年'}
   return map[unit] || unit
 }
 
 function parseChannels(channels: string): string[] {
-  try { return JSON.parse(channels) } catch { return ['desktop'] }
+  try {
+    return JSON.parse(channels)
+  } catch {
+    return ['desktop']
+  }
 }
 
 function channelIcon(key: string): string {
@@ -233,9 +249,9 @@ function formatTime(iso: string): string {
   const now = new Date()
   const isToday = d.toDateString() === now.toDateString()
   if (isToday) {
-    return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    return d.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'})
   }
-  return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleString('zh-CN', {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'})
 }
 
 onMounted(async () => {

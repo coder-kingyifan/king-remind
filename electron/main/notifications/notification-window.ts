@@ -1,11 +1,11 @@
-import { BrowserWindow, screen } from 'electron'
-import { join } from 'path'
-import { readFileSync } from 'fs'
-import { is } from '@electron-toolkit/utils'
+import {BrowserWindow, screen} from 'electron'
+import {join} from 'path'
+import {readFileSync} from 'fs'
+import {is} from '@electron-toolkit/utils'
 
 interface FloatNotification {
-  window: BrowserWindow
-  timer: NodeJS.Timeout
+    window: BrowserWindow
+    timer: NodeJS.Timeout
 }
 
 const NOTIFICATION_WIDTH = 360
@@ -17,54 +17,55 @@ const NOTIFICATION_DURATION = 6000
 let notificationSoundBase64: string | null = null
 
 function getNotificationSoundBase64(): string {
-  if (notificationSoundBase64) return notificationSoundBase64
-  try {
-    const soundPath = is.dev
-      ? join(__dirname, '../../resources/notification.wav')
-      : join(process.resourcesPath, 'resources/notification.wav')
-    const buf = readFileSync(soundPath)
-    notificationSoundBase64 = buf.toString('base64')
-  } catch {
-    notificationSoundBase64 = ''
-  }
-  return notificationSoundBase64
+    if (notificationSoundBase64) return notificationSoundBase64
+    try {
+        const soundPath = is.dev
+            ? join(__dirname, '../../resources/notification.wav')
+            : join(process.resourcesPath, 'resources/notification.wav')
+        const buf = readFileSync(soundPath)
+        notificationSoundBase64 = buf.toString('base64')
+    } catch {
+        notificationSoundBase64 = ''
+    }
+    return notificationSoundBase64
 }
 
 function playNotificationSound(): void {
-  const base64 = getNotificationSoundBase64()
-  if (!base64) return
+    const base64 = getNotificationSoundBase64()
+    if (!base64) return
 
-  const soundWin = new BrowserWindow({
-    width: 1,
-    height: 1,
-    show: false,
-    skipTaskbar: true,
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false
-    }
-  })
+    const soundWin = new BrowserWindow({
+        width: 1,
+        height: 1,
+        show: false,
+        skipTaskbar: true,
+        webPreferences: {
+            contextIsolation: true,
+            nodeIntegration: false
+        }
+    })
 
-  const html = `<!DOCTYPE html><html><body>
+    const html = `<!DOCTYPE html><html><body>
 <audio autoplay onended="window.close()">
   <source src="data:audio/wav;base64,${base64}" type="audio/wav">
 </audio>
 <script>setTimeout(()=>window.close(),3000)</script>
 </body></html>`
 
-  soundWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
-  soundWin.on('closed', () => {})
+    soundWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+    soundWin.on('closed', () => {
+    })
 }
 
 // 当前显示的浮窗列表
 const activeNotifications: FloatNotification[] = []
 
 function getNotificationHTML(data: { title: string; body: string; icon: string; color: string }): string {
-  const { title, body, icon, color } = data
-  // 转义 HTML
-  const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    const {title, body, icon, color} = data
+    // 转义 HTML
+    const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
-  return `<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
@@ -219,115 +220,115 @@ function getNotificationHTML(data: { title: string; body: string; icon: string; 
 }
 
 function cleanupClosed(): void {
-  for (let i = activeNotifications.length - 1; i >= 0; i--) {
-    if (activeNotifications[i].window.isDestroyed()) {
-      clearTimeout(activeNotifications[i].timer)
-      activeNotifications.splice(i, 1)
+    for (let i = activeNotifications.length - 1; i >= 0; i--) {
+        if (activeNotifications[i].window.isDestroyed()) {
+            clearTimeout(activeNotifications[i].timer)
+            activeNotifications.splice(i, 1)
+        }
     }
-  }
 }
 
 function repositionAll(): void {
-  cleanupClosed()
-  const display = screen.getPrimaryDisplay()
-  const { width: screenW, height: screenH } = display.workArea
+    cleanupClosed()
+    const display = screen.getPrimaryDisplay()
+    const {width: screenW, height: screenH} = display.workArea
 
-  let offsetY = NOTIFICATION_GAP
-  for (const notif of activeNotifications) {
-    if (notif.window.isDestroyed()) continue
-    const x = screenW - NOTIFICATION_WIDTH - NOTIFICATION_GAP
-    const y = screenH - NOTIFICATION_HEIGHT - offsetY
-    notif.window.setPosition(Math.round(x), Math.round(y), false)
-    offsetY += NOTIFICATION_HEIGHT + NOTIFICATION_GAP
-  }
+    let offsetY = NOTIFICATION_GAP
+    for (const notif of activeNotifications) {
+        if (notif.window.isDestroyed()) continue
+        const x = screenW - NOTIFICATION_WIDTH - NOTIFICATION_GAP
+        const y = screenH - NOTIFICATION_HEIGHT - offsetY
+        notif.window.setPosition(Math.round(x), Math.round(y), false)
+        offsetY += NOTIFICATION_HEIGHT + NOTIFICATION_GAP
+    }
 }
 
 export function showFloatNotification(data: {
-  title: string
-  body: string
-  icon?: string
-  color?: string
-  onClick?: () => void
+    title: string
+    body: string
+    icon?: string
+    color?: string
+    onClick?: () => void
 }): void {
-  cleanupClosed()
+    cleanupClosed()
 
-  // 最多同时显示 3 个浮窗
-  if (activeNotifications.length >= 3) {
-    const oldest = activeNotifications.shift()
-    if (oldest && !oldest.window.isDestroyed()) {
-      clearTimeout(oldest.timer)
-      oldest.window.close()
+    // 最多同时显示 3 个浮窗
+    if (activeNotifications.length >= 3) {
+        const oldest = activeNotifications.shift()
+        if (oldest && !oldest.window.isDestroyed()) {
+            clearTimeout(oldest.timer)
+            oldest.window.close()
+        }
     }
-  }
 
-  const display = screen.getPrimaryDisplay()
-  const { width: screenW, height: screenH } = display.workArea
+    const display = screen.getPrimaryDisplay()
+    const {width: screenW, height: screenH} = display.workArea
 
-  const win = new BrowserWindow({
-    width: NOTIFICATION_WIDTH,
-    height: NOTIFICATION_HEIGHT,
-    x: screenW - NOTIFICATION_WIDTH - NOTIFICATION_GAP,
-    y: screenH - NOTIFICATION_HEIGHT - NOTIFICATION_GAP,
-    frame: false,
-    transparent: true,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    resizable: false,
-    focusable: false,
-    show: false,
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false
-    }
-  })
+    const win = new BrowserWindow({
+        width: NOTIFICATION_WIDTH,
+        height: NOTIFICATION_HEIGHT,
+        x: screenW - NOTIFICATION_WIDTH - NOTIFICATION_GAP,
+        y: screenH - NOTIFICATION_HEIGHT - NOTIFICATION_GAP,
+        frame: false,
+        transparent: true,
+        alwaysOnTop: true,
+        skipTaskbar: true,
+        resizable: false,
+        focusable: false,
+        show: false,
+        webPreferences: {
+            contextIsolation: true,
+            nodeIntegration: false
+        }
+    })
 
-  // 禁止拖拽改变位置后恢复原位
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+    // 禁止拖拽改变位置后恢复原位
+    win.setVisibleOnAllWorkspaces(true, {visibleOnFullScreen: true})
 
-  const html = getNotificationHTML({
-    title: data.title,
-    body: data.body,
-    icon: data.icon || '🔔',
-    color: data.color || '#409EFF'
-  })
+    const html = getNotificationHTML({
+        title: data.title,
+        body: data.body,
+        icon: data.icon || '🔔',
+        color: data.color || '#409EFF'
+    })
 
-  win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+    win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
 
-  win.once('ready-to-show', () => {
-    win.showInactive()
-    playNotificationSound()
-  })
+    win.once('ready-to-show', () => {
+        win.showInactive()
+        playNotificationSound()
+    })
 
-  // 点击通知 → 回调
-  win.webContents.on('before-input-event', (_event, input) => {
-    if (input.type === 'mouseDown') {
-      data.onClick?.()
-    }
-  })
+    // 点击通知 → 回调
+    win.webContents.on('before-input-event', (_event, input) => {
+        if (input.type === 'mouseDown') {
+            data.onClick?.()
+        }
+    })
 
-  // 自动关闭
-  const timer = setTimeout(() => {
-    if (!win.isDestroyed()) {
-      win.close()
-    }
+    // 自动关闭
+    const timer = setTimeout(() => {
+        if (!win.isDestroyed()) {
+            win.close()
+        }
+        repositionAll()
+    }, NOTIFICATION_DURATION)
+
+    win.on('closed', () => {
+        repositionAll()
+    })
+
+    const notif: FloatNotification = {window: win, timer}
+    activeNotifications.push(notif)
     repositionAll()
-  }, NOTIFICATION_DURATION)
-
-  win.on('closed', () => {
-    repositionAll()
-  })
-
-  const notif: FloatNotification = { window: win, timer }
-  activeNotifications.push(notif)
-  repositionAll()
 }
 
 export function closeAllNotifications(): void {
-  for (const notif of activeNotifications) {
-    clearTimeout(notif.timer)
-    if (!notif.window.isDestroyed()) {
-      notif.window.close()
+    for (const notif of activeNotifications) {
+        clearTimeout(notif.timer)
+        if (!notif.window.isDestroyed()) {
+            notif.window.close()
+        }
     }
-  }
-  activeNotifications.length = 0
+    activeNotifications.length = 0
 }

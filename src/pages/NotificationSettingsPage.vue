@@ -10,7 +10,7 @@
         <div class="channel-header">
           <div class="channel-info">
             <span v-if="channel.key === 'wechat_work'" class="channel-icon">
-              <img :src="wechatWorkIcon" class="channel-icon-img" />
+              <img :src="wechatWorkIcon" class="channel-icon-img"/>
             </span>
             <span v-else class="channel-icon">{{ channel.icon }}</span>
             <div>
@@ -20,16 +20,16 @@
           </div>
           <div class="channel-actions">
             <el-switch
-              :model-value="notificationsStore.isEnabled(channel.key)"
-              @change="(val: boolean) => handleToggle(channel.key, val)"
+                :model-value="notificationsStore.isEnabled(channel.key)"
+                @change="(val: boolean) => handleToggle(channel.key, val)"
             />
             <span
-              v-if="notificationsStore.isEnabled(channel.key) && channel.key !== 'desktop'"
-              class="expand-arrow"
-              :class="{ expanded: expandedChannels[channel.key] }"
-              @click="toggleExpand(channel.key)"
+                v-if="notificationsStore.isEnabled(channel.key) && channel.key !== 'desktop'"
+                class="expand-arrow"
+                :class="{ expanded: expandedChannels[channel.key] }"
+                @click="toggleExpand(channel.key)"
             >
-              <el-icon :size="16"><ArrowDown /></el-icon>
+              <el-icon :size="16"><ArrowDown/></el-icon>
             </span>
           </div>
         </div>
@@ -40,14 +40,15 @@
         </div>
 
         <!-- 邮件配置 -->
-        <div v-if="channel.key === 'email' && notificationsStore.isEnabled(channel.key) && expandedChannels['email']" class="channel-config">
+        <div v-if="channel.key === 'email' && notificationsStore.isEnabled(channel.key) && expandedChannels['email']"
+             class="channel-config">
           <el-form :model="emailConfig" label-position="top" size="small">
             <div class="config-row">
               <el-form-item label="SMTP 服务器">
-                <el-input v-model="emailConfig.smtp_host" placeholder="smtp.example.com" />
+                <el-input v-model="emailConfig.smtp_host" placeholder="smtp.example.com"/>
               </el-form-item>
               <el-form-item label="端口">
-                <el-input-number v-model="emailConfig.smtp_port" :min="1" :max="65535" style="width: 100%;" />
+                <el-input-number v-model="emailConfig.smtp_port" :min="1" :max="65535" style="width: 100%;"/>
               </el-form-item>
             </div>
             <el-form-item>
@@ -55,32 +56,36 @@
             </el-form-item>
             <div class="config-row">
               <el-form-item label="用户名">
-                <el-input v-model="emailConfig.smtp_user" placeholder="your@email.com" />
+                <el-input v-model="emailConfig.smtp_user" placeholder="your@email.com"/>
               </el-form-item>
               <el-form-item label="密码/授权码">
-                <el-input v-model="emailConfig.smtp_pass" type="password" show-password placeholder="SMTP密码或授权码" />
+                <el-input v-model="emailConfig.smtp_pass" type="password" show-password placeholder="SMTP密码或授权码"/>
               </el-form-item>
             </div>
             <el-form-item label="发件人地址">
-              <el-input v-model="emailConfig.from_address" placeholder="留空则使用用户名" />
+              <el-input v-model="emailConfig.from_address" placeholder="留空则使用用户名"/>
             </el-form-item>
             <el-form-item label="收件人地址（多个用逗号分隔）">
-              <el-input v-model="emailToStr" placeholder="多个地址用逗号分隔" />
+              <el-input v-model="emailToStr" placeholder="多个地址用逗号分隔"/>
             </el-form-item>
             <div class="template-section">
               <div class="template-header" @click="templateExpanded.email = !templateExpanded.email">
                 <span class="template-header-title">消息模板</span>
-                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.email }"><ArrowDown /></el-icon>
+                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.email }">
+                  <ArrowDown/>
+                </el-icon>
               </div>
               <div v-if="templateExpanded.email" class="template-body">
                 <div class="template-vars-tip" v-pre>
-                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 · <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名
+                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 ·
+                  <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名
                 </div>
                 <el-form-item label="邮件主题模板">
-                  <el-input v-model="emailConfig.subject_template" placeholder="[{{app_name}}] {{title}}" />
+                  <el-input v-model="emailConfig.subject_template" placeholder="[{{app_name}}] {{title}}"/>
                 </el-form-item>
                 <el-form-item label="邮件正文模板（HTML）">
-                  <el-input v-model="emailConfig.body_template" type="textarea" :rows="5" placeholder="留空使用默认精美模板" />
+                  <el-input v-model="emailConfig.body_template" type="textarea" :rows="5"
+                            placeholder="留空使用默认精美模板"/>
                 </el-form-item>
               </div>
             </div>
@@ -94,7 +99,9 @@
         </div>
 
         <!-- Telegram 配置 -->
-        <div v-if="channel.key === 'telegram' && notificationsStore.isEnabled(channel.key) && expandedChannels['telegram']" class="channel-config">
+        <div
+            v-if="channel.key === 'telegram' && notificationsStore.isEnabled(channel.key) && expandedChannels['telegram']"
+            class="channel-config">
           <div class="config-guide">
             <div class="guide-title">配置步骤</div>
             <ol class="guide-steps">
@@ -106,31 +113,37 @@
           </div>
           <el-form :model="telegramConfig" label-position="top" size="small">
             <el-form-item label="Bot Token">
-              <el-input v-model="telegramConfig.bot_token" placeholder="123456:ABC-DEF..." />
+              <el-input v-model="telegramConfig.bot_token" placeholder="123456:ABC-DEF..."/>
             </el-form-item>
             <el-form-item label="Chat ID（多个用逗号分隔）">
-              <el-input v-model="telegramConfig.chat_id" placeholder="如 123456789 或 123456789,987654321" />
+              <el-input v-model="telegramConfig.chat_id" placeholder="如 123456789 或 123456789,987654321"/>
             </el-form-item>
             <el-form-item label="代理地址（国内网络需要）">
-              <el-input v-model="telegramConfig.proxy_url" placeholder="http://127.0.0.1:7890" />
+              <el-input v-model="telegramConfig.proxy_url" placeholder="http://127.0.0.1:7890"/>
             </el-form-item>
             <div class="template-section">
               <div class="template-header" @click="templateExpanded.telegram = !templateExpanded.telegram">
                 <span class="template-header-title">消息模板</span>
-                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.telegram }"><ArrowDown /></el-icon>
+                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.telegram }">
+                  <ArrowDown/>
+                </el-icon>
               </div>
               <div v-if="templateExpanded.telegram" class="template-body">
                 <div class="template-vars-tip" v-pre>
-                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 · <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名。支持 HTML 标签如 <code>&lt;b&gt;</code> <code>&lt;i&gt;</code>
+                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 ·
+                  <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名。支持 HTML 标签如 <code>&lt;b&gt;</code>
+                  <code>&lt;i&gt;</code>
                 </div>
                 <el-form-item label="消息模板">
-                  <el-input v-model="telegramConfig.message_template" type="textarea" :rows="3" placeholder="{{icon}} <b>{{title}}</b>\n\n{{body}}\n\n<i>来自 {{app_name}} · {{time}}</i>" />
+                  <el-input v-model="telegramConfig.message_template" type="textarea" :rows="3"
+                            placeholder="{{icon}} <b>{{title}}</b>\n\n{{body}}\n\n<i>来自 {{app_name}} · {{time}}</i>"/>
                 </el-form-item>
               </div>
             </div>
             <div class="config-actions">
               <el-button size="small" @click="saveConfig('telegram', telegramConfig)">保存配置</el-button>
-              <el-button size="small" type="success" plain :loading="testing === 'telegram'" @click="testChannel('telegram')">
+              <el-button size="small" type="success" plain :loading="testing === 'telegram'"
+                         @click="testChannel('telegram')">
                 发送测试
               </el-button>
             </div>
@@ -138,20 +151,22 @@
         </div>
 
         <!-- 企业微信配置 -->
-        <div v-if="channel.key === 'wechat_work' && notificationsStore.isEnabled(channel.key) && expandedChannels['wechat_work']" class="channel-config">
+        <div
+            v-if="channel.key === 'wechat_work' && notificationsStore.isEnabled(channel.key) && expandedChannels['wechat_work']"
+            class="channel-config">
           <el-form :model="wechatConfig" label-position="top" size="small">
             <el-form-item label="企业 ID (Corp ID)">
-              <el-input v-model="wechatConfig.corp_id" placeholder="ww..." />
+              <el-input v-model="wechatConfig.corp_id" placeholder="ww..."/>
             </el-form-item>
             <el-form-item label="应用 Secret">
-              <el-input v-model="wechatConfig.corp_secret" type="password" show-password placeholder="应用的Secret" />
+              <el-input v-model="wechatConfig.corp_secret" type="password" show-password placeholder="应用的Secret"/>
             </el-form-item>
             <div class="config-row">
               <el-form-item label="Agent ID">
-                <el-input v-model="wechatConfig.agent_id" placeholder="应用ID" />
+                <el-input v-model="wechatConfig.agent_id" placeholder="应用ID"/>
               </el-form-item>
               <el-form-item label="接收人（多个用 | 分隔）">
-                <el-input v-model="wechatConfig.to_user" placeholder="@all 或 user1|user2" />
+                <el-input v-model="wechatConfig.to_user" placeholder="@all 或 user1|user2"/>
               </el-form-item>
             </div>
             <el-form-item label="消息格式">
@@ -163,23 +178,29 @@
             <div class="template-section">
               <div class="template-header" @click="templateExpanded.wechat_work = !templateExpanded.wechat_work">
                 <span class="template-header-title">消息模板</span>
-                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.wechat_work }"><ArrowDown /></el-icon>
+                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.wechat_work }">
+                  <ArrowDown/>
+                </el-icon>
               </div>
               <div v-if="templateExpanded.wechat_work" class="template-body">
                 <div class="template-vars-tip" v-pre>
-                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 · <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名
+                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 ·
+                  <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名
                 </div>
                 <el-form-item v-if="wechatConfig.msg_type === 'text'" label="文本消息模板">
-                  <el-input v-model="wechatConfig.message_template" type="textarea" :rows="3" placeholder="{{icon}} {{title}}&#10;&#10;{{body}}&#10;&#10;{{app_name}} · {{time}}" />
+                  <el-input v-model="wechatConfig.message_template" type="textarea" :rows="3"
+                            placeholder="{{icon}} {{title}}&#10;&#10;{{body}}&#10;&#10;{{app_name}} · {{time}}"/>
                 </el-form-item>
                 <el-form-item v-else label="Markdown 消息模板">
-                  <el-input v-model="wechatConfig.markdown_template" type="textarea" :rows="4" placeholder="# {{icon}} {{title}}&#10;&#10;{{body}}&#10;&#10;> {{app_name}} · {{time}}" />
+                  <el-input v-model="wechatConfig.markdown_template" type="textarea" :rows="4"
+                            placeholder="# {{icon}} {{title}}&#10;&#10;{{body}}&#10;&#10;> {{app_name}} · {{time}}"/>
                 </el-form-item>
               </div>
             </div>
             <div class="config-actions">
               <el-button size="small" @click="saveConfig('wechat_work', wechatConfig)">保存配置</el-button>
-              <el-button size="small" type="success" plain :loading="testing === 'wechat_work'" @click="testChannel('wechat_work')">
+              <el-button size="small" type="success" plain :loading="testing === 'wechat_work'"
+                         @click="testChannel('wechat_work')">
                 发送测试
               </el-button>
             </div>
@@ -187,7 +208,9 @@
         </div>
 
         <!-- 企业微信消息推送配置 -->
-        <div v-if="channel.key === 'wechat_work_webhook' && notificationsStore.isEnabled(channel.key) && expandedChannels['wechat_work_webhook']" class="channel-config">
+        <div
+            v-if="channel.key === 'wechat_work_webhook' && notificationsStore.isEnabled(channel.key) && expandedChannels['wechat_work_webhook']"
+            class="channel-config">
           <div class="config-guide">
             <div class="guide-title">配置步骤</div>
             <ol class="guide-steps">
@@ -198,7 +221,8 @@
           </div>
           <el-form :model="wechatWebhookConfig" label-position="top" size="small">
             <el-form-item label="Webhook URL">
-              <el-input v-model="wechatWebhookConfig.webhook_url" placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx" />
+              <el-input v-model="wechatWebhookConfig.webhook_url"
+                        placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx"/>
             </el-form-item>
             <el-form-item label="消息格式">
               <el-radio-group v-model="wechatWebhookConfig.msg_type">
@@ -216,33 +240,41 @@
               </el-form-item>
               <div v-if="wechatWebhookConfig.mention_mode === 'custom'" class="config-row">
                 <el-form-item label="成员 UserID（逗号分隔）">
-                  <el-input v-model="wechatWebhookConfig.mention_userids" placeholder="zhangsan,lisi" />
+                  <el-input v-model="wechatWebhookConfig.mention_userids" placeholder="zhangsan,lisi"/>
                 </el-form-item>
                 <el-form-item label="成员手机号（逗号分隔）">
-                  <el-input v-model="wechatWebhookConfig.mention_mobiles" placeholder="13800138000,13900139000" />
+                  <el-input v-model="wechatWebhookConfig.mention_mobiles" placeholder="13800138000,13900139000"/>
                 </el-form-item>
               </div>
             </template>
             <div class="template-section">
-              <div class="template-header" @click="templateExpanded.wechat_work_webhook = !templateExpanded.wechat_work_webhook">
+              <div class="template-header"
+                   @click="templateExpanded.wechat_work_webhook = !templateExpanded.wechat_work_webhook">
                 <span class="template-header-title">消息模板</span>
-                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.wechat_work_webhook }"><ArrowDown /></el-icon>
+                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.wechat_work_webhook }">
+                  <ArrowDown/>
+                </el-icon>
               </div>
               <div v-if="templateExpanded.wechat_work_webhook" class="template-body">
                 <div class="template-vars-tip" v-pre>
-                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 · <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名
+                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 ·
+                  <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名
                 </div>
                 <el-form-item v-if="wechatWebhookConfig.msg_type === 'text'" label="文本消息模板">
-                  <el-input v-model="wechatWebhookConfig.message_template" type="textarea" :rows="3" placeholder="{{icon}} {{title}}&#10;&#10;{{body}}&#10;&#10;{{app_name}} · {{time}}" />
+                  <el-input v-model="wechatWebhookConfig.message_template" type="textarea" :rows="3"
+                            placeholder="{{icon}} {{title}}&#10;&#10;{{body}}&#10;&#10;{{app_name}} · {{time}}"/>
                 </el-form-item>
                 <el-form-item v-else label="Markdown 消息模板">
-                  <el-input v-model="wechatWebhookConfig.markdown_template" type="textarea" :rows="4" placeholder="# {{icon}} {{title}}&#10;&#10;{{body}}&#10;&#10;> {{app_name}} · {{time}}" />
+                  <el-input v-model="wechatWebhookConfig.markdown_template" type="textarea" :rows="4"
+                            placeholder="# {{icon}} {{title}}&#10;&#10;{{body}}&#10;&#10;> {{app_name}} · {{time}}"/>
                 </el-form-item>
               </div>
             </div>
             <div class="config-actions">
-              <el-button size="small" @click="saveConfig('wechat_work_webhook', wechatWebhookConfig)">保存配置</el-button>
-              <el-button size="small" type="success" plain :loading="testing === 'wechat_work_webhook'" @click="testChannel('wechat_work_webhook')">
+              <el-button size="small" @click="saveConfig('wechat_work_webhook', wechatWebhookConfig)">保存配置
+              </el-button>
+              <el-button size="small" type="success" plain :loading="testing === 'wechat_work_webhook'"
+                         @click="testChannel('wechat_work_webhook')">
                 发送测试
               </el-button>
             </div>
@@ -250,46 +282,51 @@
         </div>
 
         <!-- Webhook 配置 -->
-        <div v-if="channel.key === 'webhook' && notificationsStore.isEnabled(channel.key) && expandedChannels['webhook']" class="channel-config">
+        <div
+            v-if="channel.key === 'webhook' && notificationsStore.isEnabled(channel.key) && expandedChannels['webhook']"
+            class="channel-config">
           <div class="config-guide">
             <div class="guide-title">配置说明</div>
             <ul class="guide-steps">
               <li>填写接收通知的 HTTP 端点 URL</li>
               <li>支持 GET / POST / PUT 等方法，默认 POST</li>
               <li>自定义请求头使用 JSON 格式，如 <code>{"Authorization": "Bearer token"}</code></li>
-              <li v-pre>消息体模板支持变量：<code>{{title}}</code>、<code>{{body}}</code>、<code>{{reminder_id}}</code>，留空则使用默认 JSON 格式</li>
+              <li v-pre>消息体模板支持变量：<code>{{title}}</code>、<code>{{body}}</code>、<code>{{reminder_id}}</code>，留空则使用默认
+                JSON 格式
+              </li>
             </ul>
           </div>
           <el-form :model="webhookConfig" label-position="top" size="small">
             <div class="config-row">
               <el-form-item label="Webhook URL" style="grid-column: 1 / -1">
-                <el-input v-model="webhookConfig.url" placeholder="https://example.com/webhook" />
+                <el-input v-model="webhookConfig.url" placeholder="https://example.com/webhook"/>
               </el-form-item>
             </div>
             <div class="config-row">
               <el-form-item label="请求方法">
                 <el-select v-model="webhookConfig.method" style="width: 100%">
-                  <el-option label="POST" value="POST" />
-                  <el-option label="GET" value="GET" />
-                  <el-option label="PUT" value="PUT" />
-                  <el-option label="PATCH" value="PATCH" />
+                  <el-option label="POST" value="POST"/>
+                  <el-option label="GET" value="GET"/>
+                  <el-option label="PUT" value="PUT"/>
+                  <el-option label="PATCH" value="PATCH"/>
                 </el-select>
               </el-form-item>
               <el-form-item label="自定义请求头 (JSON)">
-                <el-input v-model="webhookConfig.headers" placeholder='{"Authorization": "Bearer xxx"}' />
+                <el-input v-model="webhookConfig.headers" placeholder='{"Authorization": "Bearer xxx"}'/>
               </el-form-item>
             </div>
             <el-form-item label="消息体模板（留空使用默认 JSON）">
               <el-input
-                v-model="webhookConfig.body_template"
-                type="textarea"
-                :rows="3"
-                placeholder='{"text": "{{title}}: {{body}}"}'
+                  v-model="webhookConfig.body_template"
+                  type="textarea"
+                  :rows="3"
+                  placeholder='{"text": "{{title}}: {{body}}"}'
               />
             </el-form-item>
             <div class="config-actions">
               <el-button size="small" @click="saveConfig('webhook', webhookConfig)">保存配置</el-button>
-              <el-button size="small" type="success" plain :loading="testing === 'webhook'" @click="testChannel('webhook')">
+              <el-button size="small" type="success" plain :loading="testing === 'webhook'"
+                         @click="testChannel('webhook')">
                 发送测试
               </el-button>
             </div>
@@ -297,7 +334,8 @@
         </div>
 
         <!-- 测试结果 -->
-        <div v-if="testResults[channel.key]" class="test-result" :class="testResults[channel.key]?.success ? 'success' : 'error'">
+        <div v-if="testResults[channel.key]" class="test-result"
+             :class="testResults[channel.key]?.success ? 'success' : 'error'">
           {{ testResults[channel.key]?.success ? '✓ 测试成功！' : `✗ 测试失败: ${testResults[channel.key]?.error}` }}
         </div>
       </div>
@@ -306,11 +344,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed, watch, reactive } from 'vue'
-import { useNotificationsStore } from '@/stores/notifications'
-import { CHANNELS } from '@/types/notification'
-import { ElMessage } from 'element-plus'
-import { ArrowDown } from '@element-plus/icons-vue'
+import {onMounted, reactive, ref, watch} from 'vue'
+import {useNotificationsStore} from '@/stores/notifications'
+import {CHANNELS} from '@/types/notification'
+import {ElMessage} from 'element-plus'
+import {ArrowDown} from '@element-plus/icons-vue'
 import wechatWorkIcon from '@/../resources/wechat-work.png'
 
 const notificationsStore = useNotificationsStore()
@@ -331,10 +369,26 @@ const emailConfig = ref({
 })
 const emailToStr = ref('')
 
-const telegramConfig = ref({ bot_token: '', chat_id: '', proxy_url: '', message_template: '' })
-const wechatConfig = ref({ corp_id: '', corp_secret: '', agent_id: '', to_user: '@all', msg_type: 'text', message_template: '', markdown_template: '' })
-const wechatWebhookConfig = ref({ webhook_url: '', msg_type: 'text', mention_mode: 'none', mention_userids: '', mention_mobiles: '', message_template: '', markdown_template: '' })
-const webhookConfig = ref({ url: '', method: 'POST', headers: '{}', body_template: '' })
+const telegramConfig = ref({bot_token: '', chat_id: '', proxy_url: '', message_template: ''})
+const wechatConfig = ref({
+  corp_id: '',
+  corp_secret: '',
+  agent_id: '',
+  to_user: '@all',
+  msg_type: 'text',
+  message_template: '',
+  markdown_template: ''
+})
+const wechatWebhookConfig = ref({
+  webhook_url: '',
+  msg_type: 'text',
+  mention_mode: 'none',
+  mention_userids: '',
+  mention_mobiles: '',
+  message_template: '',
+  markdown_template: ''
+})
+const webhookConfig = ref({url: '', method: 'POST', headers: '{}', body_template: ''})
 
 watch(emailToStr, (val) => {
   emailConfig.value.to_addresses = val.split(',').map(s => s.trim()).filter(Boolean)
@@ -357,11 +411,12 @@ function loadConfigFromStore(channel: string) {
     } else if (channel === 'webhook') {
       Object.assign(webhookConfig.value, json)
     }
-  } catch {}
+  } catch {
+  }
 }
 
 async function handleToggle(channel: string, enabled: boolean) {
-  await notificationsStore.updateConfig(channel, { is_enabled: enabled ? 1 : 0 })
+  await notificationsStore.updateConfig(channel, {is_enabled: enabled ? 1 : 0})
   if (enabled) loadConfigFromStore(channel)
 }
 
@@ -402,7 +457,7 @@ async function testChannel(channel: string) {
       ElMessage.error(`测试失败: ${result.error}`)
     }
   } catch (err: any) {
-    testResults.value[channel] = { success: false, error: err.message }
+    testResults.value[channel] = {success: false, error: err.message}
   } finally {
     testing.value = ''
   }

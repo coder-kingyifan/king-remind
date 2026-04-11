@@ -3,7 +3,7 @@
     <AppLayout>
       <router-view v-slot="{ Component }">
         <transition name="fade-slide" mode="out-in">
-          <component :is="Component" />
+          <component :is="Component"/>
         </transition>
       </router-view>
     </AppLayout>
@@ -23,13 +23,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { useSettingsStore } from '@/stores/settings'
+import {onMounted, ref} from 'vue'
+import {useSettingsStore} from '@/stores/settings'
 import AppLayout from '@/components/layout/AppLayout.vue'
 
 const settingsStore = useSettingsStore()
 const showNotification = ref(false)
-const notificationData = ref({ title: '', body: '' })
+const notificationData = ref({title: '', body: ''})
 let notifTimer: any = null
 
 onMounted(async () => {

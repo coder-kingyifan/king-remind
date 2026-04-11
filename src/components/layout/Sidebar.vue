@@ -1,20 +1,20 @@
 <template>
   <nav class="sidebar">
     <div class="sidebar-logo">
-      <img class="logo-icon" :src="logoIcon" alt="logo" />
+      <img class="logo-icon" :src="logoIcon" alt="logo"/>
     </div>
 
     <div class="sidebar-nav">
       <div
-        v-for="item in navItems"
-        :key="item.path"
-        class="nav-item"
-        :class="{ active: route.path === item.path }"
-        @click="router.push(item.path)"
+          v-for="item in navItems"
+          :key="item.path"
+          class="nav-item"
+          :class="{ active: route.path === item.path }"
+          @click="router.push(item.path)"
       >
         <el-tooltip :content="item.title" placement="right" :show-after="400">
           <el-icon :size="20">
-            <component :is="item.icon" />
+            <component :is="item.icon"/>
           </el-icon>
         </el-tooltip>
       </div>
@@ -24,8 +24,8 @@
       <div class="nav-item theme-toggle" @click="toggleTheme">
         <el-tooltip :content="themeTooltip" placement="right" :show-after="400">
           <el-icon :size="20">
-            <Sunny v-if="settingsStore.currentTheme === 'dark'" />
-            <Moon v-else />
+            <Sunny v-if="settingsStore.currentTheme === 'dark'"/>
+            <Moon v-else/>
           </el-icon>
         </el-tooltip>
       </div>
@@ -34,10 +34,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useSettingsStore } from '@/stores/settings'
-import { Odometer, Bell, Message, Setting, Sunny, Moon, ChatDotRound, Cpu } from '@element-plus/icons-vue'
+import {computed} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
+import {useSettingsStore} from '@/stores/settings'
+import {Bell, ChatDotRound, Cpu, Message, Moon, Odometer, Setting, Sunny} from '@element-plus/icons-vue'
 import logoIcon from '../../../resources/icon.png'
 
 const route = useRoute()
@@ -45,12 +45,12 @@ const router = useRouter()
 const settingsStore = useSettingsStore()
 
 const navItems = [
-  { path: '/', title: '仪表盘', icon: Odometer },
-  { path: '/reminders', title: '提醒管理', icon: Bell },
-  { path: '/ai-chat', title: 'AI 助手', icon: ChatDotRound },
-  { path: '/model-config', title: '模型配置', icon: Cpu },
-  { path: '/notifications', title: '通知渠道', icon: Message },
-  { path: '/settings', title: '系统设置', icon: Setting }
+  {path: '/', title: '仪表盘', icon: Odometer},
+  {path: '/reminders', title: '提醒管理', icon: Bell},
+  {path: '/ai-chat', title: 'AI 助手', icon: ChatDotRound},
+  {path: '/model-config', title: '模型配置', icon: Cpu},
+  {path: '/notifications', title: '通知渠道', icon: Message},
+  {path: '/settings', title: '系统设置', icon: Setting}
 ]
 
 const themeTooltip = computed(() => {
