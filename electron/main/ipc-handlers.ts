@@ -203,23 +203,60 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
   })
 
   // ========== AI 对话 ==========
-  safeHandle('ai:chat', async (_event, messages: Array<{ role: string; content: string }>, _configId?: number) => {
+  safeHandle('ai:chat', async (_event, messages: Array<{ role: string; content: string }>, _configId?: number, _sessionId?: number) => {
     const result = await chatWithLLM(messages, scheduler, _configId)
-    // 只保存最后一条用户消息（前端已 push 到 messages）
-    const lastUser = messages[messages.length - 1]
-    if (lastUser?.role === 'user') {
-      chatHistoryDb.append([lastUser])
-    }
-    if (result.reply) {
-      chatHistoryDb.append([{ role: 'assistant', content: result.reply }])
+    if (_sessionId) {
+      const lastUser = messages[messages.length - 1]
+      if (lastUser?.role === 'user') {
+        chatHistoryDb.appendToSession(_sessionId, [lastUser])
+      }
+      if (result.reply) {
+        chatHistoryDb.appendToSession(_sessionId, [{ role: 'assistant', content: result.reply }])
+      }
+    } else {
+      const lastUser = messages[messages.length - 1]
+      if (lastUser?.role === 'user') {
+        chatHistoryDb.append([lastUser])
+      }
+      if (result.reply) {
+        chatHistoryDb.append([{ role: 'assistant', content: result.reply }])
+      }
     }
     return result
   })
 
   safeHandle('ai:providers', () => {
-    return PROVIDERS.map(p => ({ id: p.id, name: p.name, baseUrl: p.baseUrl, apiKeyRequired: p.apiKeyRequired, defaultModel: p.defaultModel }))
+    return PROVIDERS.map(p => ({ id: p.id, name: p.name, baseUrl: p.baseUrl, apiKeyRequired: p.apiKeyRequired, defaultModel: p.defaultModel, models: p.models }))
   })
 
+  // ---- 会话管理 ----
+  safeHandle('ai:session:create', (_event, title?: string, modelId?: number) => {
+    return chatHistoryDb.createSession(title, modelId)
+  })
+
+  safeHandle('ai:session:list', () => {
+    return chatHistoryDb.listSessions()
+  })
+
+  safeHandle('ai:session:get', (_event, id: number) => {
+    return chatHistoryDb.getSession(id)
+  })
+
+  safeHandle('ai:session:delete', (_event, id: number) => {
+    chatHistoryDb.deleteSession(id)
+    return true
+  })
+
+  safeHandle('ai:session:update-title', (_event, id: number, title: string) => {
+    chatHistoryDb.updateSessionTitle(id, title)
+    return true
+  })
+
+  safeHandle('ai:session:load-messages', (_event, sessionId: number) => {
+    return chatHistoryDb.loadBySession(sessionId)
+  })
+
+  // ---- 旧接口（兼容） ----
   safeHandle('ai:chat-history:load', () => {
     return chatHistoryDb.load()
   })

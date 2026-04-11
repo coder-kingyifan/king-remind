@@ -19,10 +19,12 @@
           </el-select>
         </div>
         <div class="header-right">
+          <el-button size="small" plain @click="showHistory = true">
+            <el-icon style="margin-right:4px"><Clock /></el-icon>历史
+          </el-button>
           <el-button size="small" plain @click="newChat">
             <el-icon style="margin-right:4px"><Plus /></el-icon>新对话
           </el-button>
-          <el-button v-if="messages.length > 0" size="small" plain @click="clearChat">清空记录</el-button>
         </div>
       </div>
     </div>
@@ -82,13 +84,43 @@
         </div>
       </div>
     </div>
+
+    <!-- 历史记录抽屉 -->
+    <el-drawer v-model="showHistory" title="历史对话" direction="ltr" size="320px">
+      <div class="history-list">
+        <div
+          v-for="s in sessions"
+          :key="s.id"
+          class="history-item"
+          :class="{ active: currentSessionId === s.id }"
+          @click="loadSession(s)"
+        >
+          <div class="history-item-info">
+            <div class="history-item-title">{{ s.title }}</div>
+            <div class="history-item-date">{{ formatTime(s.created_at) }}</div>
+          </div>
+          <el-button
+            class="history-item-delete"
+            size="small"
+            plain
+            type="danger"
+            :icon="Delete"
+            circle
+            @click.stop="handleDeleteSession(s)"
+          />
+        </div>
+        <div v-if="sessions.length === 0" class="history-empty">
+          暂无历史对话
+        </div>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, nextTick, onMounted } from 'vue'
-import { Promotion, Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { Promotion, Plus, Clock, Delete } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -101,6 +133,14 @@ interface ModelItem {
   is_default: number
 }
 
+interface SessionItem {
+  id: number
+  title: string
+  model_id: number | null
+  created_at: string
+  updated_at: string
+}
+
 const messages = ref<ChatMessage[]>([])
 const inputText = ref('')
 const loading = ref(false)
@@ -108,6 +148,9 @@ const messageList = ref<HTMLElement | null>(null)
 const inputRef = ref<any>(null)
 const modelList = ref<ModelItem[]>([])
 const selectedModelId = ref<number | undefined>(undefined)
+const currentSessionId = ref<number | null>(null)
+const sessions = ref<SessionItem[]>([])
+const showHistory = ref(false)
 
 const suggestions = [
   '每30分钟提醒我喝水',
@@ -125,6 +168,11 @@ function renderContent(text: string): string {
     .replace(/\n/g, '<br/>')
 }
 
+function formatTime(t: string): string {
+  if (!t) return ''
+  return t.replace(/:\d{2}$/, '')
+}
+
 async function scrollToBottom() {
   await nextTick()
   if (messageList.value) {
@@ -140,14 +188,26 @@ onMounted(async () => {
     else if (modelList.value.length > 0) selectedModelId.value = modelList.value[0].id
   } catch { /* ignore */ }
 
-  try {
-    const history = await window.electronAPI.ai.loadHistory()
-    if (history && history.length > 0) {
-      messages.value = history as ChatMessage[]
-      scrollToBottom()
-    }
-  } catch { /* ignore */ }
+  // 加载历史会话列表
+  await loadSessions()
+
+  // 每次进入创建新会话
+  await createNewSession()
 })
+
+async function loadSessions() {
+  try {
+    sessions.value = await window.electronAPI.ai.listSessions()
+  } catch { /* ignore */ }
+}
+
+async function createNewSession() {
+  try {
+    const session = await window.electronAPI.ai.createSession('新对话', selectedModelId.value)
+    currentSessionId.value = session.id
+    messages.value = []
+  } catch { /* ignore */ }
+}
 
 function sendSuggestion(text: string) {
   inputText.value = text
@@ -155,18 +215,29 @@ function sendSuggestion(text: string) {
 }
 
 async function newChat() {
-  messages.value = []
+  await createNewSession()
+}
+
+async function loadSession(s: SessionItem) {
   try {
-    await window.electronAPI.ai.clearHistory()
+    const msgs = await window.electronAPI.ai.loadSessionMessages(s.id)
+    currentSessionId.value = s.id
+    messages.value = msgs as ChatMessage[]
+    showHistory.value = false
+    scrollToBottom()
   } catch { /* ignore */ }
 }
 
-async function clearChat() {
-  messages.value = []
+async function handleDeleteSession(s: SessionItem) {
   try {
-    await window.electronAPI.ai.clearHistory()
-    ElMessage.success('聊天记录已清空')
-  } catch { /* ignore */ }
+    await ElMessageBox.confirm(`确定删除「${s.title}」？`, '删除确认', { type: 'warning' })
+    await window.electronAPI.ai.deleteSession(s.id)
+    if (currentSessionId.value === s.id) {
+      await createNewSession()
+    }
+    await loadSessions()
+    ElMessage.success('已删除')
+  } catch { /* cancel */ }
 }
 
 async function send() {
@@ -183,14 +254,29 @@ async function send() {
   loading.value = true
   await scrollToBottom()
 
+  // 如果是第一条消息，自动更新标题
+  const isFirstMsg = messages.value.filter(m => m.role === 'user').length === 1
+
   try {
-    // 发送完整历史给 LLM 以保持上下文连贯
-    const result = await window.electronAPI.ai.chat(JSON.parse(JSON.stringify(messages.value)), selectedModelId.value)
+    const result = await window.electronAPI.ai.chat(
+      JSON.parse(JSON.stringify(messages.value)),
+      selectedModelId.value,
+      currentSessionId.value || undefined
+    )
 
     if (result.reply) {
       messages.value.push({ role: 'assistant', content: result.reply })
     } else {
       messages.value.push({ role: 'assistant', content: '已为你完成操作！' })
+    }
+
+    // 更新会话标题
+    if (isFirstMsg && currentSessionId.value) {
+      const title = text.length > 20 ? text.substring(0, 20) + '...' : text
+      try {
+        await window.electronAPI.ai.updateSessionTitle(currentSessionId.value, title)
+        await loadSessions()
+      } catch { /* ignore */ }
     }
   } catch (e: any) {
     messages.value.push({
@@ -397,5 +483,70 @@ async function send() {
   color: var(--text-tertiary);
   margin-top: 6px;
   text-align: center;
+}
+
+/* 历史记录 */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid var(--border-color-light);
+}
+
+.history-item:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+
+.history-item.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+
+.history-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-item-date {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.history-item-delete {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.history-item:hover .history-item-delete {
+  opacity: 1;
+}
+
+.history-empty {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--text-tertiary);
+  font-size: 13px;
 }
 </style>

@@ -93,11 +93,20 @@ const electronAPI = {
 
   // AI 对话
   ai: {
-    chat: (messages: Array<{ role: string; content: string }>, configId?: number) =>
-      safeInvoke('ai:chat', messages, configId),
+    chat: (messages: Array<{ role: string; content: string }>, configId?: number, sessionId?: number) =>
+      safeInvoke('ai:chat', messages, configId, sessionId),
     getProviders: () => safeInvoke('ai:providers'),
     loadHistory: () => safeInvoke('ai:chat-history:load'),
-    clearHistory: () => safeInvoke('ai:chat-history:clear')
+    clearHistory: () => safeInvoke('ai:chat-history:clear'),
+    createSession: (title?: string, modelId?: number) =>
+      safeInvoke('ai:session:create', title, modelId),
+    listSessions: () => safeInvoke('ai:session:list'),
+    getSession: (id: number) => safeInvoke('ai:session:get', id),
+    deleteSession: (id: number) => safeInvoke('ai:session:delete', id),
+    updateSessionTitle: (id: number, title: string) =>
+      safeInvoke('ai:session:update-title', id, title),
+    loadSessionMessages: (sessionId: number) =>
+      safeInvoke('ai:session:load-messages', sessionId)
   },
 
   // 模型配置

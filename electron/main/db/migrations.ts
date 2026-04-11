@@ -164,6 +164,20 @@ export function runMigrations(): void {
           updated_at  TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
         );
       `
+    },
+    {
+      version: 9,
+      sql: `
+        CREATE TABLE IF NOT EXISTS chat_sessions (
+          id         INTEGER PRIMARY KEY AUTOINCREMENT,
+          title      TEXT    NOT NULL DEFAULT '新对话',
+          model_id   INTEGER DEFAULT NULL,
+          created_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
+          updated_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
+        );
+
+        ALTER TABLE chat_messages ADD COLUMN session_id INTEGER DEFAULT NULL;
+      `
     }
   ]
 

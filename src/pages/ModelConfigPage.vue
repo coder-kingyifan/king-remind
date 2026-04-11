@@ -12,13 +12,13 @@
       <div v-for="cfg in configs" :key="cfg.id" class="model-card">
         <div class="model-header">
           <div class="model-info">
-            <span class="model-icon">🤖</span>
+            <span class="model-icon">{{ getProviderIcon(cfg.provider) }}</span>
             <div>
               <div class="model-name">
                 {{ cfg.name }}
                 <el-tag v-if="cfg.is_default" size="small" type="success">默认</el-tag>
               </div>
-              <div class="model-meta">{{ getProviderName(cfg.provider) }} · {{ cfg.model }}</div>
+              <div class="model-meta">{{ getProviderName(cfg.provider) }} &middot; {{ cfg.model }}</div>
             </div>
           </div>
           <div class="model-actions">
@@ -38,18 +38,33 @@
     <el-dialog
       v-model="showForm"
       :title="editingId ? '编辑模型' : '添加模型'"
-      width="480px"
+      width="500px"
       :close-on-click-modal="false"
     >
       <el-form :model="form" label-position="top" size="default">
+        <el-form-item label="服务商" required>
+          <el-select v-model="form.provider" style="width: 100%;" filterable @change="onProviderChange">
+            <el-option v-for="p in providers" :key="p.id" :label="p.name" :value="p.id" />
+          </el-select>
+        </el-form-item>
+
         <el-form-item label="名称" required>
           <el-input v-model="form.name" placeholder="给这个模型起个名字，如：DeepSeek-V3" />
         </el-form-item>
 
-        <el-form-item label="服务商" required>
-          <el-select v-model="form.provider" style="width: 100%;" @change="onProviderChange">
-            <el-option v-for="p in providers" :key="p.id" :label="p.name" :value="p.id" />
+        <el-form-item label="模型" required>
+          <el-select
+            v-if="currentProviderModels.length > 0"
+            v-model="form.model"
+            style="width: 100%;"
+            filterable
+            allow-create
+            default-first-option
+            :placeholder="'选择或输入模型名称'"
+          >
+            <el-option v-for="m in currentProviderModels" :key="m" :label="m" :value="m" />
           </el-select>
+          <el-input v-else v-model="form.model" :placeholder="currentProviderPreset?.defaultModel || '输入模型名称'" />
         </el-form-item>
 
         <el-form-item label="API 地址">
@@ -57,11 +72,7 @@
         </el-form-item>
 
         <el-form-item label="API Key">
-          <el-input v-model="form.api_key" type="password" show-password placeholder="sk-..." />
-        </el-form-item>
-
-        <el-form-item label="模型" required>
-          <el-input v-model="form.model" :placeholder="currentProviderPreset?.defaultModel || 'gpt-4o-mini'" />
+          <el-input v-model="form.api_key" type="password" show-password :placeholder="currentProviderPreset?.apiKeyRequired ? 'sk-...' : '可选'" />
         </el-form-item>
 
         <el-form-item>
@@ -97,6 +108,7 @@ interface ProviderInfo {
   baseUrl: string
   apiKeyRequired: boolean
   defaultModel: string
+  models: string[]
 }
 
 const configs = ref<ModelConfigRow[]>([])
@@ -118,8 +130,35 @@ const currentProviderPreset = computed(() =>
   providers.value.find(p => p.id === form.value.provider)
 )
 
+const currentProviderModels = computed(() =>
+  currentProviderPreset.value?.models || []
+)
+
 function getProviderName(id: string): string {
   return providers.value.find(p => p.id === id)?.name || id
+}
+
+const PROVIDER_ICONS: Record<string, string> = {
+  ollama: '🦙',
+  openai: '🤖',
+  deepseek: '🐋',
+  qwen: '☁️',
+  kimi: '🌙',
+  zhipu: '🔮',
+  claude: '🧠',
+  doubao: '🫘',
+  hunyuan: '🐧',
+  ernie: '🔵',
+  spark: '⚡',
+  yi: '🌍',
+  siliconflow: '🔥',
+  groq: '⚡',
+  xiaomi: '📱',
+  custom: '⚙️'
+}
+
+function getProviderIcon(id: string): string {
+  return PROVIDER_ICONS[id] || '🤖'
 }
 
 async function loadData() {
@@ -140,6 +179,9 @@ function onProviderChange(id: string) {
   if (!p) return
   if (!form.value.base_url) form.value.base_url = p.baseUrl
   if (!form.value.model) form.value.model = p.defaultModel
+  if (!form.value.name && p.defaultModel) {
+    form.value.name = p.defaultModel
+  }
 }
 
 function openForm(cfg?: ModelConfigRow) {
@@ -157,7 +199,7 @@ function openForm(cfg?: ModelConfigRow) {
     editingId.value = null
     const p = providers.value[0]
     form.value = {
-      name: '',
+      name: p?.defaultModel || '',
       provider: p?.id || 'ollama',
       base_url: p?.baseUrl || '',
       api_key: '',
@@ -260,6 +302,13 @@ async function setDefault(id: number) {
 
 .model-icon {
   font-size: 28px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border-radius: 10px;
 }
 
 .model-name {

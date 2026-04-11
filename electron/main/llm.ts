@@ -13,16 +13,154 @@ export interface ProviderPreset {
   apiKeyRequired: boolean
   defaultModel: string
   protocol: 'openai' | 'anthropic'
+  models: string[]
 }
 
 export const PROVIDERS: ProviderPreset[] = [
-  { id: 'ollama', name: 'Ollama（本地）', baseUrl: 'http://127.0.0.1:11434/v1', apiKeyRequired: false, defaultModel: 'qwen3:8b', protocol: 'openai' },
-  { id: 'openai', name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', apiKeyRequired: true, defaultModel: 'gpt-4o-mini', protocol: 'openai' },
-  { id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', apiKeyRequired: true, defaultModel: 'deepseek-chat', protocol: 'openai' },
-  { id: 'qwen', name: '通义千问', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKeyRequired: true, defaultModel: 'qwen-plus', protocol: 'openai' },
-  { id: 'zhipu', name: '智谱 GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', apiKeyRequired: true, defaultModel: 'glm-4-flash', protocol: 'openai' },
-  { id: 'claude', name: 'Claude', baseUrl: 'https://api.anthropic.com', apiKeyRequired: true, defaultModel: 'claude-sonnet-4-20250514', protocol: 'anthropic' },
-  { id: 'custom', name: '自定义（OpenAI 兼容）', baseUrl: '', apiKeyRequired: true, defaultModel: '', protocol: 'openai' }
+  {
+    id: 'ollama',
+    name: 'Ollama（本地）',
+    baseUrl: 'http://127.0.0.1:11434/v1',
+    apiKeyRequired: false,
+    defaultModel: 'qwen3:8b',
+    protocol: 'openai',
+    models: ['qwen3:8b', 'qwen3:14b', 'qwen3:32b', 'deepseek-r1:8b', 'deepseek-r1:14b', 'llama3.1:8b', 'gemma2:9b', 'mistral:7b', 'codellama:7b', 'phi3:mini']
+  },
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    baseUrl: 'https://api.openai.com/v1',
+    apiKeyRequired: true,
+    defaultModel: 'gpt-4o-mini',
+    protocol: 'openai',
+    models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo', 'o1-mini', 'o3-mini']
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    baseUrl: 'https://api.deepseek.com',
+    apiKeyRequired: true,
+    defaultModel: 'deepseek-chat',
+    protocol: 'openai',
+    models: ['deepseek-chat', 'deepseek-reasoner']
+  },
+  {
+    id: 'qwen',
+    name: '阿里百炼（通义千问）',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    apiKeyRequired: true,
+    defaultModel: 'qwen-plus',
+    protocol: 'openai',
+    models: ['qwen-turbo', 'qwen-plus', 'qwen-max', 'qwen-long', 'qwen-vl-plus', 'qwen-vl-max', 'qwen-coder-plus', 'qwq-plus']
+  },
+  {
+    id: 'kimi',
+    name: 'Kimi（月之暗面）',
+    baseUrl: 'https://api.moonshot.cn/v1',
+    apiKeyRequired: true,
+    defaultModel: 'moonshot-v1-8k',
+    protocol: 'openai',
+    models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k']
+  },
+  {
+    id: 'zhipu',
+    name: '智谱 GLM',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    apiKeyRequired: true,
+    defaultModel: 'glm-4-flash',
+    protocol: 'openai',
+    models: ['glm-4-flash', 'glm-4-air', 'glm-4-plus', 'glm-4-long', 'glm-4', 'glm-4v', 'glm-z1-flash']
+  },
+  {
+    id: 'claude',
+    name: 'Claude（Anthropic）',
+    baseUrl: 'https://api.anthropic.com',
+    apiKeyRequired: true,
+    defaultModel: 'claude-sonnet-4-20250514',
+    protocol: 'anthropic',
+    models: ['claude-sonnet-4-20250514', 'claude-haiku-4-20250514', 'claude-opus-4-20250514']
+  },
+  {
+    id: 'doubao',
+    name: '字节豆包',
+    baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+    apiKeyRequired: true,
+    defaultModel: 'doubao-pro-32k',
+    protocol: 'openai',
+    models: ['doubao-pro-32k', 'doubao-pro-128k', 'doubao-lite-32k', 'doubao-lite-128k']
+  },
+  {
+    id: 'hunyuan',
+    name: '腾讯混元',
+    baseUrl: 'https://api.hunyuan.cloud.tencent.com/v1',
+    apiKeyRequired: true,
+    defaultModel: 'hunyuan-lite',
+    protocol: 'openai',
+    models: ['hunyuan-lite', 'hunyuan-standard', 'hunyuan-pro', 'hunyuan-turbo', 'hunyuan-turbos']
+  },
+  {
+    id: 'ernie',
+    name: '百度文心一言',
+    baseUrl: 'https://qianfan.baidubce.com/v2',
+    apiKeyRequired: true,
+    defaultModel: 'ernie-4.0-8k',
+    protocol: 'openai',
+    models: ['ernie-4.0-8k', 'ernie-4.0-turbo-8k', 'ernie-3.5-8k', 'ernie-speed-8k', 'ernie-speed-128k', 'ernie-lite-8k']
+  },
+  {
+    id: 'spark',
+    name: '讯飞星火',
+    baseUrl: 'https://spark-api-open.xf-yun.com/v1',
+    apiKeyRequired: true,
+    defaultModel: 'generalv3.5',
+    protocol: 'openai',
+    models: ['4.0Ultra', 'generalv3.5', 'generalv3', 'generalv2']
+  },
+  {
+    id: 'yi',
+    name: '零一万物（Yi）',
+    baseUrl: 'https://api.lingyiwanwu.com/v1',
+    apiKeyRequired: true,
+    defaultModel: 'yi-lightning',
+    protocol: 'openai',
+    models: ['yi-lightning', 'yi-large', 'yi-medium', 'yi-spark', 'yi-vision']
+  },
+  {
+    id: 'siliconflow',
+    name: 'SiliconFlow（硅基流动）',
+    baseUrl: 'https://api.siliconflow.cn/v1',
+    apiKeyRequired: true,
+    defaultModel: 'Qwen/Qwen2.5-7B-Instruct',
+    protocol: 'openai',
+    models: ['Qwen/Qwen2.5-7B-Instruct', 'Qwen/Qwen2.5-72B-Instruct', 'deepseek-ai/DeepSeek-V3', 'deepseek-ai/DeepSeek-R1', 'Pro/deepseek-ai/DeepSeek-V3', 'THUDM/glm-4-9b-chat']
+  },
+  {
+    id: 'groq',
+    name: 'Groq',
+    baseUrl: 'https://api.groq.com/openai/v1',
+    apiKeyRequired: true,
+    defaultModel: 'llama-3.3-70b-versatile',
+    protocol: 'openai',
+    models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it']
+  },
+  {
+    id: 'xiaomi',
+    name: '小米',
+    baseUrl: 'https://apim-njimx.xiaomi.com/v1',
+    apiKeyRequired: true,
+    defaultModel: 'MiMo-7B-RL',
+    protocol: 'openai',
+    models: ['MiMo-7B-RL']
+  },
+  {
+    id: 'custom',
+    name: '自定义（OpenAI 兼容）',
+    baseUrl: '',
+    apiKeyRequired: true,
+    defaultModel: '',
+    protocol: 'openai',
+    models: []
+  }
 ]
 
 export function getProviderById(id: string): ProviderPreset {
