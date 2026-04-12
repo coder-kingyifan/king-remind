@@ -384,9 +384,9 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
         return skillsDb.toggleEnabled(id)
     })
 
-    safeHandle('skills:execute', async (_event, id: number) => {
+    safeHandle('skills:execute', async (_event, id: number, options?: { skipEnabledCheck?: boolean }) => {
         const {executeSkill} = await import('./skills/executor')
-        return await executeSkill(id)
+        return await executeSkill(id, options)
     })
 
     safeHandle('skills:update-config', (_event, id: number, userConfig: string) => {

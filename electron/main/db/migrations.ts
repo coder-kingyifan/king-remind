@@ -573,6 +573,12 @@ export function runMigrations(): void {
             sql: `
                 UPDATE skills SET is_enabled = 0 WHERE is_builtin = 1;
             `
+        },
+        {
+            version: 14,
+            sql: `
+                ALTER TABLE model_configs ADD COLUMN model_type TEXT NOT NULL DEFAULT 'text';
+            `
         }
     ]
 

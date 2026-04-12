@@ -1,68 +1,97 @@
 <template>
   <div class="model-config-page">
     <div class="page-header">
-      <h1 class="page-title">模型配置</h1>
-      <div class="page-header-actions">
+      <div>
+        <h1 class="page-title">模型配置</h1>
         <p class="page-subtitle">管理 AI 模型，对话时可切换</p>
-        <el-button type="primary" size="small" @click="openForm()">添加模型</el-button>
+      </div>
+      <el-button type="primary" @click="openForm()">
+        <el-icon><Plus/></el-icon>
+        添加模型
+      </el-button>
+    </div>
+
+    <!-- 模型类型分组 -->
+    <div class="type-tabs">
+      <div
+        v-for="tab in typeTabs"
+        :key="tab.value"
+        class="type-tab"
+        :class="{ active: activeType === tab.value }"
+        @click="activeType = tab.value"
+      >
+        <span class="type-tab-icon">{{ tab.icon }}</span>
+        <span class="type-tab-label">{{ tab.label }}</span>
+        <span v-if="countByType(tab.value) > 0" class="type-tab-count">{{ countByType(tab.value) }}</span>
       </div>
     </div>
 
-    <div class="model-list">
-      <div v-for="cfg in configs" :key="cfg.id" class="model-card">
-        <div class="model-header">
+    <!-- 模型列表 -->
+    <div v-if="filteredConfigs.length > 0" class="model-list">
+      <div v-for="cfg in filteredConfigs" :key="cfg.id" class="model-card">
+        <div class="model-card-body">
+          <span class="model-icon">{{ getProviderIcon(cfg.provider) }}</span>
           <div class="model-info">
-            <span class="model-icon">{{ getProviderIcon(cfg.provider) }}</span>
-            <div>
-              <div class="model-name">
-                {{ cfg.name }}
-                <el-tag v-if="cfg.is_default" size="small" type="success">默认</el-tag>
-              </div>
-              <div class="model-meta">{{ getProviderName(cfg.provider) }} &middot; {{ cfg.base_url || '未配置' }}</div>
-              <div class="model-tags" v-if="parseModels(cfg.models).length">
-                <el-tooltip
-                    v-for="m in parseModels(cfg.models)"
-                    :key="m"
-                    :content="parseModelNotes(cfg.model_notes)[m] || ''"
-                    :disabled="!parseModelNotes(cfg.model_notes)[m]"
-                    placement="top"
-                >
-                  <el-tag
-                      size="small"
-                      :type="m === cfg.model ? 'primary' : 'info'"
-                      class="model-tag"
-                  >{{ m }}
-                  </el-tag>
-                </el-tooltip>
-              </div>
+            <div class="model-name-row">
+              <span class="model-name">{{ cfg.name }}</span>
+              <el-tag v-if="cfg.is_default" size="small" type="success">默认</el-tag>
+              <el-tag size="small" :type="modelTypeTag(cfg.model_type)" effect="plain">
+                {{ modelTypeLabel(cfg.model_type) }}
+              </el-tag>
+            </div>
+            <div class="model-meta">{{ getProviderName(cfg.provider) }} &middot; {{ cfg.base_url || '未配置' }}</div>
+            <div class="model-tags" v-if="parseModels(cfg.models).length">
+              <el-tooltip
+                v-for="m in parseModels(cfg.models)"
+                :key="m"
+                :content="parseModelNotes(cfg.model_notes)[m] || ''"
+                :disabled="!parseModelNotes(cfg.model_notes)[m]"
+                placement="top"
+              >
+                <el-tag
+                  size="small"
+                  :type="m === cfg.model ? 'primary' : 'info'"
+                  class="model-tag"
+                >{{ m }}
+                </el-tag>
+              </el-tooltip>
             </div>
           </div>
-          <div class="model-actions">
-            <el-button v-if="!cfg.is_default" size="small" plain @click="setDefault(cfg.id)">设为默认</el-button>
-            <el-button size="small" plain @click="openForm(cfg)">编辑</el-button>
-            <el-button size="small" plain type="danger" @click="handleDelete(cfg)">删除</el-button>
-          </div>
+        </div>
+        <div class="model-actions">
+          <el-button v-if="!cfg.is_default" size="small" plain @click="setDefault(cfg.id)">设为默认</el-button>
+          <el-button size="small" plain @click="openForm(cfg)">编辑</el-button>
+          <el-button size="small" plain type="danger" @click="handleDelete(cfg)">删除</el-button>
         </div>
       </div>
+    </div>
 
-      <div v-if="configs.length === 0" class="empty-hint">
-        <p>还没有配置模型，点击上方「添加模型」开始</p>
-      </div>
+    <div v-else class="empty-hint">
+      <p>还没有配置{{ activeType === 'all' ? '' : modelTypeLabel(activeType) }}模型，点击上方「添加模型」开始</p>
     </div>
 
     <!-- 编辑弹窗 -->
     <el-dialog
-        v-model="showForm"
-        :title="editingId ? '编辑模型' : '添加模型'"
-        width="580px"
-        :close-on-click-modal="false"
+      v-model="showForm"
+      :title="editingId ? '编辑模型' : '添加模型'"
+      width="580px"
+      :close-on-click-modal="false"
     >
       <el-form :model="form" label-position="top" size="default">
-        <el-form-item label="服务商" required>
-          <el-select v-model="form.provider" style="width: 100%;" filterable @change="onProviderChange">
-            <el-option v-for="p in providers" :key="p.id" :label="p.name" :value="p.id"/>
-          </el-select>
-        </el-form-item>
+        <div class="form-row">
+          <el-form-item label="模型类型" class="flex-1">
+            <el-select v-model="form.model_type" style="width: 100%;">
+              <el-option label="文本模型" value="text"/>
+              <el-option label="多模态模型" value="multimodal"/>
+              <el-option label="联网搜索模型" value="web_search"/>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="服务商" class="flex-1">
+            <el-select v-model="form.provider" style="width: 100%;" filterable @change="onProviderChange">
+              <el-option v-for="p in filteredProviders" :key="p.id" :label="p.name" :value="p.id"/>
+            </el-select>
+          </el-form-item>
+        </div>
 
         <el-form-item label="名称" required>
           <el-input v-model="form.name" placeholder="给这个配置起个名字，如：Ollama"/>
@@ -75,31 +104,30 @@
             </div>
             <div v-for="(m, idx) in form.models" :key="idx" class="model-input-row">
               <span
-                  class="model-default-star"
-                  :class="{ active: form.defaultModelIndex === idx }"
-                  @click="form.defaultModelIndex = idx"
-                  :title="form.defaultModelIndex === idx ? '当前默认模型' : '点击设为默认'"
+                class="model-default-star"
+                :class="{ active: form.defaultModelIndex === idx }"
+                @click="form.defaultModelIndex = idx"
+                :title="form.defaultModelIndex === idx ? '当前默认模型' : '点击设为默认'"
               >{{ form.defaultModelIndex === idx ? '★' : '☆' }}</span>
               <el-input
-                  v-model="form.models[idx]"
-                  placeholder="输入模型名称，如 deepseek-chat"
-                  @keydown.enter.prevent="addModelInput"
-                  style="flex: 1;"
+                v-model="form.models[idx]"
+                placeholder="输入模型名称，如 deepseek-chat"
+                @keydown.enter.prevent="addModelInput"
+                style="flex: 1;"
               />
               <el-input
-                  v-model="form.modelNotes[form.models[idx] || `__idx_${idx}__`]"
-                  placeholder="备注，如：多模态"
-                  style="width: 120px;"
-                  @input="syncNoteKey(idx)"
+                v-model="form.modelNotes[form.models[idx] || `__idx_${idx}__`]"
+                placeholder="备注，如：多模态"
+                style="width: 120px;"
               />
               <el-button
-                  v-if="form.models.length > 1"
-                  :icon="Minus"
-                  circle
-                  size="small"
-                  plain
-                  type="danger"
-                  @click="removeModelInput(idx)"
+                v-if="form.models.length > 1"
+                :icon="Minus"
+                circle
+                size="small"
+                plain
+                type="danger"
+                @click="removeModelInput(idx)"
               />
             </div>
             <el-button size="small" plain @click="addModelInput" style="margin-top: 4px;">
@@ -158,6 +186,7 @@ interface ModelConfigRow {
   model: string
   models: string
   model_notes: string
+  model_type: string
   is_default: number
 }
 
@@ -176,6 +205,7 @@ const showForm = ref(false)
 const editingId = ref<number | null>(null)
 const saving = ref(false)
 const testing = ref(false)
+const activeType = ref('all')
 
 const form = ref({
   name: '',
@@ -185,12 +215,51 @@ const form = ref({
   models: [''] as string[],
   modelNotes: {} as Record<string, string>,
   defaultModelIndex: 0,
+  model_type: 'text' as string,
   is_default: false
 })
 
+const typeTabs = [
+  {value: 'all', label: '全部模型', icon: '📦'},
+  {value: 'text', label: '文本模型', icon: '💬'},
+  {value: 'multimodal', label: '多模态模型', icon: '👁️'},
+  {value: 'web_search', label: '联网搜索', icon: '🌐'}
+]
+
+// Web search providers
+const WEB_SEARCH_PROVIDERS = ['perplexity', 'tavily', 'jina', 'bochaai', 'exa']
+
+function modelTypeLabel(type: string): string {
+  const map: Record<string, string> = {text: '文本', multimodal: '多模态', web_search: '联网搜索'}
+  return map[type] || '文本'
+}
+
+function modelTypeTag(type: string): string {
+  const map: Record<string, string> = {text: 'info', multimodal: 'warning', web_search: 'success'}
+  return map[type] || 'info'
+}
+
+function countByType(type: string): number {
+  if (type === 'all') return configs.value.length
+  return configs.value.filter(c => (c.model_type || 'text') === type).length
+}
+
+const filteredConfigs = computed(() => {
+  if (activeType.value === 'all') return configs.value
+  return configs.value.filter(c => (c.model_type || 'text') === activeType.value)
+})
+
 const currentProviderPreset = computed(() =>
-    providers.value.find(p => p.id === form.value.provider)
+  providers.value.find(p => p.id === form.value.provider)
 )
+
+// Filter providers based on model type
+const filteredProviders = computed(() => {
+  if (form.value.model_type === 'web_search') {
+    return providers.value.filter(p => WEB_SEARCH_PROVIDERS.includes(p.id) || p.id.startsWith('custom'))
+  }
+  return providers.value.filter(p => !WEB_SEARCH_PROVIDERS.includes(p.id))
+})
 
 function parseModels(modelsJson: string): string[] {
   if (!modelsJson) return []
@@ -233,7 +302,12 @@ const PROVIDER_ICONS: Record<string, string> = {
   groq: '⚡',
   xiaomi: '📱',
   custom: '⚙️',
-  custom_anthropic: '🧠'
+  custom_anthropic: '🧠',
+  perplexity: '🔍',
+  tavily: '🔎',
+  jina: '🌐',
+  bochaai: '📡',
+  exa: '🎯'
 }
 
 function getProviderIcon(id: string): string {
@@ -257,7 +331,11 @@ function onProviderChange(id: string) {
   const p = providers.value.find(p => p.id === id)
   if (!p) return
   form.value.base_url = p.baseUrl
-  form.value.name = id
+  form.value.name = p.name
+  // Auto-detect model type from provider
+  if (WEB_SEARCH_PROVIDERS.includes(id)) {
+    form.value.model_type = 'web_search'
+  }
 }
 
 function addModelInput() {
@@ -271,11 +349,6 @@ function removeModelInput(idx: number) {
   } else if (form.value.defaultModelIndex > idx) {
     form.value.defaultModelIndex--
   }
-}
-
-// Keep notes in sync when model name changes
-function syncNoteKey(idx: number) {
-  // Notes are stored by model name key, handled in handleSave
 }
 
 function openForm(cfg?: ModelConfigRow) {
@@ -296,19 +369,28 @@ function openForm(cfg?: ModelConfigRow) {
       models,
       modelNotes: parseModelNotes(cfg.model_notes),
       defaultModelIndex: defaultIdx,
+      model_type: cfg.model_type || 'text',
       is_default: !!cfg.is_default
     }
   } else {
     editingId.value = null
-    const p = providers.value[0]
+    const defaultType = activeType.value === 'all' ? 'text' : activeType.value
+    // Pick first provider matching the current type tab
+    const typeProviders = form.value.model_type === 'web_search'
+      ? filteredProviders.value
+      : (defaultType === 'web_search'
+          ? providers.value.filter(p => WEB_SEARCH_PROVIDERS.includes(p.id) || p.id.startsWith('custom'))
+          : providers.value.filter(p => !WEB_SEARCH_PROVIDERS.includes(p.id)))
+    const p = typeProviders.length > 0 ? typeProviders[0] : providers.value[0]
     form.value = {
-      name: p?.id || 'ollama',
+      name: p?.name || '',
       provider: p?.id || 'ollama',
       base_url: p?.baseUrl || '',
       api_key: '',
-      models: [''],
+      models: [p?.defaultModel || ''],
       modelNotes: {},
       defaultModelIndex: 0,
+      model_type: defaultType,
       is_default: configs.value.length === 0
     }
   }
@@ -349,7 +431,6 @@ async function handleSave() {
     return
   }
   const defaultIdx = Math.min(form.value.defaultModelIndex, validModels.length - 1)
-  // Build model notes: map model name -> note text
   const notes: Record<string, string> = {}
   for (const m of validModels) {
     const note = form.value.modelNotes[m]
@@ -368,6 +449,7 @@ async function handleSave() {
       model: validModels[defaultIdx] || validModels[0],
       models: validModels,
       model_notes: notes,
+      model_type: form.value.model_type,
       is_default: form.value.is_default
     }
     if (editingId.value) {
@@ -403,11 +485,14 @@ async function setDefault(id: number) {
 
 <style scoped>
 .model-config-page {
-  max-width: 720px;
+  max-width: 780px;
 }
 
 .page-header {
-  margin-bottom: 24px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
 }
 
 .page-title {
@@ -417,21 +502,65 @@ async function setDefault(id: number) {
   margin-bottom: 4px;
 }
 
-.page-header-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
 .page-subtitle {
   font-size: 13px;
   color: var(--text-tertiary);
 }
 
+/* 类型标签页 */
+.type-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.type-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color-light);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.type-tab:hover {
+  border-color: var(--border-color);
+}
+
+.type-tab.active {
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.type-tab-icon {
+  font-size: 16px;
+}
+
+.type-tab-count {
+  background: var(--bg-secondary);
+  padding: 0 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.type-tab.active .type-tab-count {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* 模型列表 */
 .model-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .model-card {
@@ -439,24 +568,29 @@ async function setDefault(id: number) {
   border: 1px solid var(--border-color-light);
   border-radius: 12px;
   padding: 16px 20px;
-}
-
-.model-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  transition: all 0.2s ease;
 }
 
-.model-info {
+.model-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border-color: var(--border-color);
+}
+
+.model-card-body {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
 .model-icon {
   font-size: 28px;
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -465,26 +599,33 @@ async function setDefault(id: number) {
   flex-shrink: 0;
 }
 
+.model-info {
+  min-width: 0;
+}
+
+.model-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
 .model-name {
   font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .model-meta {
   font-size: 12px;
   color: var(--text-tertiary);
-  margin-top: 2px;
+  margin-bottom: 4px;
 }
 
 .model-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-top: 6px;
 }
 
 .model-tag {
@@ -496,6 +637,16 @@ async function setDefault(id: number) {
   display: flex;
   gap: 6px;
   flex-shrink: 0;
+}
+
+/* 表单 */
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.flex-1 {
+  flex: 1;
 }
 
 .model-input-list {

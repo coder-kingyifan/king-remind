@@ -177,18 +177,23 @@ const HOROSCOPE_DATA: Record<string, { name: string; element: string; traits: st
 
 // ======================== Utility Functions ========================
 
+
 function randomPick<T>(arr: T[]): T {
     return arr[Math.floor(Math.random() * arr.length)]
 }
 
-function seededIndex(arr: any[], seed?: string): number {
-    if (!seed) return Math.floor(Math.random() * arr.length)
-    let hash = 0
-    for (let i = 0; i < seed.length; i++) {
-        hash = ((hash << 5) - hash) + seed.charCodeAt(i)
-        hash |= 0
+// ======================== AI-Powered Dynamic Content ========================
+
+async function generateWithAI(prompt: string): Promise<string | null> {
+    try {
+        const result = await chatWithLLM(
+            [{role: 'user', content: prompt}],
+            null, undefined, undefined, undefined
+        )
+        return result.reply || null
+    } catch {
+        return null
     }
-    return Math.abs(hash) % arr.length
 }
 
 // ======================== Builtin Skill Handlers ========================
@@ -286,19 +291,18 @@ function weatherCodeToDesc(code: number): string {
     return map[code] || '🌤️ 未知'
 }
 
-function executeDailyQuote(userConfig: Record<string, any>): string {
+async function executeDailyQuote(userConfig: Record<string, any>): Promise<string> {
     const type = userConfig.type || 'mixed'
-    const today = new Date().toISOString().slice(0, 10)
+    const typeLabel: Record<string, string> = {mixed: '任意类型', motivational: '励志', philosophy: '哲理', aesthetic: '唯美'}
+    const aiResult = await generateWithAI(
+        `请生成一条${typeLabel[type] || ''}每日一言（一句话即可，要有深度和美感，中英不限）。只输出句子本身和作者，不要额外解释。`
+    )
+    if (aiResult) return `💬 ${aiResult.trim()}`
 
-    let pool: string[] = []
-    if (type === 'mixed') {
-        pool = [...QUOTES.motivational, ...QUOTES.philosophy, ...QUOTES.aesthetic]
-    } else {
-        pool = QUOTES[type as keyof typeof QUOTES] || QUOTES.motivational
-    }
-
-    const idx = seededIndex(pool, today)
-    return `💬 ${pool[idx]}`
+    const pool = type === 'mixed'
+        ? [...QUOTES.motivational, ...QUOTES.philosophy, ...QUOTES.aesthetic]
+        : (QUOTES[type as keyof typeof QUOTES] || QUOTES.motivational)
+    return `💬 ${randomPick(pool)}`
 }
 
 function executeCountdown(userConfig: Record<string, any>): string {
@@ -350,59 +354,64 @@ function executeWaterReminder(userConfig: Record<string, any>): string {
     return `💧 ${timeGreeting}！该喝水啦\n${suggestion}\n建议每次饮水 ${cupMl}ml，保持每天 1500-2000ml 的摄入量`
 }
 
-function executePoetry(): string {
-    const today = new Date().toISOString().slice(0, 10)
-    const idx = seededIndex(POEMS, today)
-    const poem = POEMS[idx]
+async function executePoetry(): Promise<string> {
+    const aiResult = await generateWithAI(
+        '请推荐一首优美的中国古诗词（唐诗宋词优先）。格式：\n📜 诗词名\n—— 作者\n\n内容。只输出诗词，不要额外解释。'
+    )
+    if (aiResult) return aiResult.trim()
+
+    const poem = randomPick(POEMS)
     return `📜 ${poem.title}\n—— ${poem.author}\n\n${poem.content}`
 }
 
-function executeHealthTip(): string {
+async function executeHealthTip(): Promise<string> {
     const hour = new Date().getHours()
-    let period: 'morning' | 'afternoon' | 'evening'
-    let periodLabel: string
+    const period = hour < 12 ? '早晨' : hour < 18 ? '下午' : '晚间'
+    const aiResult = await generateWithAI(
+        `现在是${period}，请给出一条实用的健康养生小贴士（一两句话即可，简洁有针对性）。格式：🍎 {period}健康小贴士\n\n内容`
+    )
+    if (aiResult) return aiResult.trim()
 
-    if (hour < 12) {
-        period = 'morning'
-        periodLabel = '早晨'
-    } else if (hour < 18) {
-        period = 'afternoon'
-        periodLabel = '下午'
-    } else {
-        period = 'evening'
-        periodLabel = '晚间'
-    }
-
-    const tips = HEALTH_TIPS[period]
-    const today = new Date().toISOString().slice(0, 10)
-    const idx = seededIndex(tips, today + period)
-    return `🍎 ${periodLabel}健康小贴士\n\n${tips[idx]}`
+    const periodKey = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
+    const tips = HEALTH_TIPS[periodKey]
+    return `🍎 ${period}健康小贴士\n\n${randomPick(tips)}`
 }
 
-function executeExercise(): string {
-    const hour = new Date().getHours()
-    const type = hour >= 6 && hour < 10 ? 'outdoor' : hour >= 10 && hour < 16 ? 'indoor' : hour >= 16 && hour < 20 ? 'outdoor' : 'gentle'
-    const tips = EXERCISE_TIPS[type]
-    return `🏃 今日运动建议\n\n${randomPick(tips)}`
+async function executeExercise(): Promise<string> {
+    const aiResult = await generateWithAI(
+        '请给出一条今天的运动建议（根据当前季节和时间段推荐，一两句话即可）。格式：🏃 今日运动建议\n\n建议内容'
+    )
+    if (aiResult) return aiResult.trim()
+    return `🏃 今日运动建议\n\n${randomPick(EXERCISE_TIPS.indoor)}`
 }
 
-function executeEnglish(): string {
-    const today = new Date().toISOString().slice(0, 10)
-    const idx = seededIndex(ENGLISH, today)
-    const item = ENGLISH[idx]
+async function executeEnglish(): Promise<string> {
+    const aiResult = await generateWithAI(
+        '请教我一个实用的高级英语表达。格式：\n📚 每日英语\n\n单词 音标\n释义：中文意思\n例句：英文例句。只输出这些内容，不要额外解释。'
+    )
+    if (aiResult) return aiResult.trim()
+
+    const item = randomPick(ENGLISH)
     return `📚 每日英语\n\n${item.word} ${item.phonetic}\n释义：${item.meaning}\n例句：${item.example}`
 }
 
-function executeJoke(): string {
-    const today = new Date().toISOString().slice(0, 10)
-    const idx = seededIndex(JOKES, today)
-    return `😄 每日一笑\n\n${JOKES[idx]}`
+async function executeJoke(): Promise<string> {
+    const aiResult = await generateWithAI(
+        '请讲一个轻松幽默的笑话（中文，简短有趣，不要低俗）。格式：😄 每日一笑\n\n笑话内容'
+    )
+    if (aiResult) return aiResult.trim()
+    return `😄 每日一笑\n\n${randomPick(JOKES)}`
 }
 
-function executeHoroscope(userConfig: Record<string, any>): string {
+async function executeHoroscope(userConfig: Record<string, any>): Promise<string> {
     const sign = userConfig.sign || 'aries'
     const data = HOROSCOPE_DATA[sign]
     if (!data) return '未知的星座，请检查配置。'
+
+    const aiResult = await generateWithAI(
+        `请为${data.name}生成今日运势分析，包含：综合运势（百分制+星级）、爱情运势、事业运势、幸运数字、一段建议。格式简洁。`
+    )
+    if (aiResult) return `⭐ ${data.name}今日运势（${data.element}象 · ${data.traits}）\n\n${aiResult.trim()}`
 
     // Generate pseudo-random fortune based on today's date
     const today = new Date()
@@ -472,17 +481,17 @@ function executeWorkReport(): string {
 
 // ======================== Skill Executor ========================
 
-const BUILTIN_HANDLERS: Record<string, (config: Record<string, any>) => any> = {
+const BUILTIN_HANDLERS: Record<string, (config: Record<string, any>) => Promise<string>> = {
     weather: executeWeather,
-    daily_quote: (c) => Promise.resolve(executeDailyQuote(c)),
+    daily_quote: executeDailyQuote,
     countdown: (c) => Promise.resolve(executeCountdown(c)),
     water_reminder: (c) => Promise.resolve(executeWaterReminder(c)),
-    poetry: () => Promise.resolve(executePoetry()),
-    health_tip: () => Promise.resolve(executeHealthTip()),
-    exercise: () => Promise.resolve(executeExercise()),
-    english: () => Promise.resolve(executeEnglish()),
-    joke: () => Promise.resolve(executeJoke()),
-    horoscope: (c) => Promise.resolve(executeHoroscope(c)),
+    poetry: executePoetry,
+    health_tip: executeHealthTip,
+    exercise: executeExercise,
+    english: executeEnglish,
+    joke: executeJoke,
+    horoscope: executeHoroscope,
     lunar_info: () => Promise.resolve(executeLunarInfo()),
     work_report: () => Promise.resolve(executeWorkReport())
 }
@@ -566,9 +575,10 @@ async function executeAiPrompt(actionConfig: Record<string, any>, userConfig: Re
 
 // ======================== Main Execution Entry ========================
 
-export async function executeSkill(skillId: number): Promise<string> {
+export async function executeSkill(skillId: number, options?: { skipEnabledCheck?: boolean }): Promise<string> {
     const skill = skillsDb.get(skillId)
-    if (!skill || !skill.is_enabled) return ''
+    if (!skill) return ''
+    if (!skill.is_enabled && !options?.skipEnabledCheck) return ''
 
     let userConfig: Record<string, any> = {}
     try {

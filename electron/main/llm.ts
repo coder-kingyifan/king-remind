@@ -171,6 +171,52 @@ export const PROVIDERS: ProviderPreset[] = [
         defaultModel: '',
         protocol: 'anthropic',
         models: []
+    },
+    // ========== 联网搜索模型 ==========
+    {
+        id: 'perplexity',
+        name: 'Perplexity',
+        baseUrl: 'https://api.perplexity.ai',
+        apiKeyRequired: true,
+        defaultModel: 'sonar',
+        protocol: 'openai',
+        models: ['sonar', 'sonar-pro', 'sonar-reasoning', 'sonar-reasoning-pro', 'sonar-deep-research']
+    },
+    {
+        id: 'tavily',
+        name: 'Tavily',
+        baseUrl: 'https://api.tavily.com',
+        apiKeyRequired: true,
+        defaultModel: 'tavily-search',
+        protocol: 'openai',
+        models: ['tavily-search', 'tavily-extract']
+    },
+    {
+        id: 'jina',
+        name: 'Jina（搜索/阅读）',
+        baseUrl: 'https://s.jina.ai',
+        apiKeyRequired: true,
+        defaultModel: 'jina-search',
+        protocol: 'openai',
+        models: ['jina-search', 'jina-reader', 'grounding']
+    },
+    {
+        id: 'bochaai',
+        name: '博查 AI（搜索）',
+        baseUrl: 'https://api.bochaai.com/v1',
+        apiKeyRequired: true,
+        defaultModel: 'bocha-web-search',
+        protocol: 'openai',
+        models: ['bocha-web-search', 'bocha-ai-search']
+    },
+    {
+        id: 'exa',
+        name: 'Exa（智能搜索）',
+        baseUrl: 'https://api.exa.ai',
+        apiKeyRequired: true,
+        defaultModel: 'exa-search',
+        protocol: 'openai',
+        models: ['exa-search', 'exa-contents']
     }
 ]
 
@@ -188,7 +234,8 @@ function getLLMConfig(configId?: number, modelOverride?: string) {
             provider,
             baseUrl: saved.base_url || provider.baseUrl,
             apiKey: saved.api_key || '',
-            model: modelOverride || saved.model || provider.defaultModel
+            model: modelOverride || saved.model || provider.defaultModel,
+            modelType: saved.model_type || 'text'
         }
     }
     const providerId = settingsDb.get('llm_provider') || 'ollama'
@@ -197,7 +244,8 @@ function getLLMConfig(configId?: number, modelOverride?: string) {
         provider,
         baseUrl: settingsDb.get('llm_base_url') || provider.baseUrl,
         apiKey: settingsDb.get('llm_api_key') || '',
-        model: modelOverride || settingsDb.get('llm_model') || provider.defaultModel
+        model: modelOverride || settingsDb.get('llm_model') || provider.defaultModel,
+        modelType: 'text' as string
     }
 }
 
@@ -1040,7 +1088,8 @@ export async function chatWithLLM(
     ]
 
     // Strip images if model doesn't support vision
-    if (!isVisionModel(config.model)) {
+    const supportsVision = isVisionModel(config.model) || config.modelType === 'multimodal'
+    if (!supportsVision) {
         allMessages = stripImagesFromMessages(allMessages)
     }
 

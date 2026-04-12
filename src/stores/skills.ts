@@ -1,58 +1,22 @@
 import {defineStore} from 'pinia'
-import {computed, ref, toRaw} from 'vue'
-import {BUILTIN_SKILLS} from '@/types/skill'
+import {ref, toRaw} from 'vue'
 import type {Skill} from '@/types/skill'
 
 function plain<T>(obj: T): T {
     return JSON.parse(JSON.stringify(toRaw(obj)))
 }
 
-// 内置技能从静态常量初始化（瞬间可用，无需 IPC）
-function initBuiltinSkills(): Skill[] {
-    return BUILTIN_SKILLS.map(s => ({
-        ...s,
-        id: 0,
-        is_builtin: 1,
-        is_enabled: 0,
-        user_config: '{}',
-        created_at: '',
-        updated_at: ''
-    }))
-}
-
 export const useSkillsStore = defineStore('skills', () => {
-    const builtinSkills = ref<Skill[]>(initBuiltinSkills())
-    const customSkills = ref<Skill[]>([])
+    const skills = ref<Skill[]>([])
     const loading = ref(false)
     const loaded = ref(false)
 
-    const skills = computed(() => [...builtinSkills.value, ...customSkills.value])
-
-    async function fetchSkills(filters?: { category?: string; is_enabled?: number; search?: string }) {
-        if (loaded.value && !filters) return
+    async function fetchSkills() {
+        if (loaded.value) return
         if (loading.value) return
         loading.value = true
         try {
-            const dbSkills = await window.electronAPI.skills.list(filters ? plain(filters) : undefined)
-
-            // 用数据库状态更新内置技能
-            const dbBuiltinMap = new Map(
-                dbSkills.filter(s => s.is_builtin).map(s => [s.skill_key, s])
-            )
-            builtinSkills.value = BUILTIN_SKILLS.map(s => {
-                const db = dbBuiltinMap.get(s.skill_key)
-                return {
-                    ...s,
-                    id: db?.id ?? 0,
-                    is_builtin: 1,
-                    is_enabled: db?.is_enabled ?? 0,
-                    user_config: db?.user_config ?? '{}',
-                    created_at: db?.created_at ?? '',
-                    updated_at: db?.updated_at ?? ''
-                }
-            })
-
-            customSkills.value = dbSkills.filter(s => !s.is_builtin)
+            skills.value = await window.electronAPI.skills.list()
             loaded.value = true
         } finally {
             loading.value = false
@@ -99,8 +63,8 @@ export const useSkillsStore = defineStore('skills', () => {
         await refreshSkills()
     }
 
-    async function executeSkill(id: number): Promise<string> {
-        return await window.electronAPI.skills.execute(id)
+    async function executeSkill(id: number, options?: { skipEnabledCheck?: boolean }): Promise<string> {
+        return await window.electronAPI.skills.execute(id, options)
     }
 
     async function updateConfig(id: number, userConfig: string) {
@@ -112,7 +76,8 @@ export const useSkillsStore = defineStore('skills', () => {
     async function refreshSkills() {
         loaded.value = false
         loading.value = false
-        await fetchSkills()
+        skills.value = await window.electronAPI.skills.list()
+        loaded.value = true
     }
 
     return {

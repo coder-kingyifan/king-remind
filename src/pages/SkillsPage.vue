@@ -41,23 +41,31 @@
       <div
         v-for="skill in filteredSkills"
         :key="skill.skill_key"
-        class="skill-row"
-        :class="{ inactive: skill.is_enabled === 0 }"
+        class="skill-card"
+        :class="{ disabled: skill.is_enabled === 0 }"
       >
-        <div class="row-left">
-          <span class="row-icon">{{ skill.icon }}</span>
-          <div class="row-info">
-            <div class="row-title">
-              {{ skill.name }}
+        <div class="skill-card-body">
+          <span class="skill-icon-wrap" :style="{ background: categoryColor(skill.category) }">
+            <span class="skill-icon-emoji">{{ skill.icon }}</span>
+          </span>
+          <div class="skill-main">
+            <div class="skill-title-row">
+              <span class="skill-name">{{ skill.name }}</span>
               <el-tag v-if="skill.is_builtin" size="small" type="info" effect="plain">内置</el-tag>
               <el-tag v-else size="small" type="success" effect="plain">自定义</el-tag>
-              <el-tag size="small" effect="plain" round style="margin-left: 4px;">{{ categoryLabel(skill.category) }}</el-tag>
             </div>
-            <div class="row-desc">{{ skill.description }}</div>
+            <div class="skill-desc">{{ skill.description }}</div>
           </div>
         </div>
 
-        <div class="row-right">
+        <div class="skill-card-actions">
+          <el-switch
+            :model-value="skill.is_enabled === 1"
+            size="small"
+            active-text="开"
+            inactive-text="关"
+            @change="() => skillsStore.toggleSkill(skill.id)"
+          />
           <el-button text size="small" @click="openConfigDialog(skill)">
             <el-icon><Setting/></el-icon>
             配置
@@ -66,13 +74,8 @@
             <el-icon><VideoPlay/></el-icon>
             测试
           </el-button>
-          <el-switch
-            :model-value="skill.is_enabled === 1"
-            size="small"
-            @change="() => skillsStore.toggleSkill(skill.id)"
-          />
           <el-dropdown v-if="!skill.is_builtin" trigger="click" @command="(cmd: string) => handleCommand(cmd, skill)">
-            <el-button text circle>
+            <el-button text circle size="small">
               <el-icon><MoreFilled/></el-icon>
             </el-button>
             <template #dropdown>
@@ -201,6 +204,20 @@ const testingSkill = ref<Skill | null>(null)
 const testing = ref(false)
 const testResult = ref('')
 
+const CATEGORY_COLORS: Record<string, string> = {
+  weather: 'linear-gradient(135deg, #74b9ff, #0984e3)',
+  daily: 'linear-gradient(135deg, #ffeaa7, #fdcb6e)',
+  health: 'linear-gradient(135deg, #55efc4, #00b894)',
+  finance: 'linear-gradient(135deg, #fab1a0, #e17055)',
+  study: 'linear-gradient(135deg, #a29bfe, #6c5ce7)',
+  tools: 'linear-gradient(135deg, #81ecec, #00cec9)',
+  custom: 'linear-gradient(135deg, #fd79a8, #e84393)'
+}
+
+function categoryColor(key: string): string {
+  return CATEGORY_COLORS[key] || CATEGORY_COLORS.custom
+}
+
 const filteredSkills = computed(() => {
   let list = skillsStore.skills
   if (activeCategory.value !== 'all') {
@@ -212,10 +229,6 @@ const filteredSkills = computed(() => {
   }
   return list
 })
-
-function categoryLabel(key: string): string {
-  return SKILL_CATEGORIES.find(c => c.key === key)?.label || key
-}
 
 function openConfigDialog(skill: Skill) {
   configDialogInited.value = true
@@ -279,7 +292,7 @@ async function runTest() {
   testing.value = true
   testResult.value = ''
   try {
-    testResult.value = await skillsStore.executeSkill(testingSkill.value.id)
+    testResult.value = await skillsStore.executeSkill(testingSkill.value.id, {skipEnabledCheck: true})
   } catch (e: any) {
     testResult.value = `执行失败: ${e.message}`
   } finally {
@@ -323,34 +336,35 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 
-/* 技能列表 */
+/* 技能卡片列表 */
 .skill-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
-.skill-row {
+.skill-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color-light);
+  border-radius: 12px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color-light);
-  border-radius: 10px;
-  padding: 14px 18px;
   transition: all 0.2s ease;
 }
 
-.skill-row:hover {
-  box-shadow: var(--shadow-md);
+.skill-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border-color: var(--border-color);
 }
 
-.skill-row.inactive {
-  opacity: 0.55;
+.skill-card.disabled {
+  opacity: 0.5;
 }
 
-.row-left {
+.skill-card-body {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -358,44 +372,56 @@ onMounted(() => {
   min-width: 0;
 }
 
-.row-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: var(--color-primary-bg);
+.skill-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
   flex-shrink: 0;
 }
 
-.row-info {
+.skill-icon-emoji {
+  font-size: 20px;
+  filter: brightness(10);
+}
+
+.skill-card.disabled .skill-icon-emoji {
+  filter: none;
+  opacity: 0.6;
+}
+
+.skill-main {
   min-width: 0;
 }
 
-.row-title {
+.skill-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.skill-name {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 3px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
 
-.row-desc {
+.skill-desc {
   font-size: 12px;
   color: var(--text-tertiary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 400px;
 }
 
-.row-right {
+.skill-card-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
 }
 

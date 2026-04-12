@@ -137,7 +137,7 @@ const electronAPI = {
         update: (id: number, data: any) => safeInvoke('skills:update', id, data),
         delete: (id: number) => safeInvoke('skills:delete', id),
         toggle: (id: number) => safeInvoke('skills:toggle', id),
-        execute: (id: number) => safeInvoke('skills:execute', id),
+        execute: (id: number, options?: { skipEnabledCheck?: boolean }) => safeInvoke('skills:execute', id, options),
         updateConfig: (id: number, userConfig: string) => safeInvoke('skills:update-config', id, userConfig)
     }
 }

@@ -41,6 +41,7 @@ export interface ModelConfig {
     model: string
     models: string   // JSON array string, e.g. '["gpt-4o","gpt-4o-mini"]'
     model_notes: string  // JSON object string, e.g. '{"gpt-4o":"多模态模型","gpt-4o-mini":"轻量模型"}'
+    model_type: string   // 'text' | 'multimodal' | 'web_search'
     is_default: number
     created_at: string
     updated_at: string
@@ -67,6 +68,7 @@ export const modelConfigsDb = {
         model: string;
         models?: string[];
         model_notes?: Record<string, string>;
+        model_type?: string;
         is_default?: boolean
     }): ModelConfig {
         if (input.is_default) {
@@ -74,9 +76,10 @@ export const modelConfigsDb = {
         }
         const modelsJson = JSON.stringify(input.models || [])
         const notesJson = JSON.stringify(input.model_notes || {})
+        const modelType = input.model_type || 'text'
         run(
-            'INSERT INTO model_configs (name, provider, base_url, api_key, model, models, model_notes, is_default) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [input.name, input.provider, input.base_url, input.api_key, input.model, modelsJson, notesJson, input.is_default ? 1 : 0]
+            'INSERT INTO model_configs (name, provider, base_url, api_key, model, models, model_notes, model_type, is_default) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [input.name, input.provider, input.base_url, input.api_key, input.model, modelsJson, notesJson, modelType, input.is_default ? 1 : 0]
         )
         return this.get(getLastInsertId())!
     },
@@ -89,6 +92,7 @@ export const modelConfigsDb = {
         model: string;
         models?: string[];
         model_notes?: Record<string, string>;
+        model_type: string;
         is_default: boolean
     }>): ModelConfig | undefined {
         const existing = this.get(id)
@@ -114,6 +118,7 @@ export const modelConfigsDb = {
                  model=?,
                  models=?,
                  model_notes=?,
+                 model_type=?,
                  is_default=?,
                  updated_at=datetime('now', 'localtime')
              WHERE id = ?`,
@@ -125,6 +130,7 @@ export const modelConfigsDb = {
                 input.model ?? existing.model,
                 modelsJson,
                 notesJson,
+                input.model_type ?? existing.model_type,
                 input.is_default !== undefined ? (input.is_default ? 1 : 0) : existing.is_default,
                 id
             ]
