@@ -55,6 +55,9 @@
           <div class="row-info">
             <div class="row-title">{{ reminder.title }}</div>
             <div class="row-meta">
+              <el-tag v-if="reminder.skill_id" size="small" effect="plain" type="success" style="margin-right: 6px;">
+                ⚡ {{ getSkillName(reminder.skill_id) }}
+              </el-tag>
               <el-tag
                   :type="reminder.remind_type === 'scheduled' ? 'warning' : 'primary'"
                   size="small"
@@ -132,6 +135,7 @@
 <script setup lang="ts">
 import {onMounted, ref} from 'vue'
 import {useRemindersStore} from '@/stores/reminders'
+import {useSkillsStore} from '@/stores/skills'
 import {Delete, Edit, Loading, MoreFilled, Plus} from '@element-plus/icons-vue'
 import {CHANNELS} from '@/types/notification'
 import type {Reminder} from '@/types/reminder'
@@ -140,6 +144,7 @@ import {ElMessage, ElMessageBox} from 'element-plus'
 import wechatWorkIcon from '@/../resources/wechat-work.png'
 
 const remindersStore = useRemindersStore()
+const skillsStore = useSkillsStore()
 const searchText = ref('')
 const statusFilter = ref('all')
 const formVisible = ref(false)
@@ -221,7 +226,13 @@ function formatTime(iso: string): string {
 
 onMounted(() => {
   remindersStore.fetchReminders()
+  skillsStore.fetchSkills()
 })
+
+function getSkillName(skillId: number): string {
+  const skill = skillsStore.skills.find(s => s.id === skillId)
+  return skill?.name || '未知技能'
+}
 </script>
 
 <style scoped>

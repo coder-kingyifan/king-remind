@@ -99,7 +99,7 @@
       <div class="setting-section">
         <h3 class="section-title">
           关于
-          <span class="gift-link" @click="showBlessing = true">送给佬友的礼物</span>
+          <span class="gift-link" @click="showBlessing = true">送给默默努力的你</span>
         </h3>
 
         <div class="about-info">
@@ -367,14 +367,14 @@
           </div>
         </div>
         <div class="blessing-content">
-          <h2 class="blessing-title">- 送给佬友 -</h2>
+          <h2 class="blessing-title">- 送给平凡的你 -</h2>
           <div class="blessing-divider"></div>
           <p class="blessing-text">
-            愿佬每一天都被温柔以待<br/>
+            愿你每一天都被温柔以待<br/>
             愿所有的美好都如期而至<br/>
             愿佬眼里有光，心中有爱<br/>
             愿这个小小的提醒助手<br/>
-            能陪佬度过每一个平凡又闪亮的日子
+            能陪你度过每一个平凡又闪亮的日子
           </p>
           <div class="blessing-footer">
             <span class="blessing-heart">❤️</span>

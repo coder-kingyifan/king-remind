@@ -2,9 +2,7 @@
   <div class="app-root">
     <AppLayout>
       <router-view v-slot="{ Component }">
-        <transition name="fade-slide" mode="out-in">
-          <component :is="Component"/>
-        </transition>
+        <component :is="Component"/>
       </router-view>
     </AppLayout>
 
@@ -25,9 +23,11 @@
 <script setup lang="ts">
 import {onMounted, ref} from 'vue'
 import {useSettingsStore} from '@/stores/settings'
+import {useSkillsStore} from '@/stores/skills'
 import AppLayout from '@/components/layout/AppLayout.vue'
 
 const settingsStore = useSettingsStore()
+const skillsStore = useSkillsStore()
 const showNotification = ref(false)
 const notificationData = ref({title: '', body: ''})
 let notifTimer: any = null
@@ -35,6 +35,9 @@ let notifTimer: any = null
 onMounted(async () => {
   await settingsStore.fetchSettings()
   settingsStore.initThemeListener()
+
+  // 后台预加载技能数据（不阻塞页面）
+  skillsStore.fetchSkills()
 
   // 监听来自主进程的通知
   window.electronAPI.notifications.onShow((data) => {

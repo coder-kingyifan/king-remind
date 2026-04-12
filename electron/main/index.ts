@@ -10,6 +10,7 @@ import {ReminderScheduler} from './scheduler'
 import {settingsDb} from './db/settings'
 import {closeAllNotifications} from './notifications/notification-window'
 import {startApiServer, stopApiServer} from './api-server'
+import {seedBuiltinSkills} from './db/skills'
 import {execSync} from 'child_process'
 
 // Windows 控制台中文乱码修复
@@ -105,6 +106,10 @@ if (!gotTheLock) {
             console.log('[主进程] 正在运行数据库迁移...')
             runMigrations()
             console.log('[主进程] 数据库迁移完成')
+
+            // 初始化内置技能
+            seedBuiltinSkills()
+            console.log('[主进程] 内置技能初始化完成')
 
             // 创建主窗口（headless 模式下跳过）
             let win: BrowserWindow | null = null

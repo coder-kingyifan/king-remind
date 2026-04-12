@@ -16,6 +16,12 @@ const router = createRouter({
             meta: {title: '提醒管理', icon: 'Bell'}
         },
         {
+            path: '/skills',
+            name: 'skills',
+            component: () => import('@/pages/SkillsPage.vue'),
+            meta: {title: '技能中心', icon: 'MagicStick'}
+        },
+        {
             path: '/notifications',
             name: 'notifications',
             component: () => import('@/pages/NotificationSettingsPage.vue'),

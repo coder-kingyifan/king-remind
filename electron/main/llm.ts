@@ -3,6 +3,7 @@ import {settingsDb} from './db/settings'
 import {CreateReminderInput, remindersDb} from './db/reminders'
 import {modelConfigsDb} from './db/model-configs'
 import {notificationConfigsDb} from './db/notification-configs'
+import {skillsDb} from './db/skills'
 import {ReminderScheduler} from './scheduler'
 
 // ======================== 服务商预设 ========================
@@ -237,10 +238,18 @@ const SYSTEM_PROMPT_TEMPLATE = `你是 King 提醒助手的 AI 助手。你可�
    参数:
    - id (必填): 提醒ID
 
+5. list_skills - 列出可用的技能
+   参数: 无
+
+6. execute_skill - 执行一个技能获取结果
+   参数:
+   - skill_id (必填): 技能ID
+
 请根据用户的自然语言描述，智能提取参数并调用合适的工具。
 示例:
 - 用户说"每30分钟提醒我喝水" → 调用 create_reminder，remind_type="interval"，interval_value=30，interval_unit="minutes"
 - 用户说"明天下午3点开会" → 调用 create_reminder，remind_type="scheduled"，start_time=计算出的时间
+- 用户说"每天早上8点给我推送天气" → 先 list_skills 找到天气技能，再 create_reminder 并设置 skill_id
 - 用户说"工作日每天早上9点站会" → 调用 create_reminder，remind_type="interval"，interval_unit="days"，workday_only=true，start_time 包含09:00
 - 用户说"查看我的提醒" → 调用 list_reminders
 - 用户说"删除第3个提醒" → 先 list_reminders 找到第3个的id，再 delete_reminder
@@ -310,7 +319,8 @@ const OPENAI_TOOLS = [
                     active_hours_start: {type: 'string', description: '活跃时段开始 HH:mm'},
                     active_hours_end: {type: 'string', description: '活跃时段结束 HH:mm'},
                     lunar_date: {type: 'string', description: '农历日期，格式 "MM-DD"，如 "09-03" 表示农历九月初三'},
-                    channels: {type: 'array', items: {type: 'string'}, description: '通知渠道'}
+                    channels: {type: 'array', items: {type: 'string'}, description: '通知渠道'},
+                    skill_id: {type: 'number', description: '绑定的技能ID，可选。绑定后每次触发时会先执行技能获取动态内容'}
                 }
             }
         }
@@ -356,6 +366,31 @@ const OPENAI_TOOLS = [
                 }
             }
         }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_skills',
+            description: '列出所有可用的技能',
+            parameters: {
+                type: 'object',
+                properties: {}
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'execute_skill',
+            description: '执行一个技能并获取结果内容',
+            parameters: {
+                type: 'object',
+                required: ['skill_id'],
+                properties: {
+                    skill_id: {type: 'number', description: '要执行的技能ID'}
+                }
+            }
+        }
     }
 ]
 
@@ -367,7 +402,7 @@ const ANTHROPIC_TOOLS = OPENAI_TOOLS.map(t => ({
 
 // ======================== 工具执行 ========================
 
-function executeTool(name: string, args: Record<string, any>, scheduler: ReminderScheduler | null): any {
+async function executeTool(name: string, args: Record<string, any>, scheduler: ReminderScheduler | null): Promise<any> {
     switch (name) {
         case 'create_reminder': {
             const input: CreateReminderInput = {
@@ -384,7 +419,8 @@ function executeTool(name: string, args: Record<string, any>, scheduler: Reminde
                 icon: args.icon,
                 active_hours_start: args.active_hours_start,
                 active_hours_end: args.active_hours_end,
-                channels: args.channels || ['desktop']
+                channels: args.channels || ['desktop'],
+                skill_id: args.skill_id || null
             }
             const reminder = remindersDb.create(input)
             if (scheduler) scheduler.triggerNow()
@@ -400,6 +436,15 @@ function executeTool(name: string, args: Record<string, any>, scheduler: Reminde
             return remindersDb.delete(args.id)
         case 'toggle_reminder':
             return remindersDb.toggleActive(args.id)
+        case 'list_skills':
+            return skillsDb.getEnabled().map(s => ({
+                id: s.id, skill_key: s.skill_key, name: s.name, description: s.description,
+                icon: s.icon, category: s.category
+            }))
+        case 'execute_skill': {
+            const {executeSkill} = await import('./skills/executor')
+            return executeSkill(args.skill_id)
+        }
         default:
             throw new Error(`Unknown tool: ${name}`)
     }
@@ -415,6 +460,10 @@ function getToolDisplayName(name: string): string {
             return '删除提醒'
         case 'toggle_reminder':
             return '切换提醒状态'
+        case 'list_skills':
+            return '查询技能列表'
+        case 'execute_skill':
+            return '执行技能'
         default:
             return name
     }
@@ -533,6 +582,7 @@ async function chatOpenAIStream(
     // Detect strict VL models (e.g., qwen-vl) that don't support system role and require array content
     const modelLower = config.model.toLowerCase()
     const isStrictVL = modelLower.includes('qwen-vl') || modelLower.includes('qwenvl')
+    let vlStrictDetected = false
 
     if (isStrictVL || vlStrictDetected) {
         // Merge system message into first user message
@@ -556,7 +606,6 @@ async function chatOpenAIStream(
         }
     }
 
-    let vlStrictDetected = false
     let lastReply = ''
     let iterations = 0
     const maxIterations = 5
@@ -586,14 +635,16 @@ async function chatOpenAIStream(
             return m
         })
 
+        const isReasoningModel = config.model.includes('o1') || config.model.includes('o3') || config.model.includes('reasoner') || config.model.toLowerCase().includes('r1')
+
         const body: any = {
             model: config.model,
             messages: requestMessages,
-            tools: OPENAI_TOOLS,
             stream: true
         }
 
-        if (!(config.model.includes('o1') || config.model.includes('o3') || config.model.includes('reasoner') || config.model.toLowerCase().includes('r1'))) {
+        if (!isReasoningModel) {
+            body.tools = OPENAI_TOOLS
             body.max_tokens = 4096
         }
 
@@ -731,7 +782,7 @@ async function chatOpenAIStream(
 
                 let result: any
                 try {
-                    result = executeTool(tc.name, fnArgs, scheduler)
+                    result = await executeTool(tc.name, fnArgs, scheduler)
                 } catch (e: any) {
                     result = {error: e.message}
                 }
@@ -938,7 +989,7 @@ async function chatAnthropicStream(
 
                 let result: any
                 try {
-                    result = executeTool(tu.name, toolInput, scheduler)
+                    result = await executeTool(tu.name, toolInput, scheduler)
                 } catch (e: any) {
                     result = {error: e.message}
                 }

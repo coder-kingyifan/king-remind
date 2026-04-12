@@ -24,7 +24,7 @@ export class NotificationDispatcher {
         ])
     }
 
-    async dispatch(reminder: Reminder): Promise<void> {
+    async dispatch(reminder: Reminder, skillResult?: string): Promise<void> {
         let channelIds: string[]
         try {
             channelIds = JSON.parse(reminder.channels)
@@ -43,7 +43,9 @@ export class NotificationDispatcher {
 
             const message: NotificationMessage = {
                 title: reminder.title,
-                body: reminder.description || reminder.title,
+                body: skillResult
+                    ? `${reminder.description || reminder.title}\n\n${skillResult}`
+                    : (reminder.description || reminder.title),
                 icon: reminder.icon,
                 color: reminder.color,
                 reminderId: reminder.id

@@ -2,6 +2,8 @@ import {Reminder, remindersDb} from './db/reminders'
 import {workdaysDb} from './db/workdays'
 import {getSolarDateFromLunar} from 'chinese-days'
 import {NotificationDispatcher} from './notifications/dispatcher'
+import {skillsDb} from './db/skills'
+import {executeSkill} from './skills/executor'
 
 export class ReminderScheduler {
     private intervalId: NodeJS.Timeout | null = null
@@ -34,7 +36,7 @@ export class ReminderScheduler {
         this.checkReminders()
     }
 
-    private checkReminders(): void {
+    private async checkReminders(): Promise<void> {
         try {
             const dueReminders = remindersDb.getDueReminders()
 
@@ -59,7 +61,17 @@ export class ReminderScheduler {
                     continue
                 }
 
-                this.dispatcher.dispatch(reminder).catch(err => {
+                // Execute skill before dispatching if skill is bound
+                let skillResult = ''
+                if (reminder.skill_id) {
+                    try {
+                        skillResult = await executeSkill(reminder.skill_id)
+                    } catch (e: any) {
+                        console.error(`[调度器] 技能执行失败 [${reminder.title}]:`, e.message)
+                    }
+                }
+
+                this.dispatcher.dispatch(reminder, skillResult).catch(err => {
                     console.error(`[调度器] 发送提醒失败 [${reminder.title}]:`, err.message)
                 })
 

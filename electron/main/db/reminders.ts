@@ -18,6 +18,7 @@ export interface Reminder {
     active_hours_start: string | null
     active_hours_end: string | null
     channels: string
+    skill_id: number | null
     is_active: number
     last_triggered_at: string | null
     next_trigger_at: string | null
@@ -42,6 +43,7 @@ export interface CreateReminderInput {
     active_hours_start?: string | null
     active_hours_end?: string | null
     channels: string[]
+    skill_id?: number | null
 }
 
 function toPlain<T>(obj: T): T {
@@ -168,8 +170,8 @@ export const remindersDb = {
 
         run(`
       INSERT INTO reminders (title, description, icon, color, remind_type, interval_value, interval_unit,
-        weekdays, workday_only, holiday_only, lunar_date, start_time, end_time, active_hours_start, active_hours_end, channels, next_trigger_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        weekdays, workday_only, holiday_only, lunar_date, start_time, end_time, active_hours_start, active_hours_end, channels, skill_id, next_trigger_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
             input.title,
             input.description || '',
@@ -187,6 +189,7 @@ export const remindersDb = {
             input.active_hours_start || null,
             input.active_hours_end || null,
             JSON.stringify(input.channels),
+            input.skill_id || null,
             nextTrigger
         ])
 
@@ -214,6 +217,7 @@ export const remindersDb = {
         const workdayOnly = input.workday_only !== undefined ? input.workday_only : existing.workday_only
         const holidayOnly = input.holiday_only !== undefined ? input.holiday_only : (existing.holiday_only || 0)
         const lunarDate = input.lunar_date !== undefined ? input.lunar_date : (existing.lunar_date || null)
+        const skillId = input.skill_id !== undefined ? input.skill_id : existing.skill_id
 
         let nextTrigger: string
         if (remindType === 'scheduled') {
@@ -229,7 +233,7 @@ export const remindersDb = {
         holiday_only = ?, lunar_date = ?,
         start_time = ?, end_time = ?,
         active_hours_start = ?, active_hours_end = ?,
-        channels = ?, next_trigger_at = ?,
+        channels = ?, skill_id = ?, next_trigger_at = ?,
         updated_at = datetime('now', 'localtime')
       WHERE id = ?
     `, [
@@ -238,7 +242,7 @@ export const remindersDb = {
             holidayOnly, lunarDate,
             startTime, endTime,
             activeHoursStart, activeHoursEnd,
-            channels, nextTrigger, id
+            channels, skillId, nextTrigger, id
         ])
 
         return this.get(id)

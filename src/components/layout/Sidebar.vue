@@ -37,7 +37,7 @@
 import {computed} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {useSettingsStore} from '@/stores/settings'
-import {Bell, ChatDotRound, Cpu, Message, Moon, Odometer, Setting, Sunny} from '@element-plus/icons-vue'
+import {Bell, ChatDotRound, Cpu, MagicStick, Message, Moon, Odometer, Setting, Sunny} from '@element-plus/icons-vue'
 import logoIcon from '../../../resources/icon.png'
 
 const route = useRoute()
@@ -47,6 +47,7 @@ const settingsStore = useSettingsStore()
 const navItems = [
   {path: '/', title: '仪表盘', icon: Odometer},
   {path: '/reminders', title: '提醒管理', icon: Bell},
+  {path: '/skills', title: '技能中心', icon: MagicStick},
   {path: '/ai-chat', title: 'AI 助手', icon: ChatDotRound},
   {path: '/model-config', title: '模型配置', icon: Cpu},
   {path: '/notifications', title: '通知渠道', icon: Message},

@@ -482,6 +482,97 @@ export function runMigrations(): void {
             sql: `
         ALTER TABLE model_configs ADD COLUMN model_notes TEXT NOT NULL DEFAULT '{}';
       `
+        },
+        {
+            version: 12,
+            sql: `
+                CREATE TABLE IF NOT EXISTS skills
+                (
+                    id
+                    INTEGER
+                    PRIMARY
+                    KEY
+                    AUTOINCREMENT,
+                    skill_key
+                    TEXT
+                    NOT
+                    NULL
+                    UNIQUE,
+                    name
+                    TEXT
+                    NOT
+                    NULL,
+                    description
+                    TEXT
+                    DEFAULT
+                    '',
+                    icon
+                    TEXT
+                    DEFAULT
+                    '⚡',
+                    category
+                    TEXT
+                    NOT
+                    NULL
+                    DEFAULT
+                    'custom',
+                    action_type
+                    TEXT
+                    NOT
+                    NULL
+                    DEFAULT
+                    'builtin',
+                    action_config
+                    TEXT
+                    DEFAULT
+                    '{}',
+                    config_schema
+                    TEXT
+                    DEFAULT
+                    '[]',
+                    user_config
+                    TEXT
+                    DEFAULT
+                    '{}',
+                    is_builtin
+                    INTEGER
+                    NOT
+                    NULL
+                    DEFAULT
+                    0,
+                    is_enabled
+                    INTEGER
+                    NOT
+                    NULL
+                    DEFAULT
+                    1,
+                    created_at
+                    TEXT
+                    NOT
+                    NULL
+                    DEFAULT (
+                    datetime
+                (
+                    'now',
+                    'localtime'
+                )),
+                    updated_at TEXT NOT NULL DEFAULT
+                (
+                    datetime
+                (
+                    'now',
+                    'localtime'
+                ))
+                    );
+
+                ALTER TABLE reminders ADD COLUMN skill_id INTEGER DEFAULT NULL;
+            `
+        },
+        {
+            version: 13,
+            sql: `
+                UPDATE skills SET is_enabled = 0 WHERE is_builtin = 1;
+            `
         }
     ]
 

@@ -14,17 +14,8 @@ async function safeInvoke(channel: string, ...args: any[]): Promise<any> {
             }
         })
 
-        console.log('[preload] invoke:', channel)
         const result = await ipcRenderer.invoke(channel, ...safeArgs)
-        console.log('[preload] result type:', typeof result, channel)
-        // 如果是 undefined/null/primitive 直接返回
-        if (result === undefined || result === null || typeof result !== 'object') {
-            return result
-        }
-        // 序列化返回值
-        const cloned = JSON.parse(JSON.stringify(result))
-        console.log('[preload] cloned ok:', channel)
-        return cloned
+        return result
     } catch (e: any) {
         console.error('[preload] safeInvoke error:', channel, e.message)
         throw e
@@ -136,6 +127,18 @@ const electronAPI = {
         setDefault: (id: number) => safeInvoke('models:set-default', id),
         test: (data: { provider: string; base_url: string; api_key: string; model: string }) =>
             safeInvoke('models:test', data)
+    },
+
+    // 技能管理
+    skills: {
+        list: (filters?: any) => safeInvoke('skills:list', filters),
+        get: (id: number) => safeInvoke('skills:get', id),
+        create: (data: any) => safeInvoke('skills:create', data),
+        update: (id: number, data: any) => safeInvoke('skills:update', id, data),
+        delete: (id: number) => safeInvoke('skills:delete', id),
+        toggle: (id: number) => safeInvoke('skills:toggle', id),
+        execute: (id: number) => safeInvoke('skills:execute', id),
+        updateConfig: (id: number, userConfig: string) => safeInvoke('skills:update-config', id, userConfig)
     }
 }
 

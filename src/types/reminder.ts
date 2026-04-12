@@ -16,6 +16,7 @@ export interface Reminder {
     active_hours_start: string | null
     active_hours_end: string | null
     channels: string // JSON字符串
+    skill_id: number | null
     is_active: number
     last_triggered_at: string | null
     next_trigger_at: string | null
@@ -40,6 +41,7 @@ export interface CreateReminderInput {
     active_hours_start?: string | null
     active_hours_end?: string | null
     channels: string[]
+    skill_id?: number | null
 }
 
 export interface ReminderStats {

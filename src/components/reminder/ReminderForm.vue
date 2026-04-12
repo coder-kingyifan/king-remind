@@ -198,6 +198,23 @@
           </template>
         </template>
 
+        <!-- 绑定技能（可选） -->
+        <el-form-item label="绑定技能（可选）">
+          <el-select v-model="form.skill_id" placeholder="不绑定技能" clearable style="width: 100%;">
+            <el-option :value="null" label="不绑定技能"/>
+            <el-option-group v-for="cat in skillCategories" :key="cat.key" :label="cat.icon + ' ' + cat.label">
+              <el-option
+                v-for="skill in getSkillsByCategory(cat.key)"
+                :key="skill.id"
+                :value="skill.id"
+                :label="skill.icon + ' ' + skill.name"
+                :disabled="skill.is_enabled === 0"
+              />
+            </el-option-group>
+          </el-select>
+          <div class="form-tip">绑定技能后，每次提醒触发时会先执行技能获取动态内容，一并发送给你</div>
+        </el-form-item>
+
         <el-form-item label="通知渠道" prop="channels">
           <el-checkbox-group v-model="form.channels">
             <el-checkbox
@@ -226,9 +243,10 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref} from 'vue'
+import {computed, onMounted, ref} from 'vue'
 import {useRemindersStore} from '@/stores/reminders'
 import {useNotificationsStore} from '@/stores/notifications'
+import {useSkillsStore} from '@/stores/skills'
 import {CHANNELS} from '@/types/notification'
 import type {Reminder} from '@/types/reminder'
 import {ElMessage} from 'element-plus'
@@ -247,6 +265,7 @@ const emit = defineEmits<{
 
 const remindersStore = useRemindersStore()
 const notificationsStore = useNotificationsStore()
+const skillsStore = useSkillsStore()
 const formRef = ref()
 const saving = ref(false)
 const activeStart = ref<string | null>(null)
@@ -257,6 +276,23 @@ const scheduledTime = ref('09:00')
 const isEdit = computed(() => props.reminder !== null)
 
 const channelOptions = CHANNELS
+
+// 技能相关
+const skillCategories = [
+  { key: 'weather', label: '天气环境', icon: '🌤️' },
+  { key: 'daily', label: '每日内容', icon: '📰' },
+  { key: 'health', label: '健康生活', icon: '🍎' },
+  { key: 'finance', label: '财经理财', icon: '💰' },
+  { key: 'study', label: '学习成长', icon: '📚' },
+  { key: 'tools', label: '实用工具', icon: '🔧' },
+  { key: 'custom', label: '自定义', icon: '⚡' }
+]
+
+const enabledSkills = computed(() => skillsStore.skills.filter(s => s.is_enabled === 1))
+
+function getSkillsByCategory(category: string) {
+  return enabledSkills.value.filter(s => s.category === category)
+}
 
 // 执行日模式
 const executionDayMode = ref<'all' | 'weekdays' | 'workday' | 'holiday'>('all')
@@ -369,7 +405,8 @@ const form = ref({
   solar_repeat: false,
   start_time: '',
   end_time: null as string | null,
-  channels: ['desktop'] as string[]
+  channels: ['desktop'] as string[],
+  skill_id: null as number | null
 })
 
 const rules = {
@@ -408,6 +445,8 @@ function handleTypeChange(type: string | number | boolean) {
 function initForm() {
   // 加载通知渠道配置
   notificationsStore.fetchConfigs()
+  // 加载技能列表
+  skillsStore.fetchSkills()
 
   if (props.reminder) {
     const r = props.reminder
@@ -440,7 +479,8 @@ function initForm() {
         } catch {
           return ['desktop']
         }
-      })()
+      })(),
+      skill_id: (r as any).skill_id || null
     }
     activeStart.value = r.active_hours_start
     activeEnd.value = r.active_hours_end
@@ -484,7 +524,8 @@ function initForm() {
       lunar_repeat: false,
       start_time: new Date().toISOString().slice(0, 19),
       end_time: null,
-      channels: ['desktop']
+      channels: ['desktop'],
+      skill_id: null
     }
     activeStart.value = null
     activeEnd.value = null

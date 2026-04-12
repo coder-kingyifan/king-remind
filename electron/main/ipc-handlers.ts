@@ -11,6 +11,7 @@ import {getSolarDateFromLunar} from 'chinese-days'
 import {chatWithLLM, generateSessionTitle, PROVIDERS, testModelConnection} from './llm'
 import {chatHistoryDb} from './db/chat-history'
 import {modelConfigsDb} from './db/model-configs'
+import {skillsDb} from './db/skills'
 
 // sql.js 返回的对象可能含有不可被 structured clone 序列化的属性（如 Uint8Array 等）
 // 在 IPC 返回前必须转为纯 JS 对象
@@ -356,6 +357,40 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
     safeHandle('ai:chat-history:clear', () => {
         chatHistoryDb.clear()
         return true
+    })
+
+    // ========== 技能管理 ==========
+    safeHandle('skills:list', (_event, filters?) => {
+        return skillsDb.list(filters)
+    })
+
+    safeHandle('skills:get', (_event, id: number) => {
+        return skillsDb.get(id)
+    })
+
+    safeHandle('skills:create', (_event, data: any) => {
+        return skillsDb.create(data)
+    })
+
+    safeHandle('skills:update', (_event, id: number, data: any) => {
+        return skillsDb.update(id, data)
+    })
+
+    safeHandle('skills:delete', (_event, id: number) => {
+        return skillsDb.delete(id)
+    })
+
+    safeHandle('skills:toggle', (_event, id: number) => {
+        return skillsDb.toggleEnabled(id)
+    })
+
+    safeHandle('skills:execute', async (_event, id: number) => {
+        const {executeSkill} = await import('./skills/executor')
+        return await executeSkill(id)
+    })
+
+    safeHandle('skills:update-config', (_event, id: number, userConfig: string) => {
+        return skillsDb.updateConfig(id, userConfig)
     })
 
     // ========== 模型配置 ==========
