@@ -2,11 +2,21 @@
 
 ## 概述
 
-应用启动后会在本地监听一个 HTTP API，可用于外部程序（如 OpenClaw Skill、脚本等）快速创建和管理提醒。
+应用启动后可在本地监听一个 HTTP API，可用于外部程序（如 AI Agent、脚本、自动化工具等）快速创建和管理提醒。
 
 - **默认地址**: `http://127.0.0.1:33333`
-- **端口配置**: 数据库 `settings` 表中 `api_port` 字段
+- **启用方式**: 系统设置 → API 接口 → 启用后台 API 接口（需重启应用生效）
+- **端口配置**: 数据库 `settings` 表中 `api_port` 字段（默认 33333）
+- **监听地址**: 数据库 `settings` 表中 `api_host` 字段（默认 0.0.0.0，允许外部访问）
 - **认证配置**: 数据库 `settings` 表中 `api_token` 字段（留空则不校验）
+
+## 首次配置
+
+1. 打开应用 → 系统设置 → API 接口
+2. 开启「启用后台 API 接口」开关
+3. 设置监听端口（默认 33333）、监听地址（默认 0.0.0.0）和访问令牌
+4. 点击「重启应用」使配置生效
+5. 重启后在系统设置页面可查看完整的 API 文档
 
 ## 认证
 
@@ -58,7 +68,7 @@ Authorization: Bearer <token>
 | `lunar_date`         | string   |    | 农历日期，格式 `MM-DD`，如 `01-01`（正月初一）                                                                |
 | `active_hours_start` | string   |    | 活跃时间段开始，格式 `HH:mm`，如 `09:00`                                                                   |
 | `active_hours_end`   | string   |    | 活跃时间段结束，格式 `HH:mm`，如 `18:00`                                                                   |
-| `channels`           | string[] |    | 通知渠道，默认 `["desktop"]`，可选值：`desktop` / `email` / `telegram` / `wechat_work` / `webhook` / `sms` |
+| `channels`           | string[] |    | 通知渠道，默认 `["desktop"]`，可选值：`desktop` / `email` / `telegram` / `wechat_work` / `wechat_work_webhook` / `webhook` |
 
 **示例：5 分钟后提醒一次（定时）**
 
@@ -202,35 +212,90 @@ DELETE http://127.0.0.1:33333/api/reminders/42
 
 ---
 
-## OpenClaw Skill 集成示例
+## AI 对话调用
 
-以下为 OpenClaw Skill 的 action 调用示例：
+除了通过 HTTP API，还可以通过应用内 AI 助手用自然语言创建提醒：
 
-```json
-{
-  "name": "create_reminder",
-  "description": "创建一条本地提醒",
-  "parameters": {
-    "title": "会议提醒",
-    "remind_type": "scheduled",
-    "start_time": "2025-03-20T15:00:00",
-    "description": "下午3点产品周会",
-    "channels": ["desktop"]
-  }
+| 用户输入                    | AI 操作                      |
+|-------------------------|-----------------------------|
+| 每30分钟提醒我喝水              | 创建循环提醒，间隔30分钟               |
+| 明天下午3点提醒我开会             | 创建定时提醒，指定时间                 |
+| 工作日每天早上9点提醒我站会          | 创建循环提醒，限定工作日                |
+| 查看我的所有提醒                | 调用 GET /api/reminders 查询列表  |
+| 删除喝水提醒                  | 调用 DELETE /api/reminders/:id |
+
+---
+
+## 代码调用示例
+
+### Python
+
+```python
+import requests
+
+BASE = "http://127.0.0.1:33333"
+TOKEN = "your_token"
+headers = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {TOKEN}"
 }
+
+# 创建提醒
+resp = requests.post(f"{BASE}/api/reminders", headers=headers, json={
+    "title": "喝水提醒",
+    "remind_type": "interval",
+    "start_time": "2025-03-20T09:00:00",
+    "interval_value": 30,
+    "interval_unit": "minutes",
+    "channels": ["desktop"]
+})
+print(resp.json())
+
+# 查询提醒列表
+resp = requests.get(f"{BASE}/api/reminders?is_active=1", headers=headers)
+print(resp.json())
 ```
 
-curl 等价调用：
+### Node.js
+
+```javascript
+const BASE = "http://127.0.0.1:33333";
+const TOKEN = "your_token";
+
+// 创建提醒
+const res = await fetch(`${BASE}/api/reminders`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${TOKEN}`
+  },
+  body: JSON.stringify({
+    title: "喝水提醒",
+    remind_type: "interval",
+    start_time: "2025-03-20T09:00:00",
+    interval_value: 30,
+    interval_unit: "minutes",
+    channels: ["desktop"]
+  })
+});
+const data = await res.json();
+console.log(data);
+```
+
+### curl
 
 ```bash
 curl -X POST http://127.0.0.1:33333/api/reminders \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your_token" \
   -d '{
-    "title": "会议提醒",
-    "remind_type": "scheduled",
-    "start_time": "2025-03-20T15:00:00",
-    "description": "下午3点产品周会",
+    "title": "喝水提醒",
+    "remind_type": "interval",
+    "start_time": "2025-03-20T09:00:00",
+    "interval_value": 30,
+    "interval_unit": "minutes",
+    "active_hours_start": "09:00",
+    "active_hours_end": "18:00",
     "channels": ["desktop"]
   }'
 ```

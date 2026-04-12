@@ -137,8 +137,13 @@ if (!gotTheLock) {
             scheduler = new ReminderScheduler(dispatcher)
             scheduler.start(intervalMs)
 
-            // 启动本地 API Server
-            startApiServer(scheduler)
+            // 启动本地 API Server（仅当用户启用时）
+            const apiEnabled = settingsDb.get('api_enabled')
+            if (apiEnabled === 'true') {
+                startApiServer(scheduler)
+            } else {
+                console.log('[主进程] API 接口未启用，跳过启动')
+            }
 
             // 应用启动项设置
             const launchAtStartup = settingsDb.get('launch_at_startup')

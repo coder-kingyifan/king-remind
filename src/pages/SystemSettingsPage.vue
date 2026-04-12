@@ -6,6 +6,27 @@
     </div>
 
     <div class="settings-list">
+      <!-- 用户信息 -->
+      <div class="setting-section">
+        <h3 class="section-title">用户信息</h3>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">称呼</div>
+            <div class="setting-desc">AI 会用这个昵称呼叫你</div>
+          </div>
+          <div class="setting-actions">
+            <el-input
+              :model-value="settingsStore.settings.user_nickname || ''"
+              @change="(val: string) => settingsStore.setSetting('user_nickname', val)"
+              placeholder="输入称呼"
+              size="small"
+              style="width: 160px;"
+            />
+          </div>
+        </div>
+      </div>
+
       <!-- 主题设置 -->
       <div class="setting-section">
         <h3 class="section-title">外观</h3>
@@ -82,6 +103,75 @@
         </div>
       </div>
 
+      <!-- API 接口设置 -->
+      <div class="setting-section">
+        <h3 class="section-title">API 接口</h3>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">启用后台 API 接口</div>
+            <div class="setting-desc">允许外部程序通过 HTTP 接口创建和管理提醒，修改后需重启应用生效</div>
+          </div>
+          <el-switch
+              :model-value="settingsStore.settings.api_enabled === 'true'"
+              @change="onApiEnabledChange"
+          />
+        </div>
+
+        <template v-if="settingsStore.settings.api_enabled === 'true'">
+          <div class="setting-item">
+            <div class="setting-info">
+              <div class="setting-label">监听端口</div>
+              <div class="setting-desc">API 服务监听的端口号</div>
+            </div>
+            <el-input-number
+                :model-value="Number(settingsStore.settings.api_port || 33333)"
+                :min="1024"
+                :max="65535"
+                size="small"
+                controls-position="right"
+                @change="(val: number) => onApiSettingChange('api_port', String(val))"
+            />
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <div class="setting-label">监听地址</div>
+              <div class="setting-desc"><span class="api-code">0.0.0.0</span> 允许外部访问，<span class="api-code">127.0.0.1</span> 仅本机</div>
+            </div>
+            <el-input
+                :model-value="settingsStore.settings.api_host || '0.0.0.0'"
+                @change="(val: string) => onApiSettingChange('api_host', val)"
+                size="small"
+                style="width: 160px;"
+            />
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <div class="setting-label">访问令牌（Token）</div>
+              <div class="setting-desc">留空则不校验，建议设置以保证安全</div>
+            </div>
+            <el-input
+                :model-value="settingsStore.settings.api_token || ''"
+                @change="(val: string) => onApiSettingChange('api_token', val)"
+                placeholder="留空则不校验"
+                size="small"
+                show-password
+                style="width: 160px;"
+            />
+          </div>
+
+          <div class="setting-item" v-if="apiNeedsRestart">
+            <div class="setting-info">
+              <div class="setting-label" style="color: #E6A23C;">配置已修改</div>
+              <div class="setting-desc">API 配置已更改，需重启应用生效</div>
+            </div>
+            <el-button type="warning" size="small" @click="restartApp">重启应用</el-button>
+          </div>
+        </template>
+      </div>
+
       <!-- 数据管理 -->
       <div class="setting-section">
         <h3 class="section-title">数据</h3>
@@ -126,19 +216,19 @@
         </div>
       </div>
 
-      <!-- 对外调用 API -->
-      <div class="setting-section">
-        <h3 class="section-title">对外调用 API</h3>
+      <!-- 对外调用 API 文档 - 仅在启用 API 时显示 -->
+      <div v-if="settingsStore.settings.api_enabled === 'true'" class="setting-section">
+        <h3 class="section-title">对外调用 API 文档</h3>
 
         <div class="api-doc">
           <p class="api-intro">
-            应用启动后会在本地开启一个 HTTP 服务，外部程序（脚本、AI Agent、自动化工具等）可通过该接口创建和管理提醒。
+            应用已在本地开启 HTTP 服务，外部程序（脚本、AI Agent、自动化工具等）可通过该接口创建和管理提醒。
           </p>
 
           <!-- 基本信息 -->
           <div class="api-row">
             <span class="api-label">服务地址</span>
-            <span class="api-value api-code">http://0.0.0.0:{{ settingsStore.settings.api_port || '33333' }}</span>
+            <span class="api-value api-code">http://{{ settingsStore.settings.api_host || '0.0.0.0' }}:{{ settingsStore.settings.api_port || '33333' }}</span>
           </div>
           <div class="api-row">
             <span class="api-label">认证方式</span>
@@ -294,7 +384,7 @@
               <span class="api-field-req">-</span>
               <span class="api-field-desc">通知渠道，默认 <span class="api-code">["desktop"]</span>，可选：<span
                   class="api-code">desktop</span> / <span class="api-code">email</span> / <span class="api-code">telegram</span> / <span
-                  class="api-code">wechat_work</span> / <span class="api-code">webhook</span> / <span class="api-code">sms</span></span>
+                  class="api-code">wechat_work</span> / <span class="api-code">wechat_work_webhook</span> / <span class="api-code">webhook</span></span>
             </div>
             <div class="api-field-row">
               <span class="api-field-name api-code">icon</span>
@@ -327,6 +417,40 @@
     "active_hours_end": "18:00",
     "channels": ["desktop"]
   }'</pre>
+
+          <div class="api-example-title" style="margin-top:14px;">AI Agent 对话调用示例</div>
+          <p class="api-intro">通过 AI 助手对话也可以创建提醒，直接用自然语言描述即可：</p>
+          <div class="api-chat-examples">
+            <div class="api-chat-bubble user">每30分钟提醒我喝水</div>
+            <div class="api-chat-bubble ai">好的，已为你创建喝水提醒 📋 每 30 分钟循环提醒，活跃时段 09:00-18:00，通过桌面通知推送。</div>
+            <div class="api-chat-bubble user">明天下午3点提醒我开会</div>
+            <div class="api-chat-bubble ai">已创建会议提醒 📋 明天 15:00 定时提醒，通过桌面通知推送。</div>
+          </div>
+
+          <div class="api-example-title" style="margin-top:14px;">Python 调用示例</div>
+          <pre class="api-pre">import requests
+
+BASE = "http://127.0.0.1:{{ settingsStore.settings.api_port || '33333' }}"
+TOKEN = "{{ settingsStore.settings.api_token || 'your_token' }}"
+headers = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {TOKEN}"
+}
+
+# 创建提醒
+resp = requests.post(f"{BASE}/api/reminders", headers=headers, json={
+    "title": "喝水提醒",
+    "remind_type": "interval",
+    "start_time": "2025-03-20T09:00:00",
+    "interval_value": 30,
+    "interval_unit": "minutes",
+    "channels": ["desktop"]
+})
+print(resp.json())
+
+# 查询提醒列表
+resp = requests.get(f"{BASE}/api/reminders?is_active=1", headers=headers)
+print(resp.json())</pre>
 
           <div class="api-example-title" style="margin-top:10px;">HTTP 状态码说明</div>
           <div class="api-field-row api-field-header" style="margin-top:4px;">
@@ -389,10 +513,11 @@
 <script setup lang="ts">
 import {ref} from 'vue'
 import {useSettingsStore} from '@/stores/settings'
-import {ElMessage} from 'element-plus'
+import {ElMessage, ElMessageBox} from 'element-plus'
 
 const settingsStore = useSettingsStore()
 const showBlessing = ref(false)
+const apiNeedsRestart = ref(false)
 
 function starStyle(i: number) {
   const angle = (i / 12) * 360
@@ -415,6 +540,39 @@ const themeOptions = [
   {label: '🌙 暗色', value: 'dark'},
   {label: '💻 跟随系统', value: 'system'}
 ]
+
+async function onApiEnabledChange(val: boolean) {
+  await settingsStore.setSetting('api_enabled', String(val))
+  if (val) {
+    // 启用 API，需要重启
+    apiNeedsRestart.value = true
+    try {
+      await ElMessageBox.confirm(
+        'API 接口已启用，需要重启应用才能生效。是否立即重启？',
+        '提示',
+        {confirmButtonText: '重启', cancelButtonText: '稍后', type: 'info'}
+      )
+      restartApp()
+    } catch { /* 用户取消 */ }
+  } else {
+    // 禁用 API
+    apiNeedsRestart.value = true
+    ElMessage.warning('API 接口已关闭，重启后生效')
+  }
+}
+
+async function onApiSettingChange(key: string, value: string) {
+  await settingsStore.setSetting(key, value)
+  apiNeedsRestart.value = true
+}
+
+async function restartApp() {
+  try {
+    await window.electronAPI.app.restart()
+  } catch (e: any) {
+    ElMessage.error('重启失败: ' + (e.message || '未知错误'))
+  }
+}
 
 async function cleanupLogs() {
   try {
@@ -838,5 +996,34 @@ async function cleanupLogs() {
   white-space: pre;
   margin: 0;
   line-height: 1.6;
+}
+
+/* AI 对话调用示例 */
+.api-chat-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.api-chat-bubble {
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 85%;
+}
+
+.api-chat-bubble.user {
+  align-self: flex-end;
+  background: var(--color-primary, #409EFF);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.api-chat-bubble.ai {
+  align-self: flex-start;
+  background: var(--bg-secondary, #f5f7fa);
+  color: var(--text-primary);
+  border-bottom-left-radius: 4px;
 }
 </style>

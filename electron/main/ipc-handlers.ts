@@ -12,6 +12,8 @@ import {chatWithLLM, generateSessionTitle, PROVIDERS, testModelConnection} from 
 import {chatHistoryDb} from './db/chat-history'
 import {modelConfigsDb} from './db/model-configs'
 import {skillsDb} from './db/skills'
+import {startApiServer, stopApiServer} from './api-server'
+import {ReminderScheduler} from './scheduler'
 
 // sql.js 返回的对象可能含有不可被 structured clone 序列化的属性（如 Uint8Array 等）
 // 在 IPC 返回前必须转为纯 JS 对象
@@ -32,7 +34,10 @@ function safeHandle(channel: string, handler: (...args: any[]) => any): void {
     })
 }
 
+let schedulerRef: any = null
+
 export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: NotificationDispatcher, scheduler: any): void {
+    schedulerRef = scheduler
     // ========== 提醒 ==========
     safeHandle('reminders:list', (_event, filters?) => {
         return remindersDb.list(filters)
@@ -473,5 +478,37 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
         model: string
     }) => {
         return await testModelConnection(data)
+    })
+
+    // ========== 应用控制 ==========
+    safeHandle('app:restart', () => {
+        app.relaunch()
+        app.exit(0)
+    })
+
+    safeHandle('app:api-status', () => {
+        const enabled = settingsDb.get('api_enabled')
+        const port = settingsDb.get('api_port') || '33333'
+        const host = settingsDb.get('api_host') || '0.0.0.0'
+        const token = settingsDb.get('api_token') || ''
+        return { enabled: enabled === 'true', port, host, token }
+    })
+
+    // ========== API 接口控制 ==========
+    safeHandle('api:toggle', (_event, enabled: boolean) => {
+        settingsDb.set('api_enabled', String(enabled))
+        if (!enabled) {
+            stopApiServer()
+        }
+        return true
+    })
+
+    safeHandle('api:restart', (_event) => {
+        stopApiServer()
+        const scheduler = schedulerRef
+        if (scheduler) {
+            startApiServer(scheduler)
+        }
+        return true
     })
 }

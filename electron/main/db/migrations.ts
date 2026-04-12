@@ -585,6 +585,14 @@ export function runMigrations(): void {
             sql: `
                 ALTER TABLE chat_messages ADD COLUMN images TEXT DEFAULT NULL;
             `
+        },
+        {
+            version: 16,
+            sql: `
+                INSERT OR IGNORE INTO settings (key, value) VALUES ('setup_done', 'false');
+                INSERT OR IGNORE INTO settings (key, value) VALUES ('api_enabled', 'true');
+                INSERT OR IGNORE INTO settings (key, value) VALUES ('api_host', '0.0.0.0');
+            `
         }
     ]
 

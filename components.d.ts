@@ -43,6 +43,7 @@ declare module 'vue' {
     ReminderForm: typeof import('./src/components/reminder/ReminderForm.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SetupWizard: typeof import('./src/components/setup/SetupWizard.vue')['default']
     Sidebar: typeof import('./src/components/layout/Sidebar.vue')['default']
     SkillForm: typeof import('./src/components/skill/SkillForm.vue')['default']
     TitleBar: typeof import('./src/components/layout/TitleBar.vue')['default']

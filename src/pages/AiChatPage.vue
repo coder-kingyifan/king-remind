@@ -4,6 +4,10 @@
       <div class="page-header-row">
         <h1 class="page-title">AI 助手</h1>
         <div class="page-header-actions">
+          <el-button size="small" plain @click="showNicknameDialog = true">
+            <el-icon style="margin-right:4px"><User/></el-icon>
+            {{ userNickname || '设置称呼' }}
+          </el-button>
           <el-button size="small" plain @click="showHistory = true">
             <el-icon style="margin-right:4px"><Clock/></el-icon>
             历史
@@ -173,15 +177,15 @@
     <!-- 昵称设置弹窗 -->
     <NicknameDialog
       v-model="showNicknameDialog"
+      :current-nickname="userNickname"
       @confirm="onNicknameConfirm"
-      @skip="onNicknameSkip"
     />
   </div>
 </template>
 
 <script setup lang="ts">
 import {computed, nextTick, onMounted, onUnmounted, reactive, ref} from 'vue'
-import {Clock, Delete, Paperclip, Plus, Promotion} from '@element-plus/icons-vue'
+import {Clock, Delete, Paperclip, Plus, Promotion, User} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import ChatAvatar from '@/components/chat/ChatAvatar.vue'
 import ChatMessage from '@/components/chat/ChatMessage.vue'
@@ -406,8 +410,6 @@ async function loadNickname() {
     const nick = await window.electronAPI.settings.get('user_nickname')
     if (nick) {
       userNickname.value = nick
-    } else {
-      showNicknameDialog.value = true
     }
   } catch { /* ignore */ }
 }

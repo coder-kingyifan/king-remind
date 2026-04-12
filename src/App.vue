@@ -1,22 +1,28 @@
 <template>
   <div class="app-root">
-    <AppLayout>
-      <router-view v-slot="{ Component }">
-        <component :is="Component"/>
-      </router-view>
-    </AppLayout>
+    <!-- 首次启动向导 -->
+    <SetupWizard v-if="showSetup" @finish="onSetupFinish" />
 
-    <!-- 应用内通知弹窗 -->
-    <transition name="notification-slide">
-      <div v-if="showNotification" class="in-app-notification" @click="dismissNotification">
-        <div class="notif-icon">🔔</div>
-        <div class="notif-content">
-          <div class="notif-title">{{ notificationData.title }}</div>
-          <div class="notif-body">{{ notificationData.body }}</div>
+    <!-- 主界面 -->
+    <template v-else>
+      <AppLayout>
+        <router-view v-slot="{ Component }">
+          <component :is="Component"/>
+        </router-view>
+      </AppLayout>
+
+      <!-- 应用内通知弹窗 -->
+      <transition name="notification-slide">
+        <div v-if="showNotification" class="in-app-notification" @click="dismissNotification">
+          <div class="notif-icon">🔔</div>
+          <div class="notif-content">
+            <div class="notif-title">{{ notificationData.title }}</div>
+            <div class="notif-body">{{ notificationData.body }}</div>
+          </div>
+          <div class="notif-close" @click.stop="dismissNotification">×</div>
         </div>
-        <div class="notif-close" @click.stop="dismissNotification">×</div>
-      </div>
-    </transition>
+      </transition>
+    </template>
   </div>
 </template>
 
@@ -25,6 +31,7 @@ import {onMounted, ref} from 'vue'
 import {useSettingsStore} from '@/stores/settings'
 import {useSkillsStore} from '@/stores/skills'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import SetupWizard from '@/components/setup/SetupWizard.vue'
 
 const settingsStore = useSettingsStore()
 const skillsStore = useSkillsStore()
@@ -32,10 +39,68 @@ const showNotification = ref(false)
 const notificationData = ref({title: '', body: ''})
 let notifTimer: any = null
 
+// 首次启动向导
+const showSetup = ref(false)
+
 onMounted(async () => {
   await settingsStore.fetchSettings()
   settingsStore.initThemeListener()
 
+  // 检查是否首次启动
+  const setupDone = settingsStore.settings.setup_done
+  if (!setupDone) {
+    showSetup.value = true
+    return
+  }
+
+  initApp()
+})
+
+async function onSetupFinish(data: {
+  nickname: string;
+  apiEnabled: boolean;
+  apiPort: number;
+  apiToken: string;
+  apiHost: string
+}) {
+  // 保存称呼
+  if (data.nickname) {
+    await settingsStore.setSetting('user_nickname', data.nickname)
+  }
+
+  // 保存 API 配置
+  await settingsStore.setSetting('api_enabled', data.apiEnabled ? 'true' : 'false')
+  await settingsStore.setSetting('api_port', String(data.apiPort))
+  await settingsStore.setSetting('api_token', data.apiToken)
+  await settingsStore.setSetting('api_host', data.apiHost)
+
+  // 标记设置完成
+  await settingsStore.setSetting('setup_done', 'true')
+
+  showSetup.value = false
+
+  // 如果启用了 API，提示需要重启
+  if (data.apiEnabled) {
+    // 给一点时间让主界面渲染
+    setTimeout(async () => {
+      try {
+        const { ElMessageBox } = await import('element-plus')
+        await ElMessageBox.confirm(
+          'API 接口配置已保存，需要重启应用才能生效。是否立即重启？',
+          '提示',
+          { confirmButtonText: '重启', cancelButtonText: '稍后', type: 'info' }
+        )
+        // 重启应用
+        window.electronAPI.settings.set('api_enabled', 'true')
+        window.electronAPI.app.restart()
+      } catch { /* 用户取消 */ }
+    }, 500)
+  }
+
+  initApp()
+}
+
+function initApp() {
   // 后台预加载技能数据（不阻塞页面）
   skillsStore.fetchSkills()
 
@@ -48,7 +113,7 @@ onMounted(async () => {
       showNotification.value = false
     }, 5000)
   })
-})
+}
 
 function dismissNotification() {
   showNotification.value = false

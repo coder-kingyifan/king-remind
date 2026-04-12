@@ -168,11 +168,13 @@
 import {computed, onMounted, onUnmounted, reactive, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {useRemindersStore} from '@/stores/reminders'
+import {useSettingsStore} from '@/stores/settings'
 import {ArrowDown, Bell, CircleCheck, Finished, Timer} from '@element-plus/icons-vue'
 import {CHANNELS} from '@/types/notification'
 
 const router = useRouter()
 const remindersStore = useRemindersStore()
+const settingsStore = useSettingsStore()
 const stats = computed(() => remindersStore.stats)
 const recentLogs = ref<any[]>([])
 const expandedErrors = reactive<Record<number, boolean>>({})
@@ -197,10 +199,14 @@ const activeReminders = computed(() =>
 
 const greeting = computed(() => {
   const hour = new Date().getHours()
-  if (hour < 6) return '凌晨好'
-  if (hour < 12) return '上午好'
-  if (hour < 18) return '下午好'
-  return '晚上好'
+  let timeGreeting = ''
+  if (hour < 6) timeGreeting = '凌晨好'
+  else if (hour < 12) timeGreeting = '上午好'
+  else if (hour < 18) timeGreeting = '下午好'
+  else timeGreeting = '晚上好'
+  
+  const nickname = settingsStore.settings.user_nickname
+  return nickname ? `${timeGreeting}，${nickname}` : timeGreeting
 })
 
 const nextReminderText = computed(() => {

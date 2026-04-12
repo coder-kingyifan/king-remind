@@ -1,16 +1,16 @@
 <template>
   <el-dialog
     :model-value="visible"
-    title="欢迎"
+    title="编辑称呼"
     width="400px"
-    :close-on-click-modal="false"
-    :show-close="false"
+    :close-on-click-modal="true"
+    :show-close="true"
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <div class="nickname-intro">
-      <div class="nickname-icon">👋</div>
-      <p class="nickname-text">欢迎使用 King 提醒助手！</p>
-      <p class="nickname-hint">请输入你的昵称，AI 会用这个昵称呼叫你</p>
+      <div class="nickname-icon">👤</div>
+      <p class="nickname-text">修改你的称呼</p>
+      <p class="nickname-hint">AI 会用这个昵称呼叫你</p>
     </div>
     <el-input
       v-model="nickname"
@@ -21,36 +21,42 @@
       @keydown.enter="confirm"
     />
     <template #footer>
-      <el-button @click="skip">跳过</el-button>
+      <el-button @click="$emit('update:modelValue', false)">取消</el-button>
       <el-button type="primary" @click="confirm" :disabled="!nickname.trim()">确定</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import {ref} from 'vue'
+import {onMounted, ref, watch} from 'vue'
 
-defineProps<{
+const props = defineProps<{
   visible: boolean
+  currentNickname?: string
 }>()
 
 const emit = defineEmits<{
   (e: 'update:modelValue', val: boolean): void
   (e: 'confirm', nickname: string): void
-  (e: 'skip'): void
 }>()
 
 const nickname = ref('')
+
+watch(() => props.visible, (val) => {
+  if (val) {
+    nickname.value = props.currentNickname || ''
+  }
+})
+
+onMounted(() => {
+  nickname.value = props.currentNickname || ''
+})
 
 function confirm() {
   const name = nickname.value.trim()
   if (name) {
     emit('confirm', name)
   }
-}
-
-function skip() {
-  emit('skip')
 }
 </script>
 

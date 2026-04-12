@@ -140,6 +140,18 @@ const electronAPI = {
         toggle: (id: number) => safeInvoke('skills:toggle', id),
         execute: (id: number, options?: { skipEnabledCheck?: boolean }) => safeInvoke('skills:execute', id, options),
         updateConfig: (id: number, userConfig: string) => safeInvoke('skills:update-config', id, userConfig)
+    },
+
+    // 应用控制
+    app: {
+        restart: () => safeInvoke('app:restart'),
+        getApiStatus: () => safeInvoke('app:api-status')
+    },
+
+    // API 接口控制
+    api: {
+        toggle: (enabled: boolean) => safeInvoke('api:toggle', enabled),
+        restart: () => safeInvoke('api:restart')
     }
 }
 
