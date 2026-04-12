@@ -138,7 +138,7 @@
           <!-- 基本信息 -->
           <div class="api-row">
             <span class="api-label">服务地址</span>
-            <span class="api-value api-code">http://127.0.0.1:{{ settingsStore.settings.api_port || '33333' }}</span>
+            <span class="api-value api-code">http://0.0.0.0:{{ settingsStore.settings.api_port || '33333' }}</span>
           </div>
           <div class="api-row">
             <span class="api-label">认证方式</span>

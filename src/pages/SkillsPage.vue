@@ -52,6 +52,7 @@
             <div class="skill-title-row">
               <span class="skill-name">{{ skill.name }}</span>
               <el-tag v-if="skill.is_builtin" size="small" type="info" effect="plain">内置</el-tag>
+              <el-tag v-else-if="skill.action_type === 'search_and_summarize'" size="small" type="warning" effect="plain">搜索+AI</el-tag>
               <el-tag v-else size="small" type="success" effect="plain">自定义</el-tag>
             </div>
             <div class="skill-desc">{{ skill.description }}</div>

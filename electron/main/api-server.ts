@@ -140,7 +140,7 @@ export function startApiServer(scheduler: ReminderScheduler): void {
         }
     })
 
-    const host = process.env['API_HOST'] || '127.0.0.1'
+    const host = settingsDb.get('api_host') || '0.0.0.0'
     server.listen(port, host, () => {
         console.log(`[API Server] 监听 http://${host}:${port}`)
     })

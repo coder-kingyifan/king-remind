@@ -579,6 +579,12 @@ export function runMigrations(): void {
             sql: `
                 ALTER TABLE model_configs ADD COLUMN model_type TEXT NOT NULL DEFAULT 'text';
             `
+        },
+        {
+            version: 15,
+            sql: `
+                ALTER TABLE chat_messages ADD COLUMN images TEXT DEFAULT NULL;
+            `
         }
     ]
 

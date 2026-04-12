@@ -8,6 +8,9 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AppLayout: typeof import('./src/components/layout/AppLayout.vue')['default']
+    ChatAvatar: typeof import('./src/components/chat/ChatAvatar.vue')['default']
+    ChatEmptyState: typeof import('./src/components/chat/ChatEmptyState.vue')['default']
+    ChatMessage: typeof import('./src/components/chat/ChatMessage.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCheckbox: typeof import('element-plus/es')['ElCheckbox']
     ElCheckboxGroup: typeof import('element-plus/es')['ElCheckboxGroup']
@@ -36,6 +39,7 @@ declare module 'vue' {
     ElTag: typeof import('element-plus/es')['ElTag']
     ElTimePicker: typeof import('element-plus/es')['ElTimePicker']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
+    NicknameDialog: typeof import('./src/components/chat/NicknameDialog.vue')['default']
     ReminderForm: typeof import('./src/components/reminder/ReminderForm.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

@@ -344,9 +344,15 @@ function buildSystemPrompt(): string {
     if (enabledChannels.length === 0) {
         enabledChannels.push('"desktop"(桌面通知，默认)')
     }
-    return SYSTEM_PROMPT_TEMPLATE
+    let prompt = SYSTEM_PROMPT_TEMPLATE
         .replace('{{current_time}}', new Date().toLocaleString('zh-CN', {timeZone: 'Asia/Shanghai'}))
         .replace('{{enabled_channels}}', enabledChannels.join(' / '))
+
+    const nickname = settingsDb.get('user_nickname')
+    if (nickname) {
+        prompt += `\n\n用户的昵称是「${nickname}」，回复时可以用这个昵称呼叫用户。`
+    }
+    return prompt
 }
 
 const OPENAI_TOOLS = [

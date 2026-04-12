@@ -109,6 +109,7 @@ const electronAPI = {
             safeInvoke('ai:session:load-messages', sessionId),
         generateTitle: (configId: number, userMsg: string, aiReply: string) =>
             safeInvoke('ai:generate-title', configId, userMsg, aiReply),
+        generateGreeting: () => safeInvoke('ai:generate-greeting'),
         onStreamEvent: (callback: (event: any) => void) => {
             ipcRenderer.on('ai:stream', (_event, data) => callback(data))
         },

@@ -70,14 +70,20 @@ export const chatHistoryDb = {
 
     // ---- 按会话加载消息 ----
 
-    loadBySession(sessionId: number): Array<{ role: string; content: string }> {
-        const rows = queryAll('SELECT role, content FROM chat_messages WHERE session_id = ? ORDER BY id ASC', [sessionId])
-        return rows.map(r => ({role: r.role, content: r.content}))
+    loadBySession(sessionId: number): Array<{ role: string; content: string; images?: string[]; created_at?: string }> {
+        const rows = queryAll('SELECT role, content, images, created_at FROM chat_messages WHERE session_id = ? ORDER BY id ASC', [sessionId])
+        return rows.map(r => ({
+            role: r.role,
+            content: r.content,
+            images: r.images ? JSON.parse(r.images as string) : undefined,
+            created_at: r.created_at
+        }))
     },
 
-    appendToSession(sessionId: number, messages: Array<{ role: string; content: string }>): void {
+    appendToSession(sessionId: number, messages: Array<{ role: string; content: string; images?: string[] }>): void {
         for (const m of messages) {
-            run('INSERT INTO chat_messages (role, content, session_id) VALUES (?, ?, ?)', [m.role, m.content, sessionId])
+            const imagesJson = m.images ? JSON.stringify(m.images) : null
+            run('INSERT INTO chat_messages (role, content, session_id, images) VALUES (?, ?, ?, ?)', [m.role, m.content, sessionId, imagesJson])
         }
         run('UPDATE chat_sessions SET updated_at = datetime(\'now\',\'localtime\') WHERE id = ?', [sessionId])
     },

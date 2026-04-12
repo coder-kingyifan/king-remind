@@ -41,11 +41,31 @@ export class NotificationDispatcher {
             const channel = this.channels.get(channelId)
             if (!channel) continue
 
+            // Parse structured skill result (JSON with title/content)
+            let messageTitle = reminder.title
+            let messageBody = reminder.description || reminder.title
+            if (skillResult) {
+                try {
+                    const parsed = JSON.parse(skillResult)
+                    if (parsed && typeof parsed === 'object') {
+                        if (parsed.title) messageTitle = String(parsed.title)
+                        if (parsed.content) {
+                            messageBody = parsed.content
+                        } else if (parsed.body) {
+                            messageBody = String(parsed.body)
+                        }
+                    } else {
+                        messageBody = `${reminder.description || reminder.title}\n\n${skillResult}`
+                    }
+                } catch {
+                    // Not JSON, use as plain text
+                    messageBody = `${reminder.description || reminder.title}\n\n${skillResult}`
+                }
+            }
+
             const message: NotificationMessage = {
-                title: reminder.title,
-                body: skillResult
-                    ? `${reminder.description || reminder.title}\n\n${skillResult}`
-                    : (reminder.description || reminder.title),
+                title: messageTitle,
+                body: messageBody,
                 icon: reminder.icon,
                 color: reminder.color,
                 reminderId: reminder.id

@@ -5,7 +5,7 @@ export interface Skill {
     description: string
     icon: string
     category: string
-    action_type: 'builtin' | 'api_call' | 'ai_prompt'
+    action_type: 'builtin' | 'api_call' | 'ai_prompt' | 'search_and_summarize'
     action_config: string
     config_schema: string
     user_config: string
@@ -30,7 +30,7 @@ export interface CreateSkillInput {
     description?: string
     icon?: string
     category?: string
-    action_type: 'api_call' | 'ai_prompt'
+    action_type: 'api_call' | 'ai_prompt' | 'search_and_summarize'
     action_config: string
     config_schema?: string
     user_config?: string

@@ -262,6 +262,10 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
         role: string;
         content: string
     }>, _configId?: number, _sessionId?: number, _modelOverride?: string) => {
+        // Extract image_paths from the last user message BEFORE resolving
+        const lastOriginalUser = messages[messages.length - 1]?.role === 'user' ? messages[messages.length - 1] : null
+        const originalImagePaths = (lastOriginalUser as any)?.image_paths || []
+
         // Resolve image file paths to base64 multimodal content
         const resolvedMessages = resolveImagePaths(messages)
         const sender = mainWindow.webContents
@@ -285,7 +289,11 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
         if (_sessionId) {
             const lastUser = messages[messages.length - 1]
             if (lastUser?.role === 'user') {
-                chatHistoryDb.appendToSession(_sessionId, [{ role: 'user', content: stripImages(lastUser.content) }])
+                chatHistoryDb.appendToSession(_sessionId, [{
+                    role: 'user',
+                    content: stripImages(lastUser.content),
+                    images: originalImagePaths.length > 0 ? originalImagePaths : undefined
+                }])
             }
             if (result.reply) {
                 chatHistoryDb.appendToSession(_sessionId, [{ role: 'assistant', content: result.reply }])
@@ -346,7 +354,46 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
     })
 
     safeHandle('ai:session:load-messages', (_event, sessionId: number) => {
-        return chatHistoryDb.loadBySession(sessionId)
+        const msgs = chatHistoryDb.loadBySession(sessionId)
+        const userDataPath = app.getPath('userData')
+        const mimeMap: Record<string, string> = {
+            'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+            'gif': 'image/gif', 'webp': 'image/webp', 'bmp': 'image/bmp'
+        }
+        return msgs.map(m => {
+            if (m.images && Array.isArray(m.images)) {
+                m.images = m.images.map((p: string) => {
+                    const fullPath = join(userDataPath, p)
+                    if (existsSync(fullPath)) {
+                        try {
+                            const buf = readFileSync(fullPath)
+                            const ext = extname(p).slice(1)
+                            const mime = mimeMap[ext] || 'image/png'
+                            return `data:${mime};base64,${buf.toString('base64')}`
+                        } catch { return p }
+                    }
+                    return p
+                })
+            }
+            return m
+        })
+    })
+
+    safeHandle('ai:generate-greeting', async () => {
+        try {
+            const config = modelConfigsDb.getDefault()
+            if (!config) return null
+            const now = new Date()
+            const dateInfo = `${now.toLocaleDateString('zh-CN', {timeZone: 'Asia/Shanghai'})} ${now.toLocaleDateString('zh-CN', {timeZone: 'Asia/Shanghai', weekday: 'long'})} ${now.toLocaleTimeString('zh-CN', {timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit'})}`
+            const prompt = `今天是${dateInfo}。请用简短友好的中文给我发一句问候或小贴士（不超过25个字，不要标点结尾，不要引号）。可以是节日问候、健康小贴士、鼓励的话等。只输出问候语本身。`
+            const result = await chatWithLLM(
+                [{role: 'user', content: prompt}],
+                null, config.id, undefined, undefined
+            )
+            return result.reply?.trim().replace(/["""'"']/g, '') || null
+        } catch {
+            return null
+        }
     })
 
     // ---- 旧接口（兼容） ----
