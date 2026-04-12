@@ -35,26 +35,16 @@
             <div class="model-name-row">
               <span class="model-name">{{ cfg.name }}</span>
               <el-tag v-if="cfg.is_default" size="small" type="success">默认</el-tag>
-              <el-tag size="small" :type="modelTypeTag(cfg.model_type)" effect="plain">
-                {{ modelTypeLabel(cfg.model_type) }}
-              </el-tag>
             </div>
             <div class="model-meta">{{ getProviderName(cfg.provider) }} &middot; {{ cfg.base_url || '未配置' }}</div>
             <div class="model-tags" v-if="parseModels(cfg.models).length">
-              <el-tooltip
+              <el-tag
                 v-for="m in parseModels(cfg.models)"
                 :key="m"
-                :content="parseModelNotes(cfg.model_notes)[m] || ''"
-                :disabled="!parseModelNotes(cfg.model_notes)[m]"
-                placement="top"
-              >
-                <el-tag
-                  size="small"
-                  :type="m === cfg.model ? 'primary' : 'info'"
-                  class="model-tag"
-                >{{ m }}
-                </el-tag>
-              </el-tooltip>
+                size="small"
+                :type="m === cfg.model ? 'primary' : (isModelMultimodal(m, cfg.model_notes) ? 'warning' : 'info')"
+                class="model-tag"
+              >{{ m }}</el-tag>
             </div>
           </div>
         </div>
@@ -67,7 +57,7 @@
     </div>
 
     <div v-else class="empty-hint">
-      <p>还没有配置{{ activeType === 'all' ? '' : modelTypeLabel(activeType) }}模型，点击上方「添加模型」开始</p>
+      <p>还没有配置{{ activeType === 'web_search' ? '联网搜索' : '对话' }}模型，点击上方「添加模型」开始</p>
     </div>
 
     <!-- 编辑弹窗 -->
@@ -80,10 +70,9 @@
       <el-form :model="form" label-position="top" size="default">
         <div class="form-row">
           <el-form-item label="模型类型" class="flex-1">
-            <el-select v-model="form.model_type" style="width: 100%;">
-              <el-option label="文本模型" value="text"/>
-              <el-option label="多模态模型" value="multimodal"/>
-              <el-option label="联网搜索模型" value="web_search"/>
+            <el-select v-model="form.model_type" style="width: 100%;" @change="onModelTypeChange">
+              <el-option label="对话模型" value="text"/>
+              <el-option label="联网搜索" value="web_search"/>
             </el-select>
           </el-form-item>
           <el-form-item label="服务商" class="flex-1">
@@ -100,7 +89,7 @@
         <el-form-item label="模型列表" required>
           <div class="model-input-list">
             <div class="model-list-header">
-              <span class="model-list-hint">点击左侧星标设为默认模型，右侧备注可填写模型说明</span>
+              <span class="model-list-hint">点击左侧星标设为默认模型，勾选多模态可识别图片</span>
             </div>
             <div v-for="(m, idx) in form.models" :key="idx" class="model-input-row">
               <span
@@ -108,18 +97,17 @@
                 :class="{ active: form.defaultModelIndex === idx }"
                 @click="form.defaultModelIndex = idx"
                 :title="form.defaultModelIndex === idx ? '当前默认模型' : '点击设为默认'"
-              >{{ form.defaultModelIndex === idx ? '★' : '☆' }}</span>
+              >{{ form.defaultModelIndex === idx ? '\u2605' : '\u2606' }}</span>
               <el-input
                 v-model="form.models[idx]"
-                placeholder="输入模型名称，如 deepseek-chat"
+                placeholder="输入模型名称"
                 @keydown.enter.prevent="addModelInput"
                 style="flex: 1;"
               />
-              <el-input
-                v-model="form.modelNotes[form.models[idx] || `__idx_${idx}__`]"
-                placeholder="备注，如：多模态"
-                style="width: 120px;"
-              />
+              <el-checkbox
+                :model-value="form.modelMultimodal[idx]"
+                @change="(val: boolean) => form.modelMultimodal[idx] = val"
+              >多模态</el-checkbox>
               <el-button
                 v-if="form.models.length > 1"
                 :icon="Minus"
@@ -205,48 +193,38 @@ const showForm = ref(false)
 const editingId = ref<number | null>(null)
 const saving = ref(false)
 const testing = ref(false)
-const activeType = ref('all')
+const activeType = ref('text')
 
 const form = ref({
   name: '',
-  provider: 'ollama',
+  provider: '',
   base_url: '',
   api_key: '',
   models: [''] as string[],
-  modelNotes: {} as Record<string, string>,
+  modelMultimodal: [false] as boolean[],
   defaultModelIndex: 0,
   model_type: 'text' as string,
   is_default: false
 })
 
 const typeTabs = [
-  {value: 'all', label: '全部模型', icon: '📦'},
-  {value: 'text', label: '文本模型', icon: '💬'},
-  {value: 'multimodal', label: '多模态模型', icon: '👁️'},
-  {value: 'web_search', label: '联网搜索', icon: '🌐'}
+  {value: 'text', label: '对话模型', icon: '\u{1F4AC}'},
+  {value: 'web_search', label: '联网搜索', icon: '\u{1F310}'}
 ]
 
 // Web search providers
 const WEB_SEARCH_PROVIDERS = ['perplexity', 'tavily', 'jina', 'bochaai', 'exa']
 
-function modelTypeLabel(type: string): string {
-  const map: Record<string, string> = {text: '文本', multimodal: '多模态', web_search: '联网搜索'}
-  return map[type] || '文本'
-}
-
-function modelTypeTag(type: string): string {
-  const map: Record<string, string> = {text: 'info', multimodal: 'warning', web_search: 'success'}
-  return map[type] || 'info'
-}
-
 function countByType(type: string): number {
-  if (type === 'all') return configs.value.length
-  return configs.value.filter(c => (c.model_type || 'text') === type).length
+  if (type === 'text') return configs.value.filter(c => c.model_type !== 'web_search').length
+  return configs.value.filter(c => c.model_type === 'web_search').length
 }
 
 const filteredConfigs = computed(() => {
-  if (activeType.value === 'all') return configs.value
-  return configs.value.filter(c => (c.model_type || 'text') === activeType.value)
+  if (activeType.value === 'text') {
+    return configs.value.filter(c => c.model_type !== 'web_search')
+  }
+  return configs.value.filter(c => c.model_type === 'web_search')
 })
 
 const currentProviderPreset = computed(() =>
@@ -281,37 +259,28 @@ function parseModelNotes(notesJson: string): Record<string, string> {
   }
 }
 
+function isModelMultimodal(modelName: string, notesJson: string): boolean {
+  const notes = parseModelNotes(notesJson)
+  const note = notes[modelName] || ''
+  return note === 'multimodal' || note.includes('\u591A\u6A21\u6001')
+}
+
 function getProviderName(id: string): string {
   return providers.value.find(p => p.id === id)?.name || id
 }
 
 const PROVIDER_ICONS: Record<string, string> = {
-  ollama: '🦙',
-  openai: '🤖',
-  deepseek: '🐋',
-  qwen: '☁️',
-  kimi: '🌙',
-  zhipu: '🔮',
-  claude: '🧠',
-  doubao: '🫘',
-  hunyuan: '🐧',
-  ernie: '🔵',
-  spark: '⚡',
-  yi: '🌍',
-  siliconflow: '🔥',
-  groq: '⚡',
-  xiaomi: '📱',
-  custom: '⚙️',
-  custom_anthropic: '🧠',
-  perplexity: '🔍',
-  tavily: '🔎',
-  jina: '🌐',
-  bochaai: '📡',
-  exa: '🎯'
+  ollama: '\u{1F999}', openai: '\u{1F916}', deepseek: '\u{1F40B}', qwen: '\u2601\uFE0F',
+  kimi: '\u{1F319}', zhipu: '\u{1F52E}', claude: '\u{1F9E0}', doubao: '\u{1FAD8}',
+  hunyuan: '\u{1F427}', ernie: '\u{1F535}', spark: '\u26A1', yi: '\u{1F30D}',
+  siliconflow: '\u{1F525}', groq: '\u26A1', xiaomi: '\u{1F4F1}',
+  custom: '\u2699\uFE0F', custom_anthropic: '\u{1F9E0}',
+  perplexity: '\u{1F50D}', tavily: '\u{1F50E}', jina: '\u{1F310}',
+  bochaai: '\u{1F4E1}', exa: '\u{1F3AF}'
 }
 
 function getProviderIcon(id: string): string {
-  return PROVIDER_ICONS[id] || '🤖'
+  return PROVIDER_ICONS[id] || '\u{1F916}'
 }
 
 async function loadData() {
@@ -327,23 +296,32 @@ onMounted(() => {
   loadProviders()
 })
 
+function onModelTypeChange(type: string) {
+  const list = type === 'web_search'
+    ? providers.value.filter(p => WEB_SEARCH_PROVIDERS.includes(p.id) || p.id.startsWith('custom'))
+    : providers.value.filter(p => !WEB_SEARCH_PROVIDERS.includes(p.id))
+  if (!list.find(p => p.id === form.value.provider)) {
+    form.value.provider = ''
+    form.value.base_url = ''
+    form.value.name = ''
+  }
+}
+
 function onProviderChange(id: string) {
   const p = providers.value.find(p => p.id === id)
   if (!p) return
   form.value.base_url = p.baseUrl
   form.value.name = p.name
-  // Auto-detect model type from provider
-  if (WEB_SEARCH_PROVIDERS.includes(id)) {
-    form.value.model_type = 'web_search'
-  }
 }
 
 function addModelInput() {
   form.value.models.push('')
+  form.value.modelMultimodal.push(false)
 }
 
 function removeModelInput(idx: number) {
   form.value.models.splice(idx, 1)
+  form.value.modelMultimodal.splice(idx, 1)
   if (form.value.defaultModelIndex === idx) {
     form.value.defaultModelIndex = 0
   } else if (form.value.defaultModelIndex > idx) {
@@ -361,36 +339,33 @@ function openForm(cfg?: ModelConfigRow) {
       const idx = models.indexOf(cfg.model)
       if (idx >= 0) defaultIdx = idx
     }
+    const notes = parseModelNotes(cfg.model_notes)
+    const multimodal = models.map((m: string) =>
+      notes[m] === 'multimodal' || (notes[m] || '').includes('\u591A\u6A21\u6001')
+    )
     form.value = {
       name: cfg.name,
       provider: cfg.provider,
       base_url: cfg.base_url,
       api_key: cfg.api_key,
       models,
-      modelNotes: parseModelNotes(cfg.model_notes),
+      modelMultimodal: multimodal,
       defaultModelIndex: defaultIdx,
-      model_type: cfg.model_type || 'text',
+      model_type: cfg.model_type === 'web_search' ? 'web_search' : 'text',
       is_default: !!cfg.is_default
     }
   } else {
     editingId.value = null
-    const defaultType = activeType.value === 'all' ? 'text' : activeType.value
-    // Pick first provider matching the current type tab
-    const typeProviders = form.value.model_type === 'web_search'
-      ? filteredProviders.value
-      : (defaultType === 'web_search'
-          ? providers.value.filter(p => WEB_SEARCH_PROVIDERS.includes(p.id) || p.id.startsWith('custom'))
-          : providers.value.filter(p => !WEB_SEARCH_PROVIDERS.includes(p.id)))
-    const p = typeProviders.length > 0 ? typeProviders[0] : providers.value[0]
+    const isWebSearch = activeType.value === 'web_search'
     form.value = {
-      name: p?.name || '',
-      provider: p?.id || 'ollama',
-      base_url: p?.baseUrl || '',
+      name: '',
+      provider: '',
+      base_url: '',
       api_key: '',
-      models: [p?.defaultModel || ''],
-      modelNotes: {},
+      models: [''],
+      modelMultimodal: [false],
       defaultModelIndex: 0,
-      model_type: defaultType,
+      model_type: isWebSearch ? 'web_search' : 'text',
       is_default: configs.value.length === 0
     }
   }
@@ -400,7 +375,7 @@ function openForm(cfg?: ModelConfigRow) {
 async function handleTestModel() {
   const validModels = form.value.models.filter(m => m.trim())
   if (validModels.length === 0) {
-    ElMessage.warning('请先填写至少一个模型名称')
+    ElMessage.warning('\u8BF7\u5148\u586B\u5199\u81F3\u5C11\u4E00\u4E2A\u6A21\u578B\u540D\u79F0')
     return
   }
   const testModelName = validModels[form.value.defaultModelIndex] || validModels[0]
@@ -413,12 +388,12 @@ async function handleTestModel() {
       model: testModelName
     })
     if (result.ok) {
-      ElMessage.success(`连接成功${result.reply ? '：' + result.reply : ''}`)
+      ElMessage.success(`\u8FDE\u63A5\u6210\u529F${result.reply ? '\uFF1A' + result.reply : ''}`)
     } else {
-      ElMessage.error(`连接失败：${result.message}`)
+      ElMessage.error(`\u8FDE\u63A5\u5931\u8D25\uFF1A${result.message}`)
     }
   } catch (e: any) {
-    ElMessage.error('测试失败: ' + e.message)
+    ElMessage.error('\u6D4B\u8BD5\u5931\u8D25: ' + e.message)
   } finally {
     testing.value = false
   }
@@ -427,15 +402,17 @@ async function handleTestModel() {
 async function handleSave() {
   const validModels = form.value.models.filter(m => m.trim())
   if (!form.value.name || validModels.length === 0) {
-    ElMessage.warning('请填写名称和至少一个模型')
+    ElMessage.warning('\u8BF7\u586B\u5199\u540D\u79F0\u548C\u81F3\u5C11\u4E00\u4E2A\u6A21\u578B')
     return
   }
   const defaultIdx = Math.min(form.value.defaultModelIndex, validModels.length - 1)
+
+  // Build multimodal notes from checkboxes
   const notes: Record<string, string> = {}
-  for (const m of validModels) {
-    const note = form.value.modelNotes[m]
-    if (note && note.trim()) {
-      notes[m] = note.trim()
+  for (let i = 0; i < form.value.models.length; i++) {
+    const m = form.value.models[i].trim()
+    if (m && form.value.modelMultimodal[i]) {
+      notes[m] = 'multimodal'
     }
   }
 
@@ -459,9 +436,9 @@ async function handleSave() {
     }
     showForm.value = false
     await loadData()
-    ElMessage.success('保存成功')
+    ElMessage.success('\u4FDD\u5B58\u6210\u529F')
   } catch (e: any) {
-    ElMessage.error('保存失败: ' + e.message)
+    ElMessage.error('\u4FDD\u5B58\u5931\u8D25: ' + e.message)
   } finally {
     saving.value = false
   }
@@ -469,10 +446,10 @@ async function handleSave() {
 
 async function handleDelete(cfg: ModelConfigRow) {
   try {
-    await ElMessageBox.confirm(`确定删除「${cfg.name}」？`, '删除确认', {type: 'warning'})
+    await ElMessageBox.confirm(`\u786E\u5B9A\u5220\u9664\u300C${cfg.name}\u300D\uFF1F`, '\u5220\u9664\u786E\u8BA4', {type: 'warning'})
     await window.electronAPI.models.delete(cfg.id)
     await loadData()
-    ElMessage.success('已删除')
+    ElMessage.success('\u5DF2\u5220\u9664')
   } catch { /* cancel */
   }
 }

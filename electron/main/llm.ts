@@ -226,16 +226,28 @@ export function getProviderById(id: string): ProviderPreset {
 
 // ======================== 配置读取 ========================
 
+function parseModelNotes(notesJson: string): Record<string, string> {
+    if (!notesJson) return {}
+    try {
+        const obj = JSON.parse(notesJson)
+        return typeof obj === 'object' && obj !== null ? obj : {}
+    } catch {
+        return {}
+    }
+}
+
 function getLLMConfig(configId?: number, modelOverride?: string) {
     const saved = configId ? modelConfigsDb.get(configId) : modelConfigsDb.getDefault()
     if (saved) {
         const provider = getProviderById(saved.provider)
+        const modelNotes = parseModelNotes(saved.model_notes)
         return {
             provider,
             baseUrl: saved.base_url || provider.baseUrl,
             apiKey: saved.api_key || '',
             model: modelOverride || saved.model || provider.defaultModel,
-            modelType: saved.model_type || 'text'
+            modelType: saved.model_type || 'text',
+            modelNotes
         }
     }
     const providerId = settingsDb.get('llm_provider') || 'ollama'
@@ -245,7 +257,8 @@ function getLLMConfig(configId?: number, modelOverride?: string) {
         baseUrl: settingsDb.get('llm_base_url') || provider.baseUrl,
         apiKey: settingsDb.get('llm_api_key') || '',
         model: modelOverride || settingsDb.get('llm_model') || provider.defaultModel,
-        modelType: 'text' as string
+        modelType: 'text' as string,
+        modelNotes: {} as Record<string, string>
     }
 }
 
@@ -1088,7 +1101,7 @@ export async function chatWithLLM(
     ]
 
     // Strip images if model doesn't support vision
-    const supportsVision = isVisionModel(config.model) || config.modelType === 'multimodal'
+    const supportsVision = isVisionModel(config.model) || config.modelNotes?.[config.model] === 'multimodal'
     if (!supportsVision) {
         allMessages = stripImagesFromMessages(allMessages)
     }

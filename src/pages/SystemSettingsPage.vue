@@ -109,7 +109,7 @@
           </div>
           <div class="about-row">
             <span class="about-label">版本</span>
-            <span class="about-value">V1.0.0</span>
+            <span class="about-value">V2.0.0</span>
           </div>
           <div class="about-row">
             <span class="about-label">作者</span>
