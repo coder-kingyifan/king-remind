@@ -10,8 +10,8 @@
     "dev:headless": "chcp 65001 >nul && electron-vite dev -- --headless",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "pack": "electron-vite build && electron-builder --win --config && node scripts/rcedit.js",
-    "pack:dir": "electron-vite build && electron-builder --win --dir --config && node scripts/rcedit.js"
+    "pack": "electron-vite build && electron-builder --win --config",
+    "pack:dir": "electron-vite build && electron-builder --win --dir --config"
   },
   "dependencies": {
     "@rollup/rollup-win32-x64-msvc": "^4.59.0",

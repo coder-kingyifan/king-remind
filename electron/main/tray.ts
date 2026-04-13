@@ -7,7 +7,7 @@ let tray: Tray | null = null
 function createTrayIcon(): nativeImage {
     const iconPath = is.dev
         ? join(__dirname, '../../resources/icon.png')
-        : join(process.resourcesPath, 'resources/icon.png')
+        : join(process.resourcesPath, 'resources/build/icons/win/icon.ico')
     return nativeImage.createFromPath(iconPath).resize({width: 16, height: 16})
 }
 

@@ -46,7 +46,7 @@ function createWindow(): BrowserWindow {
         },
         icon: is.dev
             ? join(__dirname, '../../resources/icon.png')
-            : join(process.resourcesPath, 'resources/icon.png'),
+            : join(process.resourcesPath, 'resources/build/icons/win/icon.ico'),
         webPreferences: {
             preload: join(__dirname, '../preload/index.js'),
             sandbox: false,

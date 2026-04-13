@@ -86,61 +86,45 @@
           <el-input v-model="form.name" placeholder="给这个配置起个名字，如：Ollama"/>
         </el-form-item>
 
-        <el-form-item label="模型列表" :required="form.model_type !== 'web_search'">
+        <!-- 对话模型才显示模型列表 -->
+        <el-form-item v-if="form.model_type !== 'web_search'" label="模型列表" required>
           <div class="model-input-list">
-            <template v-if="form.model_type === 'web_search'">
-              <div class="model-list-header">
-                <span class="model-list-hint">选择服务商后自动列出可用模型，点击左侧星标设为默认</span>
-              </div>
-              <div v-if="currentProviderPreset?.models?.length" v-for="(m, idx) in form.models" :key="idx" class="model-input-row">
-                <span
-                  class="model-default-star"
-                  :class="{ active: form.defaultModelIndex === idx }"
-                  @click="form.defaultModelIndex = idx"
-                  :title="form.defaultModelIndex === idx ? '当前默认模型' : '点击设为默认'"
-                >{{ form.defaultModelIndex === idx ? '\u2605' : '\u2606' }}</span>
-                <span class="model-tag-static">{{ m }}</span>
-              </div>
-              <div v-else class="model-list-hint">请先选择服务商</div>
-            </template>
-            <template v-else>
-              <div class="model-list-header">
-                <span class="model-list-hint">点击左侧星标设为默认模型，勾选多模态可识别图片</span>
-              </div>
-              <div v-for="(m, idx) in form.models" :key="idx" class="model-input-row">
-                <span
-                  class="model-default-star"
-                  :class="{ active: form.defaultModelIndex === idx }"
-                  @click="form.defaultModelIndex = idx"
-                  :title="form.defaultModelIndex === idx ? '当前默认模型' : '点击设为默认'"
-                >{{ form.defaultModelIndex === idx ? '\u2605' : '\u2606' }}</span>
-                <el-input
-                  v-model="form.models[idx]"
-                  placeholder="输入模型名称"
-                  @keydown.enter.prevent="addModelInput"
-                  style="flex: 1;"
-                />
-                <el-checkbox
-                  :model-value="form.modelMultimodal[idx]"
-                  @change="(val: boolean) => form.modelMultimodal[idx] = val"
-                >多模态</el-checkbox>
-                <el-button
-                  v-if="form.models.length > 1"
-                  :icon="Minus"
-                  circle
-                  size="small"
-                  plain
-                  type="danger"
-                  @click="removeModelInput(idx)"
-                />
-              </div>
-              <el-button size="small" plain @click="addModelInput" style="margin-top: 4px;">
-                <el-icon style="margin-right:4px">
-                  <Plus/>
-                </el-icon>
-                添加模型
-              </el-button>
-            </template>
+            <div class="model-list-header">
+              <span class="model-list-hint">点击左侧星标设为默认模型，勾选多模态可识别图片</span>
+            </div>
+            <div v-for="(m, idx) in form.models" :key="idx" class="model-input-row">
+              <span
+                class="model-default-star"
+                :class="{ active: form.defaultModelIndex === idx }"
+                @click="form.defaultModelIndex = idx"
+                :title="form.defaultModelIndex === idx ? '当前默认模型' : '点击设为默认'"
+              >{{ form.defaultModelIndex === idx ? '\u2605' : '\u2606' }}</span>
+              <el-input
+                v-model="form.models[idx]"
+                placeholder="输入模型名称"
+                @keydown.enter.prevent="addModelInput"
+                style="flex: 1;"
+              />
+              <el-checkbox
+                :model-value="form.modelMultimodal[idx]"
+                @change="(val: boolean) => form.modelMultimodal[idx] = val"
+              >多模态</el-checkbox>
+              <el-button
+                v-if="form.models.length > 1"
+                :icon="Minus"
+                circle
+                size="small"
+                plain
+                type="danger"
+                @click="removeModelInput(idx)"
+              />
+            </div>
+            <el-button size="small" plain @click="addModelInput" style="margin-top: 4px;">
+              <el-icon style="margin-right:4px">
+                <Plus/>
+              </el-icon>
+              添加模型
+            </el-button>
           </div>
         </el-form-item>
 
@@ -404,8 +388,12 @@ async function handleTestModel() {
   if (validModels.length === 0 && form.value.model_type === 'web_search' && currentProviderPreset.value?.models?.length) {
     validModels = [...currentProviderPreset.value.models]
   }
-  if (validModels.length === 0) {
+  if (validModels.length === 0 && form.value.model_type !== 'web_search') {
     ElMessage.warning('请先填写至少一个模型名称')
+    return
+  }
+  if (form.value.model_type === 'web_search' && !form.value.provider) {
+    ElMessage.warning('请先选择服务商')
     return
   }
   const testModelName = validModels[form.value.defaultModelIndex] || validModels[0]
@@ -439,8 +427,12 @@ async function handleSave() {
     ElMessage.warning('请填写名称')
     return
   }
-  if (validModels.length === 0) {
-    ElMessage.warning('\u8BF7\u586B\u5199\u540D\u79F0\u548C\u81F3\u5C11\u4E00\u4E2A\u6A21\u578B')
+  if (form.value.model_type !== 'web_search' && validModels.length === 0) {
+    ElMessage.warning('请填写至少一个模型名称')
+    return
+  }
+  if (form.value.model_type === 'web_search' && !form.value.provider) {
+    ElMessage.warning('请选择服务商')
     return
   }
   const defaultIdx = Math.min(form.value.defaultModelIndex, validModels.length - 1)

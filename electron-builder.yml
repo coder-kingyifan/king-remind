@@ -28,7 +28,6 @@ extraResources:
 win:
   icon: resources/build/icons/win/icon.ico
   sign: false
-  signAndEditExecutable: false
   target:
     - target: portable
       arch:
