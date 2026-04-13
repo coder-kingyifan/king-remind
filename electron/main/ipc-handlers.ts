@@ -14,6 +14,13 @@ import {modelConfigsDb} from './db/model-configs'
 import {skillsDb} from './db/skills'
 import {startApiServer, stopApiServer} from './api-server'
 import {ReminderScheduler} from './scheduler'
+import {
+    isDatabaseEncrypted,
+    verifyEncryptionPassword,
+    setEncryptionPassword,
+    removeEncryption as removeDbEncryption,
+    saveDatabase
+} from './db/connection'
 
 // sql.js 返回的对象可能含有不可被 structured clone 序列化的属性（如 Uint8Array 等）
 // 在 IPC 返回前必须转为纯 JS 对象
@@ -509,6 +516,29 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
         if (scheduler) {
             startApiServer(scheduler)
         }
+        return true
+    })
+
+    // ========== 数据库加密 ==========
+    safeHandle('db:is-encrypted', () => {
+        return isDatabaseEncrypted()
+    })
+
+    safeHandle('db:verify-password', (_event, password: string) => {
+        return verifyEncryptionPassword(password)
+    })
+
+    safeHandle('db:set-encryption', (_event, password: string) => {
+        setEncryptionPassword(password)
+        settingsDb.set('db_encrypted', 'true')
+        saveDatabase()
+        return true
+    })
+
+    safeHandle('db:remove-encryption', () => {
+        removeDbEncryption()
+        settingsDb.set('db_encrypted', 'false')
+        saveDatabase()
         return true
     })
 }

@@ -18,4 +18,6 @@ remind.db
 nul
 .claude
 .idea/
-tsconfig.tsbuildinfo
+/tsconfig.tsbuildinfo
+/remind.key
+/remind.db.enc

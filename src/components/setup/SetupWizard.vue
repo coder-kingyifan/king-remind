@@ -17,23 +17,58 @@
         <h2 class="setup-title">欢迎使用 King 提醒助手</h2>
         <p class="setup-desc">让我们快速完成初始设置，开始你的提醒之旅</p>
         <div class="setup-form">
-          <label class="setup-label">怎么称呼你？</label>
-          <el-input
-            v-model="nickname"
-            placeholder="请输入你的昵称"
-            maxlength="20"
-            show-word-limit
-            size="large"
-            @keydown.enter="nextStep"
-          />
+          <div class="setup-field">
+            <label class="setup-label">怎么称呼你？</label>
+            <el-input
+              v-model="nickname"
+              placeholder="请输入你的昵称"
+              maxlength="20"
+              show-word-limit
+              size="large"
+              @keydown.enter="nextStep"
+            />
+          </div>
         </div>
       </div>
 
-      <!-- 步骤2: API 接口配置 -->
+      <!-- 步骤2: 数据库安全 -->
       <div v-if="currentStep === 1" class="setup-content">
+        <div class="setup-icon">🔐</div>
+        <h2 class="setup-title">数据安全</h2>
+        <p class="setup-desc">设置数据库密码以加密你的提醒数据，防止他人查看</p>
+        <div class="setup-form">
+          <div class="setup-field">
+            <label class="setup-label">数据库密码</label>
+            <el-input
+              v-model="dbPassword"
+              type="password"
+              placeholder="设置密码以加密数据库"
+              size="large"
+              show-password
+            />
+            <div class="setup-sublabel">留空则不加密，建议设置以保护隐私</div>
+          </div>
+          <div v-if="dbPassword" class="setup-field">
+            <label class="setup-label">确认密码</label>
+            <el-input
+              v-model="dbPasswordConfirm"
+              type="password"
+              placeholder="再次输入密码"
+              size="large"
+              show-password
+            />
+          </div>
+          <div v-if="dbPassword && dbPasswordConfirm && dbPassword !== dbPasswordConfirm" class="setup-error">
+            两次输入的密码不一致
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤3: API 接口配置 -->
+      <div v-if="currentStep === 2" class="setup-content">
         <div class="setup-icon">🌐</div>
         <h2 class="setup-title">API 接口设置</h2>
-        <p class="setup-desc">是否启用后台 API 接口？启用后外部程序可通过 HTTP 接口创建和管理提醒</p>
+        <p class="setup-desc">启用后外部程序可通过 HTTP 接口或 AI 对话来创建和管理提醒</p>
         <div class="setup-form">
           <div class="setup-toggle-row">
             <div>
@@ -77,8 +112,8 @@
         </div>
       </div>
 
-      <!-- 步骤3: 完成 -->
-      <div v-if="currentStep === 2" class="setup-content">
+      <!-- 步骤4: 完成 -->
+      <div v-if="currentStep === 3" class="setup-content">
         <div class="setup-icon">🎉</div>
         <h2 class="setup-title">设置完成！</h2>
         <p class="setup-desc">一切就绪，开始使用 King 提醒助手吧</p>
@@ -86,6 +121,12 @@
           <div class="summary-item">
             <span class="summary-label">称呼</span>
             <span class="summary-value">{{ nickname || '未设置' }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">数据库加密</span>
+            <span class="summary-value" :class="dbPassword ? 'enabled' : ''">
+              {{ dbPassword ? '已设置密码' : '未加密' }}
+            </span>
           </div>
           <div class="summary-item">
             <span class="summary-label">API 接口</span>
@@ -115,13 +156,22 @@
 import { computed, ref } from 'vue'
 
 const emit = defineEmits<{
-  (e: 'finish', data: { nickname: string; apiEnabled: boolean; apiPort: number; apiToken: string; apiHost: string }): void
+  (e: 'finish', data: {
+    nickname: string;
+    dbPassword: string;
+    apiEnabled: boolean;
+    apiPort: number;
+    apiToken: string;
+    apiHost: string
+  }): void
 }>()
 
-const steps = [0, 1, 2]
+const steps = [0, 1, 2, 3]
 const currentStep = ref(0)
 
 const nickname = ref('')
+const dbPassword = ref('')
+const dbPasswordConfirm = ref('')
 const apiEnabled = ref(false)
 const apiPort = ref(33333)
 const apiToken = ref('')
@@ -129,6 +179,10 @@ const apiHost = ref('0.0.0.0')
 
 const canNext = computed(() => {
   if (currentStep.value === 0) return nickname.value.trim().length > 0
+  if (currentStep.value === 1) {
+    if (dbPassword.value && dbPassword.value !== dbPasswordConfirm.value) return false
+    return true
+  }
   return true
 })
 
@@ -149,6 +203,7 @@ function finish() {
   if (!canFinish.value) return
   emit('finish', {
     nickname: nickname.value.trim(),
+    dbPassword: dbPassword.value,
     apiEnabled: apiEnabled.value,
     apiPort: apiPort.value,
     apiToken: apiToken.value,
@@ -174,6 +229,7 @@ function finish() {
 .setup-wizard {
   width: 480px;
   max-height: 90vh;
+  overflow-y: auto;
   background: var(--bg-card);
   border: 1px solid var(--border-color-light);
   border-radius: 16px;
@@ -253,7 +309,13 @@ function finish() {
 .setup-sublabel {
   font-size: 12px;
   color: var(--text-tertiary);
-  margin-top: 2px;
+  margin-top: 4px;
+}
+
+.setup-error {
+  font-size: 12px;
+  color: #F56C6C;
+  padding-left: 4px;
 }
 
 .setup-toggle-row {

@@ -1,7 +1,13 @@
-import {app, BrowserWindow, shell} from 'electron'
+import {app, BrowserWindow, ipcMain, shell} from 'electron'
 import {join} from 'path'
 import {is} from '@electron-toolkit/utils'
-import {closeDatabase, initDatabase} from './db/connection'
+import {
+    closeDatabase,
+    initDatabase,
+    isDatabaseEncrypted,
+    setEncryptionPassword,
+    verifyEncryptionPassword
+} from './db/connection'
 import {runMigrations} from './db/migrations'
 import {createTray, destroyTray} from './tray'
 import {registerIpcHandlers} from './ipc-handlers'
@@ -62,8 +68,11 @@ function createWindow(): BrowserWindow {
 
     mainWindow.on('close', (event) => {
         if (!(app as any).isQuitting) {
-            event.preventDefault()
-            mainWindow?.hide()
+            const minimizeToTray = settingsDb.get('minimize_to_tray')
+            if (minimizeToTray !== 'false') {
+                event.preventDefault()
+                mainWindow?.hide()
+            }
         }
     })
 
@@ -79,6 +88,75 @@ function createWindow(): BrowserWindow {
     }
 
     return mainWindow
+}
+
+/** Continue app initialization after database is ready */
+async function continueAppInit(win: BrowserWindow | null): Promise<void> {
+    console.log('[主进程] 正在运行数据库迁移...')
+    runMigrations()
+    console.log('[主进程] 数据库迁移完成')
+
+    // 初始化内置技能
+    seedBuiltinSkills()
+    console.log('[主进程] 内置技能初始化完成')
+
+    // 创建系统托盘
+    createTray(win)
+
+    // 创建通知分发器
+    const dispatcher = new NotificationDispatcher(win)
+
+    // 注册IPC处理器
+    if (win) {
+        registerIpcHandlers(win, dispatcher, scheduler)
+        console.log('[主进程] IPC处理器已注册')
+    }
+
+    // 启动提醒调度器
+    const intervalStr = settingsDb.get('scheduler_interval') || '60'
+    const intervalMs = parseInt(intervalStr) * 1000
+    scheduler = new ReminderScheduler(dispatcher)
+    scheduler.start(intervalMs)
+
+    // 启动本地 API Server
+    const apiEnabled = settingsDb.get('api_enabled')
+    if (apiEnabled === 'true') {
+        startApiServer(scheduler)
+    } else {
+        console.log('[主进程] API 接口未启用，跳过启动')
+    }
+
+    // 应用启动项设置
+    const launchAtStartup = settingsDb.get('launch_at_startup')
+    if (launchAtStartup === 'true') {
+        app.setLoginItemSettings({openAtLogin: true})
+    }
+    console.log('[主进程] 启动完成')
+}
+
+/** Register IPC handler for database unlock during startup */
+function registerUnlockIpc(win: BrowserWindow): void {
+    // Register db:is-encrypted so renderer can check before trying to load settings
+    ipcMain.handle('db:is-encrypted', () => {
+        return isDatabaseEncrypted()
+    })
+
+    ipcMain.handle('db:unlock', async (_event, password: string) => {
+        const valid = verifyEncryptionPassword(password)
+        if (!valid) {
+            return {success: false, error: '密码错误'}
+        }
+
+        setEncryptionPassword(password)
+
+        try {
+            await initDatabase()
+            await continueAppInit(win)
+            return {success: true}
+        } catch (e: any) {
+            return {success: false, error: e.message}
+        }
+    })
 }
 
 // 确保单实例
@@ -98,59 +176,30 @@ if (!gotTheLock) {
         app.setAppUserModelId('com.kingyifan.king-remind')
 
         try {
-            // 初始化数据库（异步）
-            console.log('[主进程] 正在初始化数据库...')
-            await initDatabase()
-            console.log('[主进程] 数据库初始化成功')
+            // Check if database is encrypted before initializing
+            const encrypted = isDatabaseEncrypted()
+            console.log('[主进程] 数据库加密状态:', encrypted)
 
-            console.log('[主进程] 正在运行数据库迁移...')
-            runMigrations()
-            console.log('[主进程] 数据库迁移完成')
-
-            // 初始化内置技能
-            seedBuiltinSkills()
-            console.log('[主进程] 内置技能初始化完成')
-
-            // 创建主窗口（headless 模式下跳过）
-            let win: BrowserWindow | null = null
-            if (!isHeadless) {
-                win = createWindow()
+            if (encrypted) {
+                // Encrypted DB: need password from user before init
+                console.log('[主进程] 数据库已加密，需要输入密码')
+                const win = createWindow()
+                registerUnlockIpc(win)
             } else {
-                console.log('[主进程] headless 模式，跳过创建主窗口')
+                // Normal init
+                console.log('[主进程] 正在初始化数据库...')
+                await initDatabase()
+                console.log('[主进程] 数据库初始化成功')
+
+                let win: BrowserWindow | null = null
+                if (!isHeadless) {
+                    win = createWindow()
+                } else {
+                    console.log('[主进程] headless 模式，跳过创建主窗口')
+                }
+
+                await continueAppInit(win)
             }
-
-            // 创建系统托盘
-            createTray(win)
-
-            // 创建通知分发器
-            const dispatcher = new NotificationDispatcher(win)
-
-            // 注册IPC处理器（headless 模式下跳过，无渲染进程）
-            if (win) {
-                registerIpcHandlers(win, dispatcher, scheduler)
-                console.log('[主进程] IPC处理器已注册')
-            }
-
-            // 启动提醒调度器
-            const intervalStr = settingsDb.get('scheduler_interval') || '60'
-            const intervalMs = parseInt(intervalStr) * 1000
-            scheduler = new ReminderScheduler(dispatcher)
-            scheduler.start(intervalMs)
-
-            // 启动本地 API Server（仅当用户启用时）
-            const apiEnabled = settingsDb.get('api_enabled')
-            if (apiEnabled === 'true') {
-                startApiServer(scheduler)
-            } else {
-                console.log('[主进程] API 接口未启用，跳过启动')
-            }
-
-            // 应用启动项设置
-            const launchAtStartup = settingsDb.get('launch_at_startup')
-            if (launchAtStartup === 'true') {
-                app.setLoginItemSettings({openAtLogin: true})
-            }
-            console.log('[主进程] 启动完成')
         } catch (error: any) {
             console.error('[主进程] 启动失败:', error.message, error.stack)
         }

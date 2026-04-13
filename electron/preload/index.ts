@@ -152,6 +152,15 @@ const electronAPI = {
     api: {
         toggle: (enabled: boolean) => safeInvoke('api:toggle', enabled),
         restart: () => safeInvoke('api:restart')
+    },
+
+    // 数据库加密
+    db: {
+        isEncrypted: () => safeInvoke('db:is-encrypted'),
+        verifyPassword: (password: string) => safeInvoke('db:verify-password', password),
+        setEncryption: (password: string) => safeInvoke('db:set-encryption', password),
+        removeEncryption: () => safeInvoke('db:remove-encryption'),
+        unlock: (password: string) => safeInvoke('db:unlock', password)
     }
 }
 

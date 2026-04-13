@@ -593,6 +593,13 @@ export function runMigrations(): void {
                 INSERT OR IGNORE INTO settings (key, value) VALUES ('api_enabled', 'true');
                 INSERT OR IGNORE INTO settings (key, value) VALUES ('api_host', '0.0.0.0');
             `
+        },
+        {
+            version: 17,
+            sql: `
+                INSERT OR IGNORE INTO settings (key, value) VALUES ('db_path', '');
+                INSERT OR IGNORE INTO settings (key, value) VALUES ('db_encrypted', 'false');
+            `
         }
     ]
 

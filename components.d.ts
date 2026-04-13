@@ -47,5 +47,6 @@ declare module 'vue' {
     Sidebar: typeof import('./src/components/layout/Sidebar.vue')['default']
     SkillForm: typeof import('./src/components/skill/SkillForm.vue')['default']
     TitleBar: typeof import('./src/components/layout/TitleBar.vue')['default']
+    UnlockDialog: typeof import('./src/components/setup/UnlockDialog.vue')['default']
   }
 }

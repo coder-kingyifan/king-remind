@@ -13,14 +13,27 @@
 
     <!-- 过滤栏 -->
     <div class="filter-bar">
+      <div class="filter-chips">
+        <span
+          class="chip"
+          :class="{ active: activeCategory === 'all' }"
+          @click="activeCategory = 'all'"
+        >全部 {{ skillsStore.skills.length }}</span>
+        <span
+          v-for="cat in SKILL_CATEGORIES"
+          :key="cat.key"
+          class="chip"
+          :class="{ active: activeCategory === cat.key }"
+          @click="activeCategory = cat.key"
+        >{{ cat.icon }} {{ cat.label }}</span>
+      </div>
       <el-input
         v-model="searchText"
         placeholder="搜索技能..."
         prefix-icon="Search"
         clearable
-        style="width: 240px;"
+        style="width: 200px;"
       />
-      <el-segmented v-model="activeCategory" :options="categoryOptions"/>
     </div>
 
     <!-- 加载态 -->
@@ -30,68 +43,46 @@
     </div>
 
     <!-- 空态 -->
-    <div v-else-if="skillsStore.skills.length === 0" class="empty-state">
+    <div v-else-if="filteredSkills.length === 0" class="empty-state">
       <div class="empty-icon">⚡</div>
       <p class="empty-title">暂无技能</p>
       <p class="empty-text">点击"新建技能"创建您的第一个自定义技能</p>
     </div>
 
-    <!-- 技能列表 -->
-    <div v-else class="skill-list">
+    <!-- 技能网格 -->
+    <div v-else class="skill-grid">
       <div
         v-for="skill in filteredSkills"
         :key="skill.skill_key"
         class="skill-card"
         :class="{ disabled: skill.is_enabled === 0 }"
       >
-        <div class="skill-card-body">
-          <span class="skill-icon-wrap" :style="{ background: categoryColor(skill.category) }">
-            <span class="skill-icon-emoji">{{ skill.icon }}</span>
-          </span>
-          <div class="skill-main">
-            <div class="skill-title-row">
-              <span class="skill-name">{{ skill.name }}</span>
-              <el-tag v-if="skill.is_builtin" size="small" type="info" effect="plain">内置</el-tag>
-              <el-tag v-else-if="skill.action_type === 'search_and_summarize'" size="small" type="warning" effect="plain">搜索+AI</el-tag>
-              <el-tag v-else size="small" type="success" effect="plain">自定义</el-tag>
-            </div>
-            <div class="skill-desc">{{ skill.description }}</div>
-          </div>
-        </div>
-
-        <div class="skill-card-actions">
+        <div class="card-bar" :style="{ background: categoryGradient(skill.category) }" />
+        <div class="card-top">
+          <div class="card-icon" :style="{ background: categoryGradient(skill.category) }">{{ skill.icon }}</div>
           <el-switch
             :model-value="skill.is_enabled === 1"
             size="small"
-            active-text="开"
-            inactive-text="关"
             @change="() => skillsStore.toggleSkill(skill.id)"
           />
-          <el-button text size="small" @click="openConfigDialog(skill)">
-            <el-icon><Setting/></el-icon>
-            配置
-          </el-button>
-          <el-button text size="small" type="success" @click="testSkill(skill)">
-            <el-icon><VideoPlay/></el-icon>
-            测试
-          </el-button>
-          <el-dropdown v-if="!skill.is_builtin" trigger="click" @command="(cmd: string) => handleCommand(cmd, skill)">
-            <el-button text circle size="small">
-              <el-icon><MoreFilled/></el-icon>
-            </el-button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="edit">
-                  <el-icon><Edit/></el-icon>
-                  编辑
-                </el-dropdown-item>
-                <el-dropdown-item command="delete" divided>
-                  <el-icon color="#F56C6C"><Delete/></el-icon>
-                  <span style="color: #F56C6C;">删除</span>
-                </el-dropdown-item>
-              </el-dropdown-menu>
+        </div>
+        <div class="card-name">{{ skill.name }}</div>
+        <div class="card-desc">{{ skill.description || '暂无描述' }}</div>
+        <div class="card-bottom">
+          <div class="card-tags">
+            <el-tag v-if="skill.is_builtin" size="small" effect="plain" round>内置</el-tag>
+            <el-tag v-else-if="skill.action_type === 'api_call'" size="small" type="success" effect="plain" round>API</el-tag>
+            <el-tag v-else-if="skill.action_type === 'ai_prompt'" size="small" type="warning" effect="plain" round>AI</el-tag>
+            <el-tag v-else-if="skill.action_type === 'search_and_summarize'" size="small" type="danger" effect="plain" round>搜索</el-tag>
+          </div>
+          <div class="card-btns">
+            <span class="card-btn" title="配置" @click="openConfigDialog(skill)"><el-icon><Setting/></el-icon></span>
+            <span class="card-btn" title="测试" @click="testSkill(skill)"><el-icon><VideoPlay/></el-icon></span>
+            <template v-if="!skill.is_builtin">
+              <span class="card-btn" title="编辑" @click="editSkill(skill)"><el-icon><Edit/></el-icon></span>
+              <span class="card-btn danger" title="删除" @click="deleteSkill(skill)"><el-icon><Delete/></el-icon></span>
             </template>
-          </el-dropdown>
+          </div>
         </div>
       </div>
     </div>
@@ -105,29 +96,12 @@
       :close-on-click-modal="false"
     >
       <div v-if="configFields.length > 0">
-        <el-form label-position="top" size="default">
+        <el-form label-position="top">
           <el-form-item v-for="field in configFields" :key="field.key" :label="field.label">
-            <el-input
-              v-if="field.type === 'string'"
-              v-model="configForm[field.key]"
-              :placeholder="field.placeholder || ''"
-            />
-            <el-input-number
-              v-else-if="field.type === 'number'"
-              v-model="configForm[field.key]"
-              style="width: 100%;"
-            />
-            <el-select
-              v-else-if="field.type === 'select'"
-              v-model="configForm[field.key]"
-              style="width: 100%;"
-            >
-              <el-option
-                v-for="opt in field.options"
-                :key="String(opt.value)"
-                :label="opt.label"
-                :value="opt.value"
-              />
+            <el-input v-if="field.type === 'string'" v-model="configForm[field.key]" :placeholder="field.placeholder || ''" />
+            <el-input-number v-else-if="field.type === 'number'" v-model="configForm[field.key]" style="width: 100%;" />
+            <el-select v-else-if="field.type === 'select'" v-model="configForm[field.key]" style="width: 100%;">
+              <el-option v-for="opt in field.options" :key="String(opt.value)" :label="opt.label" :value="opt.value" />
             </el-select>
           </el-form-item>
         </el-form>
@@ -142,22 +116,18 @@
     </el-dialog>
 
     <!-- 创建/编辑对话框 -->
-    <SkillForm
-      v-model:visible="createDialogVisible"
-      :skill="editingSkill"
-      @saved="handleSaved"
-    />
+    <SkillForm v-if="createDialogVisible" v-model:visible="createDialogVisible" :skill="editingSkill" @saved="handleSaved" />
 
     <!-- 测试结果对话框 -->
-    <el-dialog v-if="testDialogInited" v-model="testDialogVisible" title="技能测试结果" width="500px">
+    <el-dialog v-if="testDialogVisible" v-model="testDialogVisible" title="技能测试结果" width="500px">
       <div class="test-result">
-        <div class="test-result-header">
+        <div class="test-header">
           <span>{{ testingSkill?.icon }} {{ testingSkill?.name }}</span>
-          <el-tag v-if="testResult" type="success" size="small">执行成功</el-tag>
+          <el-tag v-if="testResult" type="success" size="small">成功</el-tag>
         </div>
         <div v-if="testing" class="test-loading">
           <el-icon class="is-loading" :size="20"><Loading/></el-icon>
-          <span>正在执行技能...</span>
+          <span>执行中...</span>
         </div>
         <div v-else-if="testResult" class="test-content">{{ testResult }}</div>
       </div>
@@ -172,7 +142,7 @@
 <script setup lang="ts">
 import {computed, onMounted, reactive, ref} from 'vue'
 import {useSkillsStore} from '@/stores/skills'
-import {Delete, Edit, Loading, MoreFilled, Plus, Setting, VideoPlay} from '@element-plus/icons-vue'
+import {Delete, Edit, Loading, Plus, Setting, VideoPlay} from '@element-plus/icons-vue'
 import {SKILL_CATEGORIES} from '@/types/skill'
 import type {Skill, SkillConfigField} from '@/types/skill'
 import {ElMessage, ElMessageBox} from 'element-plus'
@@ -182,41 +152,17 @@ const skillsStore = useSkillsStore()
 const searchText = ref('')
 const activeCategory = ref('all')
 
-const categoryOptions = [
-  {label: '全部', value: 'all'},
-  ...SKILL_CATEGORIES.map(c => ({label: c.icon + ' ' + c.label, value: c.key}))
-]
-
-// 配置对话框
-const configDialogVisible = ref(false)
-const configDialogInited = ref(false)
-const configuringSkill = ref<Skill | null>(null)
-const configForm = reactive<Record<string, any>>({})
-const configFields = ref<SkillConfigField[]>([])
-
-// 创建/编辑
-const createDialogVisible = ref(false)
-const editingSkill = ref<Skill | null>(null)
-
-// 测试
-const testDialogVisible = ref(false)
-const testDialogInited = ref(false)
-const testingSkill = ref<Skill | null>(null)
-const testing = ref(false)
-const testResult = ref('')
-
-const CATEGORY_COLORS: Record<string, string> = {
+const GRADIENTS: Record<string, string> = {
   weather: 'linear-gradient(135deg, #74b9ff, #0984e3)',
-  daily: 'linear-gradient(135deg, #ffeaa7, #fdcb6e)',
+  daily: 'linear-gradient(135deg, #ffeaa7, #f39c12)',
   health: 'linear-gradient(135deg, #55efc4, #00b894)',
   finance: 'linear-gradient(135deg, #fab1a0, #e17055)',
   study: 'linear-gradient(135deg, #a29bfe, #6c5ce7)',
   tools: 'linear-gradient(135deg, #81ecec, #00cec9)',
   custom: 'linear-gradient(135deg, #fd79a8, #e84393)'
 }
-
-function categoryColor(key: string): string {
-  return CATEGORY_COLORS[key] || CATEGORY_COLORS.custom
+function categoryGradient(key: string): string {
+  return GRADIENTS[key] || GRADIENTS.custom
 }
 
 const filteredSkills = computed(() => {
@@ -231,6 +177,23 @@ const filteredSkills = computed(() => {
   return list
 })
 
+// 配置对话框
+const configDialogVisible = ref(false)
+const configDialogInited = ref(false)
+const configuringSkill = ref<Skill | null>(null)
+const configForm = reactive<Record<string, any>>({})
+const configFields = ref<SkillConfigField[]>([])
+
+// 创建/编辑
+const createDialogVisible = ref(false)
+const editingSkill = ref<Skill | null>(null)
+
+// 测试
+const testDialogVisible = ref(false)
+const testingSkill = ref<Skill | null>(null)
+const testing = ref(false)
+const testResult = ref('')
+
 function openConfigDialog(skill: Skill) {
   configDialogInited.value = true
   configuringSkill.value = skill
@@ -239,12 +202,11 @@ function openConfigDialog(skill: Skill) {
   } catch {
     configFields.value = []
   }
-  let userConfig: Record<string, any> = {}
-  try { userConfig = JSON.parse(skill.user_config || '{}') } catch { /* ignore */ }
-
+  let uc: Record<string, any> = {}
+  try { uc = JSON.parse(skill.user_config || '{}') } catch { /* ignore */ }
   for (const key of Object.keys(configForm)) delete configForm[key]
   for (const field of configFields.value) {
-    configForm[field.key] = userConfig[field.key] !== undefined ? userConfig[field.key] : field.default
+    configForm[field.key] = uc[field.key] !== undefined ? uc[field.key] : field.default
   }
   configDialogVisible.value = true
 }
@@ -261,19 +223,19 @@ function openCreateDialog() {
   createDialogVisible.value = true
 }
 
-function handleCommand(cmd: string, skill: Skill) {
-  if (cmd === 'edit') {
-    editingSkill.value = skill
-    createDialogVisible.value = true
-  } else if (cmd === 'delete') {
-    ElMessageBox.confirm(
-      `确定要删除技能「${skill.name}」吗？`, '删除确认',
-      {confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'}
-    ).then(() => {
-      skillsStore.deleteSkill(skill.id)
-      ElMessage.success('删除成功')
-    }).catch(() => {})
-  }
+function editSkill(skill: Skill) {
+  editingSkill.value = skill
+  createDialogVisible.value = true
+}
+
+function deleteSkill(skill: Skill) {
+  ElMessageBox.confirm(
+    `确定要删除技能「${skill.name}」吗？`, '删除确认',
+    {confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'}
+  ).then(() => {
+    skillsStore.deleteSkill(skill.id)
+    ElMessage.success('删除成功')
+  }).catch(() => {})
 }
 
 function handleSaved() {
@@ -281,11 +243,17 @@ function handleSaved() {
 }
 
 async function testSkill(skill: Skill) {
-  testDialogInited.value = true
   testingSkill.value = skill
-  testDialogVisible.value = true
   testResult.value = ''
-  await runTest()
+  testing.value = true
+  testDialogVisible.value = true
+  try {
+    testResult.value = await skillsStore.executeSkill(skill.id, {skipEnabledCheck: true})
+  } catch (e: any) {
+    testResult.value = `执行失败: ${e.message}`
+  } finally {
+    testing.value = false
+  }
 }
 
 async function runTest() {
@@ -308,7 +276,7 @@ onMounted(() => {
 
 <style scoped>
 .skills-page {
-  max-width: 900px;
+  max-width: 960px;
 }
 
 .page-header {
@@ -330,100 +298,167 @@ onMounted(() => {
   color: var(--text-tertiary);
 }
 
+/* 过滤栏 */
 .filter-bar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   margin-bottom: 16px;
 }
 
-/* 技能卡片列表 */
-.skill-list {
+.filter-chips {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 12px;
+  cursor: pointer;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color-light);
+  color: var(--text-secondary);
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.chip:hover {
+  border-color: var(--color-primary, #409EFF);
+  color: var(--color-primary, #409EFF);
+}
+
+.chip.active {
+  background: var(--color-primary, #409EFF);
+  border-color: var(--color-primary, #409EFF);
+  color: #fff;
+}
+
+/* 技能网格 */
+.skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
 }
 
 .skill-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color-light);
   border-radius: 12px;
-  padding: 16px 20px;
+  padding: 16px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  transition: all 0.2s ease;
+  flex-direction: column;
+  gap: 10px;
+  transition: box-shadow 0.2s, transform 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.skill-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--card-accent, linear-gradient(135deg, #fd79a8, #e84393));
 }
 
 .skill-card:hover {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  border-color: var(--border-color);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.07);
+  transform: translateY(-1px);
 }
 
 .skill-card.disabled {
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
-.skill-card-body {
+.skill-card.disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.card-top {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  flex: 1;
-  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
 }
 
-.skill-icon-wrap {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+.card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 18px;
   flex-shrink: 0;
 }
 
-.skill-icon-emoji {
-  font-size: 20px;
-  filter: brightness(10);
+.card-bar {
+  display: none; /* using ::before pseudo instead */
 }
 
-.skill-card.disabled .skill-icon-emoji {
-  filter: none;
-  opacity: 0.6;
-}
-
-.skill-main {
-  min-width: 0;
-}
-
-.skill-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.skill-name {
+.card-name {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
+  line-height: 1.3;
 }
 
-.skill-desc {
+.card-desc {
   font-size: 12px;
   color: var(--text-tertiary);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 400px;
+  flex: 1;
 }
 
-.skill-card-actions {
+.card-bottom {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.card-tags {
+  display: flex;
+  gap: 4px;
+}
+
+.card-btns {
+  display: flex;
+  gap: 2px;
+}
+
+.card-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  transition: all 0.15s;
+  font-size: 14px;
+}
+
+.card-btn:hover {
+  background: var(--bg-hover);
+  color: var(--color-primary, #409EFF);
+}
+
+.card-btn.danger:hover {
+  color: #F56C6C;
 }
 
 /* 空状态 */
@@ -435,23 +470,9 @@ onMounted(() => {
   text-align: center;
 }
 
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.empty-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 6px;
-}
-
-.empty-text {
-  font-size: 13px;
-  color: var(--text-tertiary);
-  margin-bottom: 16px;
-}
+.empty-icon { font-size: 48px; margin-bottom: 16px; }
+.empty-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+.empty-text { font-size: 13px; color: var(--text-tertiary); }
 
 .loading-state {
   display: flex;
@@ -463,18 +484,14 @@ onMounted(() => {
 }
 
 /* 测试结果 */
-.test-result {
-  min-height: 80px;
-}
-
-.test-result-header {
+.test-result { min-height: 80px; }
+.test-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
   font-weight: 600;
 }
-
 .test-loading {
   display: flex;
   align-items: center;
@@ -483,7 +500,6 @@ onMounted(() => {
   padding: 30px;
   color: var(--text-tertiary);
 }
-
 .test-content {
   background: var(--bg-card);
   border: 1px solid var(--border-color-light);

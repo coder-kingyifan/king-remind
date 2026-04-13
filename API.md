@@ -2,21 +2,21 @@
 
 ## 概述
 
-应用启动后可在本地监听一个 HTTP API，可用于外部程序（如 AI Agent、脚本、自动化工具等）快速创建和管理提醒。
+应用启动后可在本地监听一个 HTTP API，可用于外部程序（如 AI Agent、脚本、自动化工具等）快速创建和管理提醒，也可通过 AI 对话接口用自然语言创建提醒。
 
 - **默认地址**: `http://127.0.0.1:33333`
-- **启用方式**: 系统设置 → API 接口 → 启用后台 API 接口（需重启应用生效）
-- **端口配置**: 数据库 `settings` 表中 `api_port` 字段（默认 33333）
-- **监听地址**: 数据库 `settings` 表中 `api_host` 字段（默认 0.0.0.0，允许外部访问）
-- **认证配置**: 数据库 `settings` 表中 `api_token` 字段（留空则不校验）
+- **启用方式**: 系统设置 → API 接口 → 启用后台 API 接口（启用后自动重启应用生效）
+- **端口配置**: 系统设置 → API 接口 → 监听端口（默认 33333）
+- **监听地址**: 系统设置 → API 接口 → 监听地址（默认 0.0.0.0，允许外部访问）
+- **认证配置**: 系统设置 → API 接口 → 访问令牌（留空则不校验）
 
 ## 首次配置
 
-1. 打开应用 → 系统设置 → API 接口
+1. 打开应用 → 首次启动向导（或系统设置 → API 接口）
 2. 开启「启用后台 API 接口」开关
 3. 设置监听端口（默认 33333）、监听地址（默认 0.0.0.0）和访问令牌
-4. 点击「重启应用」使配置生效
-5. 重启后在系统设置页面可查看完整的 API 文档
+4. 应用自动重启使配置生效
+5. 重启后在系统设置 → API 接口 → 展开接口文档查看
 
 ## 认证
 
@@ -192,6 +192,111 @@ DELETE http://127.0.0.1:33333/api/reminders/42
 
 ---
 
+### POST /api/chat
+
+AI 对话接口。通过自然语言与 AI 助手对话，AI 会自动识别意图并创建提醒、查询提醒等。适合集成到外部 AI Agent 或自动化流程中。
+
+**请求体** `application/json`
+
+| 字段               | 类型     | 必填 | 说明                                           |
+|------------------|--------|----|----------------------------------------------|
+| `message`        | string | ✅  | 用户消息，如 "每30分钟提醒我喝水"                          |
+| `model_config_id`| number |    | 模型配置 ID，不传则使用默认模型                            |
+| `history`        | array  |    | 对话历史 `[{role: "user"/"assistant", content: "..."}]`，支持多轮对话 |
+
+**请求示例**
+
+```json
+POST http://127.0.0.1:33333/api/chat
+Content-Type: application/json
+Authorization: Bearer your_token
+
+{
+  "message": "每30分钟提醒我喝水",
+  "history": []
+}
+```
+
+**多轮对话示例**
+
+```json
+{
+  "message": "改成每小时提醒一次",
+  "history": [
+    { "role": "user", "content": "每30分钟提醒我喝水" },
+    { "role": "assistant", "content": "好的，已为你创建喝水提醒！每 30 分钟循环提醒。" }
+  ]
+}
+```
+
+**成功响应** `200`
+
+```json
+{
+  "success": true,
+  "data": {
+    "reply": "好的，已为你创建喝水提醒！📋 每 30 分钟循环提醒，活跃时段 09:00-18:00，通过桌面通知推送。",
+    "tool_calls": [
+      {
+        "name": "create_reminder",
+        "args": {
+          "title": "喝水提醒",
+          "remind_type": "interval",
+          "start_time": "2025-03-20T09:00:00",
+          "interval_value": 30,
+          "interval_unit": "minutes",
+          "active_hours_start": "09:00",
+          "active_hours_end": "18:00",
+          "channels": ["desktop"]
+        },
+        "result": {
+          "id": 42,
+          "title": "喝水提醒",
+          "is_active": 1
+        }
+      }
+    ]
+  }
+}
+```
+
+**无工具调用的响应**
+
+```json
+{
+  "success": true,
+  "data": {
+    "reply": "你好！我是 King 提醒助手，有什么可以帮你的吗？"
+  }
+}
+```
+
+**错误响应** `500`
+
+```json
+{ "success": false, "error": "AI 对话失败: 未配置 AI 模型" }
+```
+
+---
+
+### GET /api/models
+
+获取可用的模型配置列表。
+
+**响应示例**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "name": "默认模型", "provider": "openai", "model": "gpt-4o-mini", "is_default": 1 },
+    { "id": 2, "name": "本地模型", "provider": "ollama", "model": "qwen3:8b", "is_default": 0 }
+  ]
+}
+```
+
+---
+
 ## 统一响应格式
 
 ```json
@@ -212,17 +317,15 @@ DELETE http://127.0.0.1:33333/api/reminders/42
 
 ---
 
-## AI 对话调用
-
-除了通过 HTTP API，还可以通过应用内 AI 助手用自然语言创建提醒：
+## AI 对话调用示例
 
 | 用户输入                    | AI 操作                      |
 |-------------------------|-----------------------------|
 | 每30分钟提醒我喝水              | 创建循环提醒，间隔30分钟               |
 | 明天下午3点提醒我开会             | 创建定时提醒，指定时间                 |
 | 工作日每天早上9点提醒我站会          | 创建循环提醒，限定工作日                |
-| 查看我的所有提醒                | 调用 GET /api/reminders 查询列表  |
-| 删除喝水提醒                  | 调用 DELETE /api/reminders/:id |
+| 查看我的所有提醒                | 调用 list_reminders 查询列表     |
+| 删除喝水提醒                  | 调用 delete_reminder 删除对应提醒   |
 
 ---
 
@@ -240,7 +343,14 @@ headers = {
     "Authorization": f"Bearer {TOKEN}"
 }
 
-# 创建提醒
+# 方式1: 通过 AI 对话创建提醒（推荐 - 自然语言）
+resp = requests.post(f"{BASE}/api/chat", headers=headers, json={
+    "message": "每30分钟提醒我喝水",
+    "history": []
+})
+print(resp.json())
+
+# 方式2: 直接创建提醒（精确控制参数）
 resp = requests.post(f"{BASE}/api/reminders", headers=headers, json={
     "title": "喝水提醒",
     "remind_type": "interval",
@@ -254,6 +364,10 @@ print(resp.json())
 # 查询提醒列表
 resp = requests.get(f"{BASE}/api/reminders?is_active=1", headers=headers)
 print(resp.json())
+
+# 获取可用模型
+resp = requests.get(f"{BASE}/api/models", headers=headers)
+print(resp.json())
 ```
 
 ### Node.js
@@ -262,8 +376,23 @@ print(resp.json())
 const BASE = "http://127.0.0.1:33333";
 const TOKEN = "your_token";
 
-// 创建提醒
-const res = await fetch(`${BASE}/api/reminders`, {
+// AI 对话创建提醒
+const res = await fetch(`${BASE}/api/chat`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${TOKEN}`
+  },
+  body: JSON.stringify({
+    message: "每30分钟提醒我喝水",
+    history: []
+  })
+});
+const data = await res.json();
+console.log(data);
+
+// 直接创建提醒
+const res2 = await fetch(`${BASE}/api/reminders`, {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -278,13 +407,23 @@ const res = await fetch(`${BASE}/api/reminders`, {
     channels: ["desktop"]
   })
 });
-const data = await res.json();
-console.log(data);
+const data2 = await res2.json();
+console.log(data2);
 ```
 
 ### curl
 
 ```bash
+# AI 对话创建提醒
+curl -X POST http://127.0.0.1:33333/api/chat \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_token" \
+  -d '{
+    "message": "每30分钟提醒我喝水",
+    "history": []
+  }'
+
+# 直接创建提醒
 curl -X POST http://127.0.0.1:33333/api/reminders \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your_token" \

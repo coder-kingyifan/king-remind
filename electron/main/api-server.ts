@@ -2,6 +2,9 @@ import {createServer, IncomingMessage, Server, ServerResponse} from 'http'
 import {remindersDb} from './db/reminders'
 import {settingsDb} from './db/settings'
 import {ReminderScheduler} from './scheduler'
+import {chatWithLLM} from './llm'
+import type {StreamEvent} from './llm'
+import {modelConfigsDb} from './db/model-configs'
 
 let server: Server | null = null
 
@@ -132,6 +135,59 @@ export function startApiServer(scheduler: ReminderScheduler): void {
             // GET /api/ping
             if (method === 'GET' && path === '/api/ping') {
                 return ok(res, {message: 'pong', version: '1.0.0'})
+            }
+
+            // POST /api/chat - AI 对话接口
+            if (method === 'POST' && path === '/api/chat') {
+                const body = await readBody(req)
+                if (!body.message) return err(res, 400, '缺少必填字段: message')
+
+                // 构建消息列表
+                const history: Array<{ role: string; content: string }> = Array.isArray(body.history) ? body.history : []
+                const messages = [
+                    ...history,
+                    { role: 'user', content: String(body.message) }
+                ]
+
+                const configId = body.model_config_id ? Number(body.model_config_id) : undefined
+
+                // 收集工具调用信息
+                const toolCalls: Array<{ name: string; args: Record<string, any>; result: any }> = []
+                const toolArgsMap = new Map<string, Record<string, any>>()
+
+                try {
+                    const result = await chatWithLLM(messages, scheduler, configId, undefined, (event: StreamEvent) => {
+                        if (event.type === 'tool_start') {
+                            toolArgsMap.set(event.name, event.args)
+                        }
+                        if (event.type === 'tool_result') {
+                            toolCalls.push({
+                                name: event.name,
+                                args: toolArgsMap.get(event.name) || {},
+                                result: event.result
+                            })
+                        }
+                    })
+
+                    return ok(res, {
+                        reply: result.reply,
+                        tool_calls: toolCalls.length > 0 ? toolCalls : undefined
+                    })
+                } catch (e: any) {
+                    return err(res, 500, `AI 对话失败: ${e.message || '未知错误'}`)
+                }
+            }
+
+            // GET /api/models - 获取模型配置列表
+            if (method === 'GET' && path === '/api/models') {
+                const models = modelConfigsDb.list()
+                return ok(res, models.map((m: any) => ({
+                    id: m.id,
+                    name: m.name,
+                    provider: m.provider,
+                    model: m.model,
+                    is_default: m.is_default
+                })))
             }
 
             err(res, 404, '接口不存在')

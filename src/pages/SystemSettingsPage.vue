@@ -55,7 +55,7 @@
           </div>
           <el-switch
               :model-value="settingsStore.settings.launch_at_startup === 'true'"
-              @change="(val: boolean) => settingsStore.setSetting('launch_at_startup', String(val))"
+              @change="onLaunchAtStartupChange"
           />
         </div>
 
@@ -66,7 +66,7 @@
           </div>
           <el-switch
               :model-value="settingsStore.settings.minimize_to_tray !== 'false'"
-              @change="(val: boolean) => settingsStore.setSetting('minimize_to_tray', String(val))"
+              @change="onMinimizeToTrayChange"
           />
         </div>
 
@@ -79,6 +79,14 @@
               :model-value="settingsStore.settings.notification_sound !== 'false'"
               @change="(val: boolean) => settingsStore.setSetting('notification_sound', String(val))"
           />
+        </div>
+
+        <div class="setting-item" v-if="behaviorNeedsRestart">
+          <div class="setting-info">
+            <div class="setting-label" style="color: #E6A23C;">配置已修改</div>
+            <div class="setting-desc">行为设置已更改，需重启应用生效</div>
+          </div>
+          <el-button type="warning" size="small" @click="restartApp">重启应用</el-button>
         </div>
       </div>
 
@@ -110,7 +118,7 @@
         <div class="setting-item">
           <div class="setting-info">
             <div class="setting-label">启用后台 API 接口</div>
-            <div class="setting-desc">允许外部程序通过 HTTP 接口创建和管理提醒，修改后需重启应用生效</div>
+            <div class="setting-desc">允许外部程序通过 HTTP 接口创建和管理提醒</div>
           </div>
           <el-switch
               :model-value="settingsStore.settings.api_enabled === 'true'"
@@ -162,12 +170,329 @@
             />
           </div>
 
-          <div class="setting-item" v-if="apiNeedsRestart">
-            <div class="setting-info">
-              <div class="setting-label" style="color: #E6A23C;">配置已修改</div>
-              <div class="setting-desc">API 配置已更改，需重启应用生效</div>
+          <!-- API 文档 - 默认收缩可展开 -->
+          <div class="api-doc-collapse">
+            <div class="api-doc-header" @click="showApiDoc = !showApiDoc">
+              <span class="api-doc-title">API 接口文档</span>
+              <el-icon :class="{ 'rotate-icon': showApiDoc }"><ArrowDown /></el-icon>
             </div>
-            <el-button type="warning" size="small" @click="restartApp">重启应用</el-button>
+
+            <transition name="doc-slide">
+              <div v-if="showApiDoc" class="api-doc-body">
+                <div class="api-doc">
+                  <p class="api-intro">
+                    应用已在本地开启 HTTP 服务，外部程序（脚本、AI Agent、自动化工具等）可通过该接口创建和管理提醒，也可通过 AI 对话接口用自然语言创建提醒。
+                  </p>
+
+                  <!-- 基本信息 -->
+                  <div class="api-row">
+                    <span class="api-label">服务地址</span>
+                    <span class="api-value api-code">http://{{ settingsStore.settings.api_host || '0.0.0.0' }}:{{ settingsStore.settings.api_port || '33333' }}</span>
+                  </div>
+                  <div class="api-row">
+                    <span class="api-label">认证方式</span>
+                    <span class="api-value">
+                      <template v-if="settingsStore.settings.api_token">
+                        Header <span class="api-code">Authorization: Bearer &lt;token&gt;</span>
+                      </template>
+                      <template v-else>
+                        未启用（Token 为空则不校验）
+                      </template>
+                    </span>
+                  </div>
+                  <div class="api-row">
+                    <span class="api-label">响应格式</span>
+                    <span class="api-value">JSON &nbsp;<span
+                        class="api-code">{ success, data } / { success, error }</span></span>
+                  </div>
+
+                  <!-- 接口列表 -->
+                  <div class="api-endpoints-title">接口列表</div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method get">GET</span>
+                    <span class="api-path">/api/ping</span>
+                    <span class="api-endpoint-desc">健康检查</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method post">POST</span>
+                    <span class="api-path">/api/reminders</span>
+                    <span class="api-endpoint-desc">创建提醒</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method get">GET</span>
+                    <span class="api-path">/api/reminders</span>
+                    <span class="api-endpoint-desc">查询提醒列表</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method get">GET</span>
+                    <span class="api-path">/api/reminders/:id</span>
+                    <span class="api-endpoint-desc">获取单条提醒</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method delete">DELETE</span>
+                    <span class="api-path">/api/reminders/:id</span>
+                    <span class="api-endpoint-desc">删除提醒</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method post">POST</span>
+                    <span class="api-path">/api/chat</span>
+                    <span class="api-endpoint-desc">AI 对话（可通过自然语言创建提醒）</span>
+                  </div>
+
+                  <!-- 创建提醒字段说明 -->
+                  <div class="api-endpoints-title" style="margin-top:12px;">POST /api/reminders 请求字段</div>
+                  <div class="api-fields-table">
+                    <div class="api-field-row api-field-header">
+                      <span class="api-field-name">字段</span>
+                      <span class="api-field-type">类型</span>
+                      <span class="api-field-req">必填</span>
+                      <span class="api-field-desc">说明</span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">title</span>
+                      <span class="api-field-type">string</span>
+                      <span class="api-field-req req">✅</span>
+                      <span class="api-field-desc">提醒标题</span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">remind_type</span>
+                      <span class="api-field-type">string</span>
+                      <span class="api-field-req req">✅</span>
+                      <span class="api-field-desc"><span class="api-code">interval</span>（周期循环）或 <span class="api-code">scheduled</span>（定时一次）</span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">start_time</span>
+                      <span class="api-field-type">string</span>
+                      <span class="api-field-req req">✅</span>
+                      <span class="api-field-desc">开始时间，ISO 8601，如 <span class="api-code">2025-03-20T09:00:00</span></span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">description</span>
+                      <span class="api-field-type">string</span>
+                      <span class="api-field-req">-</span>
+                      <span class="api-field-desc">提醒内容描述</span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">end_time</span>
+                      <span class="api-field-type">string</span>
+                      <span class="api-field-req">-</span>
+                      <span class="api-field-desc">结束时间，超过后自动停止</span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">interval_value</span>
+                      <span class="api-field-type">number</span>
+                      <span class="api-field-req">-</span>
+                      <span class="api-field-desc">周期数值（默认 60），仅 interval 类型有效</span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">interval_unit</span>
+                      <span class="api-field-type">string</span>
+                      <span class="api-field-req">-</span>
+                      <span class="api-field-desc"><span class="api-code">minutes</span> / <span class="api-code">hours</span> / <span class="api-code">days</span> / <span class="api-code">months</span> / <span class="api-code">years</span></span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">weekdays</span>
+                      <span class="api-field-type">number[]</span>
+                      <span class="api-field-req">-</span>
+                      <span class="api-field-desc">仅指定星期触发，0=周日 … 6=周六，如 <span class="api-code">[1,3,5]</span></span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">workday_only</span>
+                      <span class="api-field-type">boolean</span>
+                      <span class="api-field-req">-</span>
+                      <span class="api-field-desc">仅工作日触发</span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">holiday_only</span>
+                      <span class="api-field-type">boolean</span>
+                      <span class="api-field-req">-</span>
+                      <span class="api-field-desc">仅节假日触发</span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">lunar_date</span>
+                      <span class="api-field-type">string</span>
+                      <span class="api-field-req">-</span>
+                      <span class="api-field-desc">农历日期 <span class="api-code">MM-DD</span>，如 <span class="api-code">01-01</span></span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">active_hours_start</span>
+                      <span class="api-field-type">string</span>
+                      <span class="api-field-req">-</span>
+                      <span class="api-field-desc">活跃时段开始，格式 <span class="api-code">HH:mm</span></span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">active_hours_end</span>
+                      <span class="api-field-type">string</span>
+                      <span class="api-field-req">-</span>
+                      <span class="api-field-desc">活跃时段结束，格式 <span class="api-code">HH:mm</span></span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">channels</span>
+                      <span class="api-field-type">string[]</span>
+                      <span class="api-field-req">-</span>
+                      <span class="api-field-desc">通知渠道，默认 <span class="api-code">["desktop"]</span>，可选：<span class="api-code">desktop</span> / <span class="api-code">email</span> / <span class="api-code">telegram</span> / <span class="api-code">wechat_work</span> / <span class="api-code">wechat_work_webhook</span> / <span class="api-code">webhook</span></span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">icon</span>
+                      <span class="api-field-type">string</span>
+                      <span class="api-field-req">-</span>
+                      <span class="api-field-desc">图标 emoji，默认 🔔</span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">color</span>
+                      <span class="api-field-type">string</span>
+                      <span class="api-field-req">-</span>
+                      <span class="api-field-desc">颜色十六进制，默认 <span class="api-code">#409EFF</span></span>
+                    </div>
+                  </div>
+
+                  <!-- AI 对话接口 -->
+                  <div class="api-endpoints-title" style="margin-top:14px;">POST /api/chat - AI 对话接口</div>
+                  <p class="api-intro">
+                    通过 AI 对话接口，可以用自然语言创建提醒。AI 会自动识别意图并调用对应的工具。适合集成到外部 AI Agent 或自动化流程中。
+                  </p>
+
+                  <div class="api-fields-table">
+                    <div class="api-field-row api-field-header">
+                      <span class="api-field-name">字段</span>
+                      <span class="api-field-type">类型</span>
+                      <span class="api-field-req">必填</span>
+                      <span class="api-field-desc">说明</span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">message</span>
+                      <span class="api-field-type">string</span>
+                      <span class="api-field-req req">✅</span>
+                      <span class="api-field-desc">用户消息，如 "每30分钟提醒我喝水"</span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">model_config_id</span>
+                      <span class="api-field-type">number</span>
+                      <span class="api-field-req">-</span>
+                      <span class="api-field-desc">模型配置 ID，不传则使用默认模型</span>
+                    </div>
+                    <div class="api-field-row">
+                      <span class="api-field-name api-code">history</span>
+                      <span class="api-field-type">array</span>
+                      <span class="api-field-req">-</span>
+                      <span class="api-field-desc">对话历史 <span class="api-code">[{role, content}]</span>，支持多轮对话</span>
+                    </div>
+                  </div>
+
+                  <div class="api-example-title" style="margin-top:8px;">AI 对话请求示例</div>
+                  <pre class="api-pre">curl -X POST http://127.0.0.1:{{
+              settingsStore.settings.api_port || '33333'
+            }}/api/chat \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer &lt;your_token&gt;" \
+  -d '{
+    "message": "每30分钟提醒我喝水",
+    "history": []
+  }'</pre>
+
+                  <div class="api-example-title" style="margin-top:6px;">AI 对话响应示例</div>
+                  <pre class="api-pre">{
+  "success": true,
+  "data": {
+    "reply": "好的，已为你创建喝水提醒！📋 每 30 分钟循环提醒，通过桌面通知推送。",
+    "tool_calls": [
+      {
+        "name": "create_reminder",
+        "args": {
+          "title": "喝水提醒",
+          "remind_type": "interval",
+          "interval_value": 30,
+          "interval_unit": "minutes",
+          "channels": ["desktop"]
+        }
+      }
+    ]
+  }
+}</pre>
+
+                  <!-- 调用示例 -->
+                  <div class="api-example-title" style="margin-top:14px;">创建提醒 - curl 示例</div>
+                  <pre class="api-pre">curl -X POST http://127.0.0.1:{{
+              settingsStore.settings.api_port || '33333'
+            }}/api/reminders \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer &lt;your_token&gt;" \
+  -d '{
+    "title": "喝水提醒",
+    "remind_type": "interval",
+    "start_time": "2025-03-20T09:00:00",
+    "interval_value": 30,
+    "interval_unit": "minutes",
+    "active_hours_start": "09:00",
+    "active_hours_end": "18:00",
+    "channels": ["desktop"]
+  }'</pre>
+
+                  <div class="api-example-title" style="margin-top:14px;">AI Agent 对话调用示例</div>
+                  <p class="api-intro">通过 AI 对话接口，直接用自然语言即可创建提醒：</p>
+                  <div class="api-chat-examples">
+                    <div class="api-chat-bubble user">每30分钟提醒我喝水</div>
+                    <div class="api-chat-bubble ai">好的，已为你创建喝水提醒 📋 每 30 分钟循环提醒，活跃时段 09:00-18:00，通过桌面通知推送。</div>
+                    <div class="api-chat-bubble user">明天下午3点提醒我开会</div>
+                    <div class="api-chat-bubble ai">已创建会议提醒 📋 明天 15:00 定时提醒，通过桌面通知推送。</div>
+                  </div>
+
+                  <div class="api-example-title" style="margin-top:14px;">Python 调用示例</div>
+                  <pre class="api-pre">import requests
+
+BASE = "http://127.0.0.1:{{ settingsStore.settings.api_port || '33333' }}"
+TOKEN = "{{ settingsStore.settings.api_token || 'your_token' }}"
+headers = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {TOKEN}"
+}
+
+# 方式1: 通过 AI 对话创建提醒（推荐）
+resp = requests.post(f"{BASE}/api/chat", headers=headers, json={
+    "message": "每30分钟提醒我喝水",
+    "history": []
+})
+print(resp.json())
+
+# 方式2: 直接创建提醒
+resp = requests.post(f"{BASE}/api/reminders", headers=headers, json={
+    "title": "喝水提醒",
+    "remind_type": "interval",
+    "start_time": "2025-03-20T09:00:00",
+    "interval_value": 30,
+    "interval_unit": "minutes",
+    "channels": ["desktop"]
+})
+print(resp.json())
+
+# 查询提醒列表
+resp = requests.get(f"{BASE}/api/reminders?is_active=1", headers=headers)
+print(resp.json())</pre>
+
+                  <div class="api-example-title" style="margin-top:10px;">HTTP 状态码说明</div>
+                  <div class="api-field-row api-field-header" style="margin-top:4px;">
+                    <span class="api-field-name">状态码</span>
+                    <span style="flex:1">含义</span>
+                  </div>
+                  <div class="api-field-row"><span class="api-field-name api-code">200</span><span style="flex:1">成功</span>
+                  </div>
+                  <div class="api-field-row"><span class="api-field-name api-code">400</span><span
+                      style="flex:1">请求参数错误</span></div>
+                  <div class="api-field-row"><span class="api-field-name api-code">401</span><span
+                      style="flex:1">Token 验证失败</span></div>
+                  <div class="api-field-row"><span class="api-field-name api-code">404</span><span
+                      style="flex:1">资源不存在</span></div>
+                  <div class="api-field-row"><span class="api-field-name api-code">500</span><span
+                      style="flex:1">服务器内部错误</span></div>
+                </div>
+              </div>
+            </transition>
           </div>
         </template>
       </div>
@@ -175,6 +500,16 @@
       <!-- 数据管理 -->
       <div class="setting-section">
         <h3 class="section-title">数据</h3>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">数据库加密</div>
+            <div class="setting-desc">{{ settingsStore.settings.db_encrypted === 'true' ? '已启用，数据库文件已加密' : '未加密' }}</div>
+          </div>
+          <el-button size="small" plain @click="showEncryptionDialog = true">
+            {{ settingsStore.settings.db_encrypted === 'true' ? '管理密码' : '设置密码' }}
+          </el-button>
+        </div>
 
         <div class="setting-item">
           <div class="setting-info">
@@ -215,260 +550,6 @@
           </div>
         </div>
       </div>
-
-      <!-- 对外调用 API 文档 - 仅在启用 API 时显示 -->
-      <div v-if="settingsStore.settings.api_enabled === 'true'" class="setting-section">
-        <h3 class="section-title">对外调用 API 文档</h3>
-
-        <div class="api-doc">
-          <p class="api-intro">
-            应用已在本地开启 HTTP 服务，外部程序（脚本、AI Agent、自动化工具等）可通过该接口创建和管理提醒。
-          </p>
-
-          <!-- 基本信息 -->
-          <div class="api-row">
-            <span class="api-label">服务地址</span>
-            <span class="api-value api-code">http://{{ settingsStore.settings.api_host || '0.0.0.0' }}:{{ settingsStore.settings.api_port || '33333' }}</span>
-          </div>
-          <div class="api-row">
-            <span class="api-label">认证方式</span>
-            <span class="api-value">
-              <template v-if="settingsStore.settings.api_token">
-                Header <span class="api-code">Authorization: Bearer &lt;token&gt;</span>
-              </template>
-              <template v-else>
-                未启用（Token 为空则不校验）
-              </template>
-            </span>
-          </div>
-          <div class="api-row">
-            <span class="api-label">响应格式</span>
-            <span class="api-value">JSON &nbsp;<span
-                class="api-code">{ success, data } / { success, error }</span></span>
-          </div>
-
-          <!-- 接口列表 -->
-          <div class="api-endpoints-title">接口列表</div>
-
-          <div class="api-endpoint">
-            <span class="api-method get">GET</span>
-            <span class="api-path">/api/ping</span>
-            <span class="api-endpoint-desc">健康检查，确认服务是否正常运行</span>
-          </div>
-
-          <div class="api-endpoint">
-            <span class="api-method post">POST</span>
-            <span class="api-path">/api/reminders</span>
-            <span class="api-endpoint-desc">创建提醒，创建后调度器立即检查触发</span>
-          </div>
-
-          <div class="api-endpoint">
-            <span class="api-method get">GET</span>
-            <span class="api-path">/api/reminders</span>
-            <span class="api-endpoint-desc">查询提醒列表</span>
-          </div>
-          <div class="api-query-params">
-            <span class="api-query-item"><span class="api-code">?search=关键词</span> 按标题/描述模糊搜索</span>
-            <span class="api-query-item"><span
-                class="api-code">?is_active=1</span> 只返回启用中的提醒（0 = 已禁用）</span>
-            <span class="api-query-item">不传参数则返回全部</span>
-          </div>
-
-          <div class="api-endpoint">
-            <span class="api-method get">GET</span>
-            <span class="api-path">/api/reminders/:id</span>
-            <span class="api-endpoint-desc">获取单条提醒详情</span>
-          </div>
-
-          <div class="api-endpoint">
-            <span class="api-method delete">DELETE</span>
-            <span class="api-path">/api/reminders/:id</span>
-            <span class="api-endpoint-desc">删除指定提醒</span>
-          </div>
-
-          <!-- 创建提醒字段说明 -->
-          <div class="api-endpoints-title" style="margin-top:12px;">POST /api/reminders 请求字段</div>
-          <div class="api-fields-table">
-            <div class="api-field-row api-field-header">
-              <span class="api-field-name">字段</span>
-              <span class="api-field-type">类型</span>
-              <span class="api-field-req">必填</span>
-              <span class="api-field-desc">说明</span>
-            </div>
-            <div class="api-field-row">
-              <span class="api-field-name api-code">title</span>
-              <span class="api-field-type">string</span>
-              <span class="api-field-req req">✅</span>
-              <span class="api-field-desc">提醒标题</span>
-            </div>
-            <div class="api-field-row">
-              <span class="api-field-name api-code">remind_type</span>
-              <span class="api-field-type">string</span>
-              <span class="api-field-req req">✅</span>
-              <span class="api-field-desc"><span class="api-code">interval</span>（周期循环）或 <span class="api-code">scheduled</span>（定时一次）</span>
-            </div>
-            <div class="api-field-row">
-              <span class="api-field-name api-code">start_time</span>
-              <span class="api-field-type">string</span>
-              <span class="api-field-req req">✅</span>
-              <span class="api-field-desc">开始时间，ISO 8601，如 <span class="api-code">2025-03-20T09:00:00</span></span>
-            </div>
-            <div class="api-field-row">
-              <span class="api-field-name api-code">description</span>
-              <span class="api-field-type">string</span>
-              <span class="api-field-req">-</span>
-              <span class="api-field-desc">提醒内容描述</span>
-            </div>
-            <div class="api-field-row">
-              <span class="api-field-name api-code">end_time</span>
-              <span class="api-field-type">string</span>
-              <span class="api-field-req">-</span>
-              <span class="api-field-desc">结束时间，超过后自动停止</span>
-            </div>
-            <div class="api-field-row">
-              <span class="api-field-name api-code">interval_value</span>
-              <span class="api-field-type">number</span>
-              <span class="api-field-req">-</span>
-              <span class="api-field-desc">周期数值（默认 60），仅 interval 类型有效</span>
-            </div>
-            <div class="api-field-row">
-              <span class="api-field-name api-code">interval_unit</span>
-              <span class="api-field-type">string</span>
-              <span class="api-field-req">-</span>
-              <span class="api-field-desc"><span class="api-code">minutes</span> / <span class="api-code">hours</span> / <span
-                  class="api-code">days</span> / <span class="api-code">months</span> / <span
-                  class="api-code">years</span></span>
-            </div>
-            <div class="api-field-row">
-              <span class="api-field-name api-code">weekdays</span>
-              <span class="api-field-type">number[]</span>
-              <span class="api-field-req">-</span>
-              <span class="api-field-desc">仅指定星期触发，0=周日 … 6=周六，如 <span
-                  class="api-code">[1,3,5]</span></span>
-            </div>
-            <div class="api-field-row">
-              <span class="api-field-name api-code">workday_only</span>
-              <span class="api-field-type">boolean</span>
-              <span class="api-field-req">-</span>
-              <span class="api-field-desc">仅工作日触发</span>
-            </div>
-            <div class="api-field-row">
-              <span class="api-field-name api-code">holiday_only</span>
-              <span class="api-field-type">boolean</span>
-              <span class="api-field-req">-</span>
-              <span class="api-field-desc">仅节假日触发</span>
-            </div>
-            <div class="api-field-row">
-              <span class="api-field-name api-code">lunar_date</span>
-              <span class="api-field-type">string</span>
-              <span class="api-field-req">-</span>
-              <span class="api-field-desc">农历日期 <span class="api-code">MM-DD</span>，如 <span
-                  class="api-code">01-01</span>（正月初一）</span>
-            </div>
-            <div class="api-field-row">
-              <span class="api-field-name api-code">active_hours_start</span>
-              <span class="api-field-type">string</span>
-              <span class="api-field-req">-</span>
-              <span class="api-field-desc">活跃时段开始，格式 <span class="api-code">HH:mm</span>，如 <span
-                  class="api-code">09:00</span></span>
-            </div>
-            <div class="api-field-row">
-              <span class="api-field-name api-code">active_hours_end</span>
-              <span class="api-field-type">string</span>
-              <span class="api-field-req">-</span>
-              <span class="api-field-desc">活跃时段结束，格式 <span class="api-code">HH:mm</span></span>
-            </div>
-            <div class="api-field-row">
-              <span class="api-field-name api-code">channels</span>
-              <span class="api-field-type">string[]</span>
-              <span class="api-field-req">-</span>
-              <span class="api-field-desc">通知渠道，默认 <span class="api-code">["desktop"]</span>，可选：<span
-                  class="api-code">desktop</span> / <span class="api-code">email</span> / <span class="api-code">telegram</span> / <span
-                  class="api-code">wechat_work</span> / <span class="api-code">wechat_work_webhook</span> / <span class="api-code">webhook</span></span>
-            </div>
-            <div class="api-field-row">
-              <span class="api-field-name api-code">icon</span>
-              <span class="api-field-type">string</span>
-              <span class="api-field-req">-</span>
-              <span class="api-field-desc">图标 emoji，默认 🔔</span>
-            </div>
-            <div class="api-field-row">
-              <span class="api-field-name api-code">color</span>
-              <span class="api-field-type">string</span>
-              <span class="api-field-req">-</span>
-              <span class="api-field-desc">颜色十六进制，默认 <span class="api-code">#409EFF</span></span>
-            </div>
-          </div>
-
-          <!-- 调用示例 -->
-          <div class="api-example-title" style="margin-top:14px;">调用示例（curl）</div>
-          <pre class="api-pre">curl -X POST http://127.0.0.1:{{
-              settingsStore.settings.api_port || '33333'
-            }}/api/reminders \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer &lt;your_token&gt;" \
-  -d '{
-    "title": "喝水提醒",
-    "remind_type": "interval",
-    "start_time": "2025-03-20T09:00:00",
-    "interval_value": 30,
-    "interval_unit": "minutes",
-    "active_hours_start": "09:00",
-    "active_hours_end": "18:00",
-    "channels": ["desktop"]
-  }'</pre>
-
-          <div class="api-example-title" style="margin-top:14px;">AI Agent 对话调用示例</div>
-          <p class="api-intro">通过 AI 助手对话也可以创建提醒，直接用自然语言描述即可：</p>
-          <div class="api-chat-examples">
-            <div class="api-chat-bubble user">每30分钟提醒我喝水</div>
-            <div class="api-chat-bubble ai">好的，已为你创建喝水提醒 📋 每 30 分钟循环提醒，活跃时段 09:00-18:00，通过桌面通知推送。</div>
-            <div class="api-chat-bubble user">明天下午3点提醒我开会</div>
-            <div class="api-chat-bubble ai">已创建会议提醒 📋 明天 15:00 定时提醒，通过桌面通知推送。</div>
-          </div>
-
-          <div class="api-example-title" style="margin-top:14px;">Python 调用示例</div>
-          <pre class="api-pre">import requests
-
-BASE = "http://127.0.0.1:{{ settingsStore.settings.api_port || '33333' }}"
-TOKEN = "{{ settingsStore.settings.api_token || 'your_token' }}"
-headers = {
-    "Content-Type": "application/json",
-    "Authorization": f"Bearer {TOKEN}"
-}
-
-# 创建提醒
-resp = requests.post(f"{BASE}/api/reminders", headers=headers, json={
-    "title": "喝水提醒",
-    "remind_type": "interval",
-    "start_time": "2025-03-20T09:00:00",
-    "interval_value": 30,
-    "interval_unit": "minutes",
-    "channels": ["desktop"]
-})
-print(resp.json())
-
-# 查询提醒列表
-resp = requests.get(f"{BASE}/api/reminders?is_active=1", headers=headers)
-print(resp.json())</pre>
-
-          <div class="api-example-title" style="margin-top:10px;">HTTP 状态码说明</div>
-          <div class="api-field-row api-field-header" style="margin-top:4px;">
-            <span class="api-field-name">状态码</span>
-            <span style="flex:1">含义</span>
-          </div>
-          <div class="api-field-row"><span class="api-field-name api-code">200</span><span style="flex:1">成功</span>
-          </div>
-          <div class="api-field-row"><span class="api-field-name api-code">400</span><span
-              style="flex:1">请求参数错误</span></div>
-          <div class="api-field-row"><span class="api-field-name api-code">401</span><span
-              style="flex:1">Token 验证失败</span></div>
-          <div class="api-field-row"><span class="api-field-name api-code">404</span><span
-              style="flex:1">资源不存在</span></div>
-          <div class="api-field-row"><span class="api-field-name api-code">500</span><span
-              style="flex:1">服务器内部错误</span></div>
-        </div>
-      </div>
     </div>
 
     <!-- 祝福弹窗 -->
@@ -507,17 +588,64 @@ print(resp.json())</pre>
         </div>
       </div>
     </el-dialog>
+
+    <!-- 数据库加密弹窗 -->
+    <el-dialog
+        v-model="showEncryptionDialog"
+        :title="settingsStore.settings.db_encrypted === 'true' ? '管理数据库密码' : '设置数据库密码'"
+        width="420px"
+        :close-on-click-modal="false"
+    >
+      <div class="encryption-dialog-body">
+        <!-- 已加密：修改或移除 -->
+        <template v-if="settingsStore.settings.db_encrypted === 'true'">
+          <div class="setup-field">
+            <label class="setup-label">当前密码</label>
+            <el-input v-model="encCurrentPassword" type="password" show-password placeholder="请输入当前密码" />
+          </div>
+          <div class="setup-field">
+            <label class="setup-label">新密码（留空则不修改）</label>
+            <el-input v-model="encNewPassword" type="password" show-password placeholder="输入新密码" />
+          </div>
+          <div class="enc-actions">
+            <el-button type="danger" plain size="small" @click="removeEncryption" :loading="encLoading">移除加密</el-button>
+            <el-button type="primary" @click="changeEncryptionPassword" :loading="encLoading">修改密码</el-button>
+          </div>
+        </template>
+        <!-- 未加密：设置密码 -->
+        <template v-else>
+          <div class="setup-field">
+            <label class="setup-label">设置密码</label>
+            <el-input v-model="encNewPassword" type="password" show-password placeholder="设置数据库加密密码" />
+          </div>
+          <div class="setup-field">
+            <label class="setup-label">确认密码</label>
+            <el-input v-model="encConfirmPassword" type="password" show-password placeholder="再次输入密码" />
+          </div>
+          <el-button type="primary" style="width: 100%; margin-top: 8px;" @click="setEncryption" :loading="encLoading">设置密码并加密</el-button>
+        </template>
+        <div v-if="encError" class="enc-error">{{ encError }}</div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import {ref} from 'vue'
 import {useSettingsStore} from '@/stores/settings'
-import {ElMessage, ElMessageBox} from 'element-plus'
+import {ElMessage} from 'element-plus'
+import {ArrowDown} from '@element-plus/icons-vue'
 
 const settingsStore = useSettingsStore()
 const showBlessing = ref(false)
-const apiNeedsRestart = ref(false)
+const behaviorNeedsRestart = ref(false)
+const showApiDoc = ref(false)
+const showEncryptionDialog = ref(false)
+const encCurrentPassword = ref('')
+const encNewPassword = ref('')
+const encConfirmPassword = ref('')
+const encError = ref('')
+const encLoading = ref(false)
 
 function starStyle(i: number) {
   const angle = (i / 12) * 360
@@ -541,29 +669,40 @@ const themeOptions = [
   {label: '💻 跟随系统', value: 'system'}
 ]
 
+async function onLaunchAtStartupChange(val: boolean) {
+  await settingsStore.setSetting('launch_at_startup', String(val))
+  behaviorNeedsRestart.value = true
+}
+
+async function onMinimizeToTrayChange(val: boolean) {
+  await settingsStore.setSetting('minimize_to_tray', String(val))
+  behaviorNeedsRestart.value = true
+}
+
 async function onApiEnabledChange(val: boolean) {
   await settingsStore.setSetting('api_enabled', String(val))
   if (val) {
-    // 启用 API，需要重启
-    apiNeedsRestart.value = true
     try {
-      await ElMessageBox.confirm(
-        'API 接口已启用，需要重启应用才能生效。是否立即重启？',
-        '提示',
-        {confirmButtonText: '重启', cancelButtonText: '稍后', type: 'info'}
-      )
-      restartApp()
-    } catch { /* 用户取消 */ }
+      await window.electronAPI.api.restart()
+      ElMessage.success('API 接口已启用')
+    } catch {
+      ElMessage.error('API 接口启动失败')
+    }
   } else {
-    // 禁用 API
-    apiNeedsRestart.value = true
-    ElMessage.warning('API 接口已关闭，重启后生效')
+    try {
+      await window.electronAPI.api.toggle(false)
+      ElMessage.success('API 接口已关闭')
+    } catch { /* ignore */ }
   }
 }
 
 async function onApiSettingChange(key: string, value: string) {
   await settingsStore.setSetting(key, value)
-  apiNeedsRestart.value = true
+  // Restart API server dynamically
+  try {
+    await window.electronAPI.api.restart()
+    ElMessage.success('API 配置已更新')
+  } catch { /* ignore */ }
 }
 
 async function restartApp() {
@@ -574,9 +713,88 @@ async function restartApp() {
   }
 }
 
+async function setEncryption() {
+  encError.value = ''
+  if (!encNewPassword.value) {
+    encError.value = '请输入密码'
+    return
+  }
+  if (encNewPassword.value !== encConfirmPassword.value) {
+    encError.value = '两次输入的密码不一致'
+    return
+  }
+  encLoading.value = true
+  try {
+    await window.electronAPI.db.setEncryption(encNewPassword.value)
+    await settingsStore.setSetting('db_encrypted', 'true')
+    ElMessage.success('数据库加密设置成功，需要重启应用生效')
+    showEncryptionDialog.value = false
+    encNewPassword.value = ''
+    encConfirmPassword.value = ''
+    behaviorNeedsRestart.value = true
+  } catch (e: any) {
+    encError.value = e.message || '设置失败'
+  } finally {
+    encLoading.value = false
+  }
+}
+
+async function changeEncryptionPassword() {
+  encError.value = ''
+  if (!encCurrentPassword.value) {
+    encError.value = '请输入当前密码'
+    return
+  }
+  if (!encNewPassword.value) {
+    encError.value = '请输入新密码'
+    return
+  }
+  encLoading.value = true
+  try {
+    const valid = await window.electronAPI.db.verifyPassword(encCurrentPassword.value)
+    if (!valid) {
+      encError.value = '当前密码错误'
+      return
+    }
+    await window.electronAPI.db.setEncryption(encNewPassword.value)
+    ElMessage.success('密码修改成功，需要重启应用生效')
+    showEncryptionDialog.value = false
+    encCurrentPassword.value = ''
+    encNewPassword.value = ''
+  } catch (e: any) {
+    encError.value = e.message || '修改失败'
+  } finally {
+    encLoading.value = false
+  }
+}
+
+async function removeEncryption() {
+  encError.value = ''
+  if (!encCurrentPassword.value) {
+    encError.value = '请输入当前密码以确认移除加密'
+    return
+  }
+  encLoading.value = true
+  try {
+    const valid = await window.electronAPI.db.verifyPassword(encCurrentPassword.value)
+    if (!valid) {
+      encError.value = '密码错误'
+      return
+    }
+    await window.electronAPI.db.removeEncryption()
+    await settingsStore.setSetting('db_encrypted', 'false')
+    ElMessage.success('加密已移除，需要重启应用生效')
+    showEncryptionDialog.value = false
+    encCurrentPassword.value = ''
+  } catch (e: any) {
+    encError.value = e.message || '移除失败'
+  } finally {
+    encLoading.value = false
+  }
+}
+
 async function cleanupLogs() {
   try {
-    // 调用主进程清理日志
     ElMessage.success('日志清理完成')
   } catch {
     ElMessage.error('清理失败')
@@ -827,6 +1045,58 @@ async function cleanupLogs() {
   font-style: italic;
 }
 
+/* API 文档折叠 */
+.api-doc-collapse {
+  border: 1px solid var(--border-color-light);
+  border-radius: 8px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+
+.api-doc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: var(--bg-secondary, #f5f7fa);
+  transition: background 0.2s;
+}
+
+.api-doc-header:hover {
+  background: var(--bg-hover, #ebeef5);
+}
+
+.api-doc-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.rotate-icon {
+  transform: rotate(180deg);
+  transition: transform 0.3s;
+}
+
+.api-doc-body {
+  padding: 14px;
+  border-top: 1px solid var(--border-color-light);
+}
+
+.doc-slide-enter-active {
+  transition: all 0.3s ease;
+}
+
+.doc-slide-leave-active {
+  transition: all 0.2s ease;
+}
+
+.doc-slide-enter-from,
+.doc-slide-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+
 /* API 字段表格 */
 .api-fields-table {
   display: flex;
@@ -1025,5 +1295,24 @@ async function cleanupLogs() {
   background: var(--bg-secondary, #f5f7fa);
   color: var(--text-primary);
   border-bottom-left-radius: 4px;
+}
+
+/* 数据库加密弹窗 */
+.encryption-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.enc-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.enc-error {
+  font-size: 12px;
+  color: #F56C6C;
+  padding-left: 4px;
 }
 </style>
