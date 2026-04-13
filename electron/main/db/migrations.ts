@@ -600,6 +600,28 @@ export function runMigrations(): void {
                 INSERT OR IGNORE INTO settings (key, value) VALUES ('db_path', '');
                 INSERT OR IGNORE INTO settings (key, value) VALUES ('db_encrypted', 'false');
             `
+        },
+        {
+            version: 18,
+            sql: `
+                CREATE TABLE IF NOT EXISTS skill_content (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    skill_key TEXT NOT NULL,
+                    category TEXT DEFAULT '',
+                    content TEXT NOT NULL,
+                    extra TEXT DEFAULT '{}',
+                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+                );
+                CREATE INDEX IF NOT EXISTS idx_skill_content_key ON skill_content(skill_key);
+                CREATE INDEX IF NOT EXISTS idx_skill_content_key_cat ON skill_content(skill_key, category);
+            `
+        },
+        {
+            version: 19,
+            sql: `
+                ALTER TABLE skills ADD COLUMN store_version TEXT DEFAULT NULL;
+                ALTER TABLE skills ADD COLUMN store_source TEXT DEFAULT NULL;
+            `
         }
     ]
 

@@ -12,6 +12,7 @@ import {chatWithLLM, generateSessionTitle, PROVIDERS, testModelConnection} from 
 import {chatHistoryDb} from './db/chat-history'
 import {modelConfigsDb} from './db/model-configs'
 import {skillsDb} from './db/skills'
+import {skillContentDb, seedSkillContent} from './db/skill-content'
 import {startApiServer, stopApiServer} from './api-server'
 import {ReminderScheduler} from './scheduler'
 import {
@@ -154,6 +155,42 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
 
     safeHandle('window:is-maximized', () => {
         return mainWindow.isMaximized()
+    })
+
+    safeHandle('window:toggle-always-on-top', () => {
+        const isOnTop = mainWindow.isAlwaysOnTop()
+        mainWindow.setAlwaysOnTop(!isOnTop)
+        settingsDb.set('always_on_top', String(!isOnTop))
+        return !isOnTop
+    })
+
+    safeHandle('window:is-always-on-top', () => {
+        return mainWindow.isAlwaysOnTop()
+    })
+
+    // ========== 仪表盘统计 ==========
+    safeHandle('dashboard:stats', () => {
+        const reminderStats = remindersDb.getTodayStats()
+        const chatSessionCount = chatHistoryDb.sessionCount()
+        const chatMessageCount = chatHistoryDb.count()
+        const modelCount = modelConfigsDb.list().length
+        const skillCount = skillsDb.list().length
+        const enabledSkillCount = skillsDb.list({is_enabled: 1}).length
+        const notifConfigs = notificationConfigsDb.getAll()
+        const enabledChannels = notifConfigs.filter((c: any) => c.enabled).length
+
+        return {
+            totalReminders: reminderStats.total,
+            activeReminders: reminderStats.active,
+            triggeredToday: reminderStats.triggeredToday,
+            chatSessionCount,
+            chatMessageCount,
+            modelCount,
+            skillCount,
+            enabledSkillCount,
+            enabledChannels,
+            totalChannels: notifConfigs.length
+        }
     })
 
     // ========== 日志 ==========
@@ -392,16 +429,35 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
 
     safeHandle('ai:generate-greeting', async () => {
         try {
-            const config = modelConfigsDb.getDefault()
-            if (!config) return null
+            const allConfigs = modelConfigsDb.list()
+            const textConfig = allConfigs.find(c => c.model_type === 'text' && c.is_default === 1)
+                || allConfigs.find(c => c.model_type === 'text')
+                || allConfigs.find(c => c.is_default === 1 && c.model_type !== 'web_search')
+                || allConfigs.find(c => c.model_type !== 'web_search')
+            if (!textConfig) return null
+
             const now = new Date()
+            const hour = now.getHours()
             const dateInfo = `${now.toLocaleDateString('zh-CN', {timeZone: 'Asia/Shanghai'})} ${now.toLocaleDateString('zh-CN', {timeZone: 'Asia/Shanghai', weekday: 'long'})} ${now.toLocaleTimeString('zh-CN', {timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit'})}`
-            const prompt = `今天是${dateInfo}。请用简短友好的中文给我发一句问候或小贴士（不超过25个字，不要标点结尾，不要引号）。可以是节日问候、健康小贴士、鼓励的话等。只输出问候语本身。`
-            const result = await chatWithLLM(
-                [{role: 'user', content: prompt}],
-                null, config.id, undefined, undefined
-            )
-            return result.reply?.trim().replace(/["""'"']/g, '') || null
+            const period = hour < 6 ? '凌晨' : hour < 12 ? '早上' : hour < 14 ? '中午' : hour < 18 ? '下午' : '晚上'
+
+            // 并行生成问候和建议
+            const prompt1 = `现在是${period}，${dateInfo}。请用简短友好的中文给我一句鼓励的话（不超过20个字，不要标点结尾，不要引号，不要"加油"）。只输出鼓励语本身。`
+            const prompt2 = `请生成5条具体的提醒建议（每条不超过15字），用JSON数组格式返回，如["建议1","建议2","建议3","建议4","建议5"]。要求具体可操作，如"新增每日喝水提醒"、"周末提醒我去运动"、"下周一提醒我交周报"等，不要笼统。随机多样。只输出JSON数组。`
+
+            const [r1, r2] = await Promise.all([
+                chatWithLLM([{role: 'user', content: prompt1}], null, textConfig.id, undefined, undefined),
+                chatWithLLM([{role: 'user', content: prompt2}], null, textConfig.id, undefined, undefined)
+            ])
+
+            const encouragement = r1.reply?.trim().replace(/["""'"']/g, '') || ''
+            let suggestions: string[] = []
+            try {
+                const arr = JSON.parse(r2.reply?.trim() || '[]')
+                if (Array.isArray(arr) && arr.length > 0) suggestions = arr.filter((s: any) => typeof s === 'string' && s.length > 0)
+            } catch { /* ignore */ }
+
+            return { encouragement, suggestions }
         } catch {
             return null
         }
@@ -449,6 +505,65 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
 
     safeHandle('skills:update-config', (_event, id: number, userConfig: string) => {
         return skillsDb.updateConfig(id, userConfig)
+    })
+
+    // ========== 技能内容管理 ==========
+    safeHandle('skills:content:list', (_event, skillKey: string, category?: string) => {
+        return skillContentDb.list(skillKey, category)
+    })
+
+    safeHandle('skills:content:add', (_event, skillKey: string, category: string, content: string, extra?: Record<string, any>) => {
+        return skillContentDb.add(skillKey, category, content, extra)
+    })
+
+    safeHandle('skills:content:delete', (_event, id: number) => {
+        return skillContentDb.delete(id)
+    })
+
+    safeHandle('skills:content:count', (_event, skillKey: string, category?: string) => {
+        return skillContentDb.count(skillKey, category)
+    })
+
+    // 初始化技能内容数据
+    try {
+        seedSkillContent()
+    } catch (e: any) {
+        console.error('[IPC] 技能内容初始化失败:', e.message)
+    }
+
+    // ========== 技能商店 ==========
+    safeHandle('skill-store:fetch', async () => {
+        const {fetchStoreManifest, getStoreSkillsWithStatus} = await import('./skill-store')
+        try {
+            const storeUrl = settingsDb.get('skill_store_url') || undefined
+            const manifest = await fetchStoreManifest(storeUrl)
+            return getStoreSkillsWithStatus(manifest, storeUrl)
+        } catch (e: any) {
+            throw new Error(`获取技能商店失败: ${e.message}`)
+        }
+    })
+
+    safeHandle('skill-store:install', async (_event, skillKey: string) => {
+        const {fetchStoreManifest, installStoreSkill} = await import('./skill-store')
+        const storeUrl = settingsDb.get('skill_store_url') || undefined
+        const manifest = await fetchStoreManifest(storeUrl)
+        const storeSkill = manifest.skills.find(s => s.skill_key === skillKey)
+        if (!storeSkill) throw new Error('未找到该技能')
+        return installStoreSkill(storeSkill, storeUrl)
+    })
+
+    safeHandle('skill-store:uninstall', async (_event, skillKey: string) => {
+        const {uninstallStoreSkill} = await import('./skill-store')
+        return uninstallStoreSkill(skillKey)
+    })
+
+    safeHandle('skill-store:set-url', (_event, url: string) => {
+        settingsDb.set('skill_store_url', url)
+        return true
+    })
+
+    safeHandle('skill-store:get-url', () => {
+        return settingsDb.get('skill_store_url') || ''
     })
 
     // ========== 模型配置 ==========

@@ -109,5 +109,10 @@ export const chatHistoryDb = {
     count(): number {
         const rows = queryAll('SELECT COUNT(*) as c FROM chat_messages')
         return (rows[0]?.c || 0) as number
+    },
+
+    sessionCount(): number {
+        const rows = queryAll('SELECT COUNT(*) as c FROM chat_sessions')
+        return (rows[0]?.c || 0) as number
     }
 }

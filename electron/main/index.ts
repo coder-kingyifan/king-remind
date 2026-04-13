@@ -18,6 +18,7 @@ import {startApiServer, stopApiServer} from './api-server'
 import {seedBuiltinSkills} from './db/skills'
 import {continueHeadlessInit} from './repl'
 import {execSync} from 'child_process'
+import {initNetworkInterceptor} from './network-interceptor'
 
 // Windows 控制台中文乱码修复
 try {
@@ -56,6 +57,11 @@ function createWindow(): BrowserWindow {
     })
 
     mainWindow.on('ready-to-show', () => {
+        // 恢复窗口置顶状态
+        const alwaysOnTop = settingsDb.get('always_on_top')
+        if (alwaysOnTop === 'true') {
+            mainWindow?.setAlwaysOnTop(true)
+        }
         mainWindow?.show()
     })
 
@@ -109,6 +115,8 @@ async function continueAppInit(win: BrowserWindow | null): Promise<void> {
     // 注册IPC处理器
     if (win) {
         registerIpcHandlers(win, dispatcher, scheduler)
+        // 初始化网络请求拦截器，将主进程 axios 请求转发到 DevTools
+        initNetworkInterceptor(win)
         console.log('[主进程] IPC处理器已注册')
     }
 

@@ -1,53 +1,90 @@
 <template>
   <div class="dashboard">
     <div class="page-header">
-      <h1 class="page-title">仪表盘</h1>
-      <p class="page-subtitle">{{ greeting }}，这是今天的提醒概览</p>
+      <h1 class="page-title">数据概览</h1>
+      <p class="page-subtitle">{{ greeting }}，这是你的应用全景</p>
     </div>
 
-    <!-- 统计卡片 -->
+    <!-- 核心指标 -->
     <div class="stats-row">
-      <div class="stat-card">
+      <div class="stat-card" @click="router.push('/reminders')">
         <div class="stat-icon" style="background: rgba(64, 158, 255, 0.1); color: #409EFF;">
-          <el-icon :size="22">
-            <Bell/>
-          </el-icon>
+          <el-icon :size="22"><Bell/></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value">{{ stats.total }}</div>
-          <div class="stat-label">全部提醒</div>
+          <div class="stat-value">{{ dashStats.totalReminders }}</div>
+          <div class="stat-label">提醒总数</div>
+        </div>
+        <div class="stat-extra" v-if="dashStats.activeReminders > 0">
+          <span class="stat-tag active">{{ dashStats.activeReminders }} 进行中</span>
         </div>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(103, 194, 58, 0.1); color: #67C23A;">
-          <el-icon :size="22">
-            <CircleCheck/>
-          </el-icon>
+      <div class="stat-card" @click="router.push('/')">
+        <div class="stat-icon" style="background: rgba(144, 89, 246, 0.1); color: #9059F6;">
+          <el-icon :size="22"><ChatDotRound/></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value">{{ stats.active }}</div>
-          <div class="stat-label">进行中</div>
+          <div class="stat-value">{{ dashStats.chatSessionCount }}</div>
+          <div class="stat-label">对话次数</div>
+        </div>
+        <div class="stat-extra" v-if="dashStats.chatMessageCount > 0">
+          <span class="stat-tag">{{ dashStats.chatMessageCount }} 条消息</span>
         </div>
       </div>
 
-      <div class="stat-card">
+      <div class="stat-card" @click="router.push('/model-config')">
         <div class="stat-icon" style="background: rgba(230, 162, 60, 0.1); color: #E6A23C;">
-          <el-icon :size="22">
-            <Finished/>
-          </el-icon>
+          <el-icon :size="22"><Cpu/></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value">{{ stats.triggeredToday }}</div>
-          <div class="stat-label">今日已触发</div>
+          <div class="stat-value">{{ dashStats.modelCount }}</div>
+          <div class="stat-label">模型配置</div>
         </div>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(144, 147, 153, 0.1); color: #909399;">
-          <el-icon :size="22">
-            <Timer/>
-          </el-icon>
+      <div class="stat-card" @click="router.push('/notifications')">
+        <div class="stat-icon" style="background: rgba(103, 194, 58, 0.1); color: #67C23A;">
+          <el-icon :size="22"><Message/></el-icon>
+        </div>
+        <div class="stat-info">
+          <div class="stat-value">{{ dashStats.enabledChannels }}</div>
+          <div class="stat-label">通知渠道</div>
+        </div>
+        <div class="stat-extra" v-if="dashStats.totalChannels > 0">
+          <span class="stat-tag">{{ dashStats.enabledChannels }}/{{ dashStats.totalChannels }} 已启用</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 第二行指标 -->
+    <div class="stats-row secondary">
+      <div class="stat-card small" @click="router.push('/skills')">
+        <div class="stat-icon" style="background: rgba(236, 105, 92, 0.1); color: #EC695C;">
+          <el-icon :size="20"><MagicStick/></el-icon>
+        </div>
+        <div class="stat-info">
+          <div class="stat-value">{{ dashStats.skillCount }}</div>
+          <div class="stat-label">技能</div>
+        </div>
+        <div class="stat-extra" v-if="dashStats.enabledSkillCount > 0">
+          <span class="stat-tag active">{{ dashStats.enabledSkillCount }} 已启用</span>
+        </div>
+      </div>
+
+      <div class="stat-card small">
+        <div class="stat-icon" style="background: rgba(230, 162, 60, 0.1); color: #E6A23C;">
+          <el-icon :size="20"><Finished/></el-icon>
+        </div>
+        <div class="stat-info">
+          <div class="stat-value">{{ dashStats.triggeredToday }}</div>
+          <div class="stat-label">今日触发</div>
+        </div>
+      </div>
+
+      <div class="stat-card small">
+        <div class="stat-icon" style="background: rgba(64, 158, 255, 0.1); color: #409EFF;">
+          <el-icon :size="20"><Timer/></el-icon>
         </div>
         <div class="stat-info">
           <div class="stat-value">{{ nextReminderText }}</div>
@@ -56,107 +93,98 @@
       </div>
     </div>
 
-    <!-- 今日提醒列表 -->
-    <div class="section">
-      <div class="section-header">
-        <h2 class="section-title">活跃提醒</h2>
-        <el-button type="primary" size="small" @click="router.push('/reminders')">
-          管理提醒
-        </el-button>
-      </div>
+    <!-- 活跃提醒 + 最近通知 -->
+    <div class="two-col">
+      <!-- 活跃提醒 -->
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title">活跃提醒</h2>
+          <el-button type="primary" size="small" plain @click="router.push('/reminders')">
+            查看全部
+          </el-button>
+        </div>
 
-      <div v-if="activeReminders.length === 0" class="empty-state">
-        <div class="empty-icon">📋</div>
-        <p class="empty-text">暂无活跃提醒</p>
-        <el-button type="primary" plain size="small" @click="router.push('/reminders')">
-          创建第一个提醒
-        </el-button>
-      </div>
+        <div v-if="activeReminders.length === 0" class="empty-state small">
+          <p class="empty-text">暂无活跃提醒</p>
+          <el-button type="primary" plain size="small" @click="router.push('/reminders')">
+            创建提醒
+          </el-button>
+        </div>
 
-      <div v-else class="reminder-grid">
-        <div
-            v-for="reminder in activeReminders"
-            :key="reminder.id"
-            class="reminder-card"
-            :style="{ borderLeftColor: reminder.color }"
-        >
-          <div class="reminder-card-header">
-            <span class="reminder-icon">{{ reminder.icon }}</span>
-            <span class="reminder-title">{{ reminder.title }}</span>
-            <el-switch
-                :model-value="reminder.is_active === 1"
-                size="small"
-                @change="() => remindersStore.toggleReminder(reminder.id)"
-            />
-          </div>
-          <div class="reminder-card-body">
-            <div class="reminder-interval">
-              <el-tag
-                  :type="reminder.remind_type === 'scheduled' ? 'warning' : 'primary'"
+        <div v-else class="reminder-list">
+          <div
+              v-for="reminder in activeReminders.slice(0, 6)"
+              :key="reminder.id"
+              class="reminder-item"
+              :style="{ borderLeftColor: reminder.color }"
+          >
+            <div class="reminder-item-left">
+              <span class="reminder-icon">{{ reminder.icon }}</span>
+              <div class="reminder-item-info">
+                <span class="reminder-title">{{ reminder.title }}</span>
+                <span class="reminder-meta">
+                  <el-tag
+                      :type="reminder.remind_type === 'scheduled' ? 'warning' : 'primary'"
+                      size="small"
+                      effect="plain"
+                  >{{ reminder.remind_type === 'scheduled' ? '定时' : '循环' }}
+                  </el-tag>
+                  <template v-if="reminder.remind_type === 'interval'">
+                    每 {{ reminder.interval_value }} {{ unitLabel(reminder.interval_unit) }}
+                  </template>
+                  <template v-else>
+                    {{ formatTime(reminder.start_time) }}
+                  </template>
+                </span>
+              </div>
+            </div>
+            <div class="reminder-item-right">
+              <div class="channel-badges">
+                <span v-for="ch in parseChannels(reminder.channels)" :key="ch" class="channel-badge">
+                  {{ channelIcon(ch) }}
+                </span>
+              </div>
+              <el-switch
+                  :model-value="reminder.is_active === 1"
                   size="small"
-                  effect="plain"
-                  style="margin-right: 6px;"
-              >{{ reminder.remind_type === 'scheduled' ? '定时' : '循环' }}
-              </el-tag>
-              <el-icon :size="14">
-                <Timer/>
-              </el-icon>
-              <template v-if="reminder.remind_type === 'interval'">
-                每 {{ reminder.interval_value }} {{ unitLabel(reminder.interval_unit) }}
-              </template>
-              <template v-else>
-                {{ formatTime(reminder.start_time) }}
-              </template>
-            </div>
-            <div v-if="reminder.next_trigger_at" class="reminder-next">
-              下次: {{ formatTime(reminder.next_trigger_at) }}
-            </div>
-          </div>
-          <div class="reminder-card-footer">
-            <div class="channel-badges">
-              <span
-                  v-for="ch in parseChannels(reminder.channels)"
-                  :key="ch"
-                  class="channel-badge"
-              >
-                {{ channelIcon(ch) }}
-              </span>
+                  @change="() => remindersStore.toggleReminder(reminder.id)"
+              />
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 最近通知日志 -->
-    <div class="section">
-      <div class="section-header">
-        <h2 class="section-title">最近通知</h2>
-      </div>
+      <!-- 最近通知 -->
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title">最近通知</h2>
+        </div>
 
-      <div v-if="recentLogs.length === 0" class="empty-state small">
-        <p class="empty-text">暂无通知记录</p>
-      </div>
+        <div v-if="recentLogs.length === 0" class="empty-state small">
+          <p class="empty-text">暂无通知记录</p>
+        </div>
 
-      <div v-else class="log-list">
-        <div v-for="log in recentLogs" :key="log.id" class="log-item-wrapper">
-          <div class="log-item">
-            <span class="log-status" :class="log.status">
-              {{ log.status === 'sent' ? '✓' : '✗' }}
-            </span>
-            <span class="log-title">{{ log.reminder_title || '未知' }}</span>
-            <span class="log-channel">{{ channelIcon(log.channel) }} {{ channelName(log.channel) }}</span>
-            <span class="log-time">{{ formatTime(log.sent_at) }}</span>
-            <span
-                v-if="log.status === 'failed' && log.error_message"
-                class="log-expand-arrow"
-                :class="{ expanded: expandedErrors[log.id] }"
-                @click="toggleLogError(log.id)"
-            >
-              <el-icon :size="14"><ArrowDown/></el-icon>
-            </span>
-          </div>
-          <div v-if="log.status === 'failed' && log.error_message && expandedErrors[log.id]" class="log-error-detail">
-            {{ log.error_message }}
+        <div v-else class="log-list">
+          <div v-for="log in recentLogs" :key="log.id" class="log-item-wrapper">
+            <div class="log-item">
+              <span class="log-status" :class="log.status">
+                {{ log.status === 'sent' ? '✓' : '✗' }}
+              </span>
+              <span class="log-title">{{ log.reminder_title || '未知' }}</span>
+              <span class="log-channel">{{ channelIcon(log.channel) }}</span>
+              <span class="log-time">{{ formatTime(log.sent_at) }}</span>
+              <span
+                  v-if="log.status === 'failed' && log.error_message"
+                  class="log-expand-arrow"
+                  :class="{ expanded: expandedErrors[log.id] }"
+                  @click="toggleLogError(log.id)"
+              >
+                <el-icon :size="14"><ArrowDown/></el-icon>
+              </span>
+            </div>
+            <div v-if="log.status === 'failed' && log.error_message && expandedErrors[log.id]" class="log-error-detail">
+              {{ log.error_message }}
+            </div>
           </div>
         </div>
       </div>
@@ -169,16 +197,28 @@ import {computed, onMounted, onUnmounted, onActivated, onDeactivated, reactive, 
 import {useRouter} from 'vue-router'
 import {useRemindersStore} from '@/stores/reminders'
 import {useSettingsStore} from '@/stores/settings'
-import {ArrowDown, Bell, CircleCheck, Finished, Timer} from '@element-plus/icons-vue'
+import {ArrowDown, Bell, ChatDotRound, Cpu, Finished, MagicStick, Message, Timer} from '@element-plus/icons-vue'
 import {CHANNELS} from '@/types/notification'
 
 const router = useRouter()
 const remindersStore = useRemindersStore()
 const settingsStore = useSettingsStore()
-const stats = computed(() => remindersStore.stats)
 const recentLogs = ref<any[]>([])
 const expandedErrors = reactive<Record<number, boolean>>({})
 let refreshTimer: any = null
+
+const dashStats = ref({
+  totalReminders: 0,
+  activeReminders: 0,
+  triggeredToday: 0,
+  chatSessionCount: 0,
+  chatMessageCount: 0,
+  modelCount: 0,
+  skillCount: 0,
+  enabledSkillCount: 0,
+  enabledChannels: 0,
+  totalChannels: 0
+})
 
 function toggleLogError(id: number) {
   expandedErrors[id] = !expandedErrors[id]
@@ -186,11 +226,13 @@ function toggleLogError(id: number) {
 
 async function refreshData() {
   await remindersStore.fetchReminders()
-  await remindersStore.fetchStats()
+  try {
+    const stats = await window.electronAPI.dashboard.stats()
+    dashStats.value = stats
+  } catch { /* ignore */ }
   try {
     recentLogs.value = await window.electronAPI.logs.recent(10)
-  } catch { /* ignore */
-  }
+  } catch { /* ignore */ }
 }
 
 const activeReminders = computed(() =>
@@ -204,7 +246,7 @@ const greeting = computed(() => {
   else if (hour < 12) timeGreeting = '上午好'
   else if (hour < 18) timeGreeting = '下午好'
   else timeGreeting = '晚上好'
-  
+
   const nickname = settingsStore.settings.user_nickname
   return nickname ? `${timeGreeting}，${nickname}` : timeGreeting
 })
@@ -262,13 +304,11 @@ function formatTime(iso: string): string {
 
 onMounted(async () => {
   await refreshData()
-  // 收到通知时立即刷新
   window.electronAPI.notifications.onShow(() => {
     refreshData()
   })
 })
 
-// keep-alive: 页面激活时刷新数据并启动定时器
 onActivated(() => {
   refreshData()
   if (!refreshTimer) {
@@ -276,7 +316,6 @@ onActivated(() => {
   }
 })
 
-// keep-alive: 页面离开时停止定时器，避免后台轮询
 onDeactivated(() => {
   if (refreshTimer) {
     clearInterval(refreshTimer)
@@ -291,7 +330,7 @@ onUnmounted(() => {
 
 <style scoped>
 .dashboard {
-  max-width: 900px;
+  max-width: 960px;
 }
 
 .page-header {
@@ -314,8 +353,12 @@ onUnmounted(() => {
 .stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.stats-row.secondary {
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .stat-card {
@@ -327,10 +370,17 @@ onUnmounted(() => {
   align-items: center;
   gap: 14px;
   transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.stat-card.small {
+  padding: 14px 18px;
 }
 
 .stat-card:hover {
   box-shadow: var(--shadow-md);
+  border-color: var(--border-color);
 }
 
 .stat-icon {
@@ -343,11 +393,25 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
+.stat-card.small .stat-icon {
+  width: 38px;
+  height: 38px;
+}
+
+.stat-info {
+  flex: 1;
+  min-width: 0;
+}
+
 .stat-value {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.2;
+}
+
+.stat-card.small .stat-value {
+  font-size: 18px;
 }
 
 .stat-label {
@@ -356,9 +420,36 @@ onUnmounted(() => {
   margin-top: 2px;
 }
 
+.stat-extra {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+}
+
+.stat-tag {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  background: var(--bg-secondary);
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.stat-tag.active {
+  color: #67C23A;
+  background: rgba(103, 194, 58, 0.08);
+}
+
+/* 两栏布局 */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
 /* 段落 */
 .section {
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 
 .section-header {
@@ -374,56 +465,60 @@ onUnmounted(() => {
   color: var(--text-primary);
 }
 
-/* 提醒卡片网格 */
-.reminder-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+/* 提醒列表 */
+.reminder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.reminder-card {
+.reminder-item {
   background: var(--bg-card);
   border: 1px solid var(--border-color-light);
   border-left: 3px solid;
   border-radius: 10px;
-  padding: 14px 16px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   transition: all 0.2s ease;
 }
 
-.reminder-card:hover {
-  box-shadow: var(--shadow-md);
+.reminder-item:hover {
+  box-shadow: var(--shadow-sm);
 }
 
-.reminder-card-header {
+.reminder-item-left {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
 }
 
 .reminder-icon {
   font-size: 18px;
+  flex-shrink: 0;
+}
+
+.reminder-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
 }
 
 .reminder-title {
-  flex: 1;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.reminder-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 10px;
-}
-
-.reminder-interval,
-.reminder-next {
+.reminder-meta {
   font-size: 12px;
   color: var(--text-secondary);
   display: flex;
@@ -431,18 +526,20 @@ onUnmounted(() => {
   gap: 4px;
 }
 
-.reminder-card-footer {
+.reminder-item-right {
   display: flex;
   align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .channel-badges {
   display: flex;
-  gap: 4px;
+  gap: 2px;
 }
 
 .channel-badge {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 /* 空状态 */
@@ -455,12 +552,7 @@ onUnmounted(() => {
 }
 
 .empty-state.small {
-  padding: 24px;
-}
-
-.empty-icon {
-  font-size: 40px;
-  margin-bottom: 12px;
+  padding: 28px;
 }
 
 .empty-text {
@@ -480,19 +572,19 @@ onUnmounted(() => {
 .log-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
+  gap: 8px;
+  padding: 10px 14px;
   font-size: 13px;
 }
 
 .log-status {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 10px;
   flex-shrink: 0;
 }
 
@@ -512,6 +604,19 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 12px;
+}
+
+.log-channel {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.log-time {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .log-expand-arrow {
@@ -519,8 +624,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 6px;
   flex-shrink: 0;
   color: var(--text-tertiary);
@@ -549,7 +654,7 @@ onUnmounted(() => {
 }
 
 .log-error-detail {
-  padding: 6px 16px 10px 46px;
+  padding: 6px 14px 10px 40px;
   font-size: 12px;
   color: #F56C6C;
   background: rgba(245, 108, 108, 0.04);
@@ -557,21 +662,15 @@ onUnmounted(() => {
   word-break: break-all;
 }
 
-.log-channel {
-  color: var(--text-secondary);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.log-time {
-  color: var(--text-tertiary);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
 @media (max-width: 800px) {
   .stats-row {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .stats-row.secondary {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .two-col {
+    grid-template-columns: 1fr;
   }
 }
 </style>

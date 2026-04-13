@@ -45,12 +45,12 @@ const router = useRouter()
 const settingsStore = useSettingsStore()
 
 const navItems = [
-  {path: '/', title: '仪表盘', icon: Odometer},
+  {path: '/', title: 'AI 助手', icon: ChatDotRound},
+  {path: '/dashboard', title: '数据概览', icon: Odometer},
   {path: '/reminders', title: '提醒管理', icon: Bell},
-  {path: '/skills', title: '技能中心', icon: MagicStick},
-  {path: '/ai-chat', title: 'AI 助手', icon: ChatDotRound},
-  {path: '/model-config', title: '模型配置', icon: Cpu},
   {path: '/notifications', title: '通知渠道', icon: Message},
+  {path: '/model-config', title: '模型配置', icon: Cpu},
+  {path: '/skills', title: '技能中心', icon: MagicStick},
   {path: '/settings', title: '系统设置', icon: Setting}
 ]
 

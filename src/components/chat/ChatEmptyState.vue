@@ -1,32 +1,24 @@
 <template>
   <div class="empty-state">
-    <div class="empty-greeting">
-      <div class="greeting-icon">💬</div>
-      <p class="greeting-text">{{ displayGreeting }}</p>
+    <div class="empty-center">
+      <div class="empty-icon">🤖</div>
+      <p class="empty-title">我能为你做点什么？</p>
     </div>
-    <div class="empty-suggestions">
+    <div v-if="suggestions.length > 0" class="empty-suggestions">
       <div class="suggestion" v-for="s in suggestions" :key="s" @click="$emit('send-suggestion', s)">{{ s }}</div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import {computed} from 'vue'
-
-const props = defineProps<{
-  greeting: string
+defineProps<{
   suggestions: string[]
-  loading: boolean
+  hasModel: boolean
 }>()
 
 defineEmits<{
   (e: 'send-suggestion', text: string): void
 }>()
-
-const displayGreeting = computed(() => {
-  if (props.loading) return '正在获取问候...'
-  return props.greeting || '有什么可以帮你的？'
-})
 </script>
 
 <style scoped>
@@ -36,31 +28,35 @@ const displayGreeting = computed(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: 24px;
   padding: 20px;
 }
 
-.empty-greeting {
-  text-align: center;
+.empty-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
-.greeting-icon {
-  font-size: 48px;
-  margin-bottom: 8px;
+.empty-icon {
+  font-size: 42px;
+  line-height: 1;
 }
 
-.greeting-text {
+.empty-title {
   font-size: 16px;
+  font-weight: 500;
   color: var(--text-secondary);
-  animation: fade-in 0.5s ease;
 }
 
 .empty-suggestions {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-width: 360px;
+  max-width: 320px;
   width: 100%;
+  animation: fade-in 0.3s ease;
 }
 
 .suggestion {

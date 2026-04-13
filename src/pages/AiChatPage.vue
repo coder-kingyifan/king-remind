@@ -2,12 +2,11 @@
   <div class="ai-chat">
     <div class="page-header">
       <div class="page-header-row">
-        <h1 class="page-title">AI 助手</h1>
+        <div class="page-title-area">
+          <h1 class="page-title">{{ timeGreeting }}<span v-if="userNickname" class="user-nickname">，{{ userNickname }}</span></h1>
+          <p v-if="encouragement" class="page-encouragement">{{ encouragement }}</p>
+        </div>
         <div class="page-header-actions">
-          <el-button size="small" plain @click="showNicknameDialog = true">
-            <el-icon style="margin-right:4px"><User/></el-icon>
-            {{ userNickname || '设置称呼' }}
-          </el-button>
           <el-button size="small" plain @click="showHistory = true">
             <el-icon style="margin-right:4px"><Clock/></el-icon>
             历史
@@ -18,27 +17,16 @@
           </el-button>
         </div>
       </div>
-      <div class="header-selectors">
-        <el-select v-model="selectedConfigId" size="small" style="flex:1;" placeholder="选择模型配置" @change="onConfigChange">
-          <el-option v-for="m in modelList" :key="m.id" :label="m.name" :value="m.id">
-            <span>{{ getProviderIcon(m.provider) }} {{ m.name }}</span>
-          </el-option>
-        </el-select>
-        <el-select v-model="selectedModel" size="small" style="flex:1;" placeholder="选择模型" filterable allow-create default-first-option>
-          <el-option v-for="m in currentModels" :key="m" :label="m" :value="m"/>
-        </el-select>
-      </div>
     </div>
 
     <div class="chat-container">
       <!-- 消息列表 -->
-      <div ref="messageList" class="message-list" @paste="onPasteImage">
+      <div ref="messageList" class="message-list">
         <!-- 空态 -->
         <ChatEmptyState
           v-if="messages.length === 0"
-          :greeting="greeting"
-          :suggestions="suggestions"
-          :loading="greetingLoading"
+          :suggestions="displaySuggestions"
+          :has-model="modelList.length > 0"
           @send-suggestion="sendSuggestion"
         />
 
@@ -93,12 +81,13 @@
         </div>
       </div>
 
-      <!-- 右下角服务选择器 -->
-      <div class="service-fab" v-if="modelList.length > 0">
+      <!-- 右下角模型选择器 -->
+      <div class="model-selector" v-if="modelList.length > 0">
         <el-dropdown trigger="click" @command="onServiceSelect" placement="top-end">
-          <div class="fab-button">
-            <span class="fab-icon">{{ getProviderIcon(currentConfig?.provider) }}</span>
-            <span class="fab-label">{{ currentConfig?.name || '选择' }}</span>
+          <div class="model-selector-btn">
+            <span class="model-selector-icon">{{ getProviderIcon(currentConfig?.provider) }}</span>
+            <span class="model-selector-name">{{ currentConfig?.name || '选择' }}</span>
+            <span class="model-selector-model" v-if="selectedModel">{{ selectedModel }}</span>
           </div>
           <template #dropdown>
             <el-dropdown-menu>
@@ -110,6 +99,9 @@
             </el-dropdown-menu>
           </template>
         </el-dropdown>
+        <el-select v-model="selectedModel" size="small" class="model-inline-select" placeholder="模型" filterable allow-create default-first-option>
+          <el-option v-for="m in currentModels" :key="m" :label="m" :value="m"/>
+        </el-select>
       </div>
 
       <!-- 输入区 -->
@@ -121,14 +113,10 @@
           </div>
         </div>
         <div class="input-row">
-          <el-button class="attach-btn" @click="triggerFileInput" :disabled="loading" plain>
-            <el-icon><Paperclip/></el-icon>
-          </el-button>
-          <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="onFileSelected"/>
           <el-input
             ref="inputRef"
             v-model="inputText"
-            placeholder="描述你想设置的提醒... (可粘贴图片)"
+            placeholder="说点什么吧..."
             :disabled="loading"
             @keydown.enter.exact.prevent="send"
             @paste="onInputPaste"
@@ -139,9 +127,6 @@
               <el-button :icon="Promotion" :loading="loading" @click="send"/>
             </template>
           </el-input>
-        </div>
-        <div class="input-hint" v-if="modelList.length === 0">
-          还没有配置模型，请先到「模型配置」页面添加
         </div>
       </div>
     </div>
@@ -173,24 +158,16 @@
         <div v-if="sessions.length === 0" class="history-empty">暂无历史对话</div>
       </div>
     </el-drawer>
-
-    <!-- 昵称设置弹窗 -->
-    <NicknameDialog
-      v-model="showNicknameDialog"
-      :current-nickname="userNickname"
-      @confirm="onNicknameConfirm"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
 import {computed, nextTick, onMounted, onUnmounted, reactive, ref} from 'vue'
-import {Clock, Delete, Paperclip, Plus, Promotion, User} from '@element-plus/icons-vue'
+import {Clock, Delete, Plus, Promotion} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import ChatAvatar from '@/components/chat/ChatAvatar.vue'
 import ChatMessage from '@/components/chat/ChatMessage.vue'
 import ChatEmptyState from '@/components/chat/ChatEmptyState.vue'
-import NicknameDialog from '@/components/chat/NicknameDialog.vue'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -223,7 +200,6 @@ const inputText = ref('')
 const loading = ref(false)
 const messageList = ref<HTMLElement | null>(null)
 const inputRef = ref<any>(null)
-const fileInput = ref<HTMLInputElement | null>(null)
 const modelList = ref<ModelItem[]>([])
 const selectedConfigId = ref<number | undefined>(undefined)
 const selectedModel = ref<string>('')
@@ -245,11 +221,23 @@ const openThinkingSet = reactive(new Set<number>())
 
 // Nickname
 const userNickname = ref('')
-const showNicknameDialog = ref(false)
 
-// Greeting
-const greeting = ref('')
+// Greeting & encouragement
+const encouragement = ref('')
 const greetingLoading = ref(false)
+
+// 缓存：每次启动只生成一次
+let greetingCache: { encouragement: string; suggestions: string[] } | null = null
+
+// Time-based greeting
+const timeGreeting = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 6) return '凌晨好'
+  if (hour < 12) return '早上好'
+  if (hour < 14) return '中午好'
+  if (hour < 18) return '下午好'
+  return '晚上好'
+})
 
 const currentConfig = computed(() =>
   modelList.value.find(m => m.id === selectedConfigId.value)
@@ -265,13 +253,22 @@ const currentModels = computed(() => {
   return cfg.model ? [cfg.model] : []
 })
 
-const suggestions = [
-  '每30分钟提醒我喝水',
-  '明天下午3点提醒我开会',
-  '工作日每天早上9点提醒我站会',
-  '查看我的所有提醒',
-  '每小时提醒我休息一下眼睛'
+const defaultSuggestions = [
+  '新增每日喝水提醒',
+  '周末提醒我去爬山',
+  '每天早上8点叫我起床',
+  '帮我看看今天有什么提醒',
+  '下周一提醒我交周报'
 ]
+const suggestions = ref<string[]>([])
+const aiSuggestionsLoaded = ref(false)
+
+// 有模型时：AI建议加载完才显示，不展示默认建议；无模型时：直接显示默认建议
+const displaySuggestions = computed(() => {
+  if (modelList.value.length === 0) return defaultSuggestions
+  if (!aiSuggestionsLoaded.value) return []
+  return suggestions.value.length > 0 ? suggestions.value : []
+})
 
 const PROVIDER_ICONS: Record<string, string> = {
   ollama: '🦙', openai: '🤖', deepseek: '🐋', qwen: '☁️',
@@ -350,15 +347,6 @@ function toggleThinking(idx: number) {
 }
 
 // Image handling
-function triggerFileInput() { fileInput.value?.click() }
-
-function onFileSelected(e: Event) {
-  const target = e.target as HTMLInputElement
-  if (!target.files?.length) return
-  for (const file of Array.from(target.files!)) readFileAsBase64(file)
-  target.value = ''
-}
-
 function readFileAsBase64(file: File) {
   if (!file.type.startsWith('image/')) { ElMessage.warning('仅支持图片文件'); return }
   if (file.size > 10 * 1024 * 1024) { ElMessage.warning('图片不能超过 10MB'); return }
@@ -380,8 +368,6 @@ function onInputPaste(e: ClipboardEvent) {
     }
   }
 }
-
-function onPasteImage(e: ClipboardEvent) { onInputPaste(e) }
 
 // Stream handler
 function handleStreamEvent(event: any) {
@@ -414,34 +400,49 @@ async function loadNickname() {
   } catch { /* ignore */ }
 }
 
-async function onNicknameConfirm(nick: string) {
-  userNickname.value = nick
-  showNicknameDialog.value = false
-  try { await window.electronAPI.settings.set('user_nickname', nick) } catch { /* ignore */ }
-}
-
-function onNicknameSkip() {
-  showNicknameDialog.value = false
-}
-
 // Greeting
-const fallbackGreetings = [
-  '今天也要加油哦 💪',
-  '记得多喝水 💧',
-  '注意休息眼睛 👀',
+const fallbackEncouragements = [
+  '今天也要加油哦',
+  '记得多喝水',
+  '注意休息眼睛',
   '有什么可以帮你的？',
   '随时告诉我你的提醒需求'
 ]
 
 async function loadGreeting() {
+  // 有缓存直接用
+  if (greetingCache) {
+    encouragement.value = greetingCache.encouragement
+    suggestions.value = greetingCache.suggestions
+    aiSuggestionsLoaded.value = true
+    return
+  }
+
+  // 无模型时不调用AI，直接用默认
+  if (modelList.value.length === 0) {
+    encouragement.value = fallbackEncouragements[Math.floor(Math.random() * fallbackEncouragements.length)]
+    aiSuggestionsLoaded.value = true
+    return
+  }
+
   greetingLoading.value = true
   try {
     const result = await window.electronAPI.ai.generateGreeting()
-    greeting.value = result || fallbackGreetings[Math.floor(Math.random() * fallbackGreetings.length)]
+    if (result) {
+      if (result.encouragement) encouragement.value = result.encouragement
+      if (result.suggestions && result.suggestions.length > 0) suggestions.value = result.suggestions
+    }
+    if (!encouragement.value) {
+      encouragement.value = fallbackEncouragements[Math.floor(Math.random() * fallbackEncouragements.length)]
+    }
+    // 写入缓存
+    greetingCache = { encouragement: encouragement.value, suggestions: suggestions.value }
   } catch {
-    greeting.value = fallbackGreetings[Math.floor(Math.random() * fallbackGreetings.length)]
+    encouragement.value = fallbackEncouragements[Math.floor(Math.random() * fallbackEncouragements.length)]
+    greetingCache = { encouragement: encouragement.value, suggestions: [] }
   } finally {
     greetingLoading.value = false
+    aiSuggestionsLoaded.value = true
   }
 }
 
@@ -454,7 +455,7 @@ function onServiceSelect(id: number) {
 
 onMounted(async () => {
   window.electronAPI.ai.onStreamEvent(handleStreamEvent)
-  try { modelList.value = await window.electronAPI.models.list() } catch { /* ignore */ }
+  try { modelList.value = (await window.electronAPI.models.list()).filter((m: ModelItem) => m.model_type !== 'web_search') } catch { /* ignore */ }
 
   const defaultCfg = modelList.value.find(m => m.is_default)
   if (defaultCfg) {
@@ -487,7 +488,16 @@ function newChat() {
   currentSessionId.value = null
   messages.value = []
   pendingImages.value = []
-  loadGreeting()
+  // 使用缓存，不再重新生成
+  if (greetingCache) {
+    encouragement.value = greetingCache.encouragement
+    suggestions.value = greetingCache.suggestions
+    aiSuggestionsLoaded.value = true
+  } else {
+    aiSuggestionsLoaded.value = false
+    encouragement.value = ''
+    loadGreeting()
+  }
 }
 
 async function loadSession(s: SessionItem) {
@@ -609,21 +619,38 @@ async function send() {
   justify-content: space-between;
 }
 
+.page-title-area {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .page-title {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 8px;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-nickname {
+  font-weight: 500;
+}
+
+.page-encouragement {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 2px 0 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .page-header-actions {
   display: flex;
   gap: 6px;
-}
-
-.header-selectors {
-  display: flex;
-  gap: 8px;
 }
 
 .chat-container {
@@ -798,37 +825,66 @@ async function send() {
   flex-shrink: 0;
 }
 
-/* Service FAB */
-.service-fab {
+/* Model selector (inline near input) */
+.model-selector {
   position: absolute;
   bottom: 78px;
   right: 16px;
   z-index: 10;
-}
-
-.fab-button {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+}
+
+.model-selector-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
   background: var(--bg-card);
   border: 1px solid var(--border-color-light);
-  border-radius: 20px;
+  border-radius: 16px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transition: all 0.2s;
+  max-width: 160px;
 }
 
-.fab-button:hover {
+.model-selector-btn:hover {
   border-color: var(--color-primary);
   color: var(--color-primary);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
-.fab-icon { font-size: 16px; }
-.fab-label { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-selector-icon { font-size: 14px; flex-shrink: 0; }
+.model-selector-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-selector-model {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 80px;
+  padding-left: 4px;
+  border-left: 1px solid var(--border-color-light);
+}
+
+.model-inline-select {
+  width: 120px;
+}
+
+.model-inline-select :deep(.el-input__wrapper) {
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.model-inline-select :deep(.el-input__inner) {
+  font-size: 12px;
+}
 
 /* Input area */
 .input-area {
@@ -883,14 +939,6 @@ async function send() {
 
 .input-row .el-input { flex: 1; }
 .input-area :deep(.el-input-group__append) { padding: 0 12px; }
-.attach-btn { flex-shrink: 0; }
-
-.input-hint {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  margin-top: 6px;
-  text-align: center;
-}
 
 /* History drawer */
 .history-header {

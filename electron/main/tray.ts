@@ -1,6 +1,7 @@
 import {app, BrowserWindow, Menu, nativeImage, Tray} from 'electron'
 import {join} from 'path'
 import {is} from '@electron-toolkit/utils'
+import {settingsDb} from './db/settings'
 
 let tray: Tray | null = null
 
@@ -14,6 +15,8 @@ function createTrayIcon(): nativeImage {
 export function createTray(mainWindow: BrowserWindow | null): Tray {
     const icon = createTrayIcon()
     tray = new Tray(icon)
+
+    const alwaysOnTopSaved = settingsDb.get('always_on_top') === 'true'
 
     const contextMenu = Menu.buildFromTemplate([
         ...(mainWindow ? [
@@ -31,6 +34,15 @@ export function createTray(mainWindow: BrowserWindow | null): Tray {
                 checked: false,
                 click: (menuItem: Electron.MenuItem) => {
                     mainWindow!.webContents.send('scheduler:toggle-pause', menuItem.checked)
+                }
+            },
+            {
+                label: '置顶窗口',
+                type: 'checkbox' as const,
+                checked: alwaysOnTopSaved,
+                click: (menuItem: Electron.MenuItem) => {
+                    mainWindow!.setAlwaysOnTop(menuItem.checked)
+                    settingsDb.set('always_on_top', String(menuItem.checked))
                 }
             },
             {type: 'separator' as const},

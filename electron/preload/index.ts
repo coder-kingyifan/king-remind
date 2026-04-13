@@ -23,6 +23,11 @@ async function safeInvoke(channel: string, ...args: any[]): Promise<any> {
 }
 
 const electronAPI = {
+    // 仪表盘
+    dashboard: {
+        stats: () => safeInvoke('dashboard:stats')
+    },
+
     // 提醒管理
     reminders: {
         list: (filters?: any) => safeInvoke('reminders:list', filters),
@@ -66,7 +71,9 @@ const electronAPI = {
         minimize: () => safeInvoke('window:minimize'),
         maximize: () => safeInvoke('window:maximize'),
         close: () => safeInvoke('window:close'),
-        isMaximized: () => safeInvoke('window:is-maximized')
+        isMaximized: () => safeInvoke('window:is-maximized'),
+        toggleAlwaysOnTop: () => safeInvoke('window:toggle-always-on-top'),
+        isAlwaysOnTop: () => safeInvoke('window:is-always-on-top')
     },
 
     // 日志
@@ -142,6 +149,15 @@ const electronAPI = {
         updateConfig: (id: number, userConfig: string) => safeInvoke('skills:update-config', id, userConfig)
     },
 
+    // 技能商店
+    skillStore: {
+        fetch: () => safeInvoke('skill-store:fetch'),
+        install: (skillKey: string) => safeInvoke('skill-store:install', skillKey),
+        uninstall: (skillKey: string) => safeInvoke('skill-store:uninstall', skillKey),
+        setUrl: (url: string) => safeInvoke('skill-store:set-url', url),
+        getUrl: () => safeInvoke('skill-store:get-url')
+    },
+
     // 应用控制
     app: {
         restart: () => safeInvoke('app:restart'),
@@ -159,6 +175,16 @@ const electronAPI = {
         isEncrypted: () => safeInvoke('db:is-encrypted'),
         setEncryption: (password: string) => safeInvoke('db:set-encryption', password),
         removeEncryption: () => safeInvoke('db:remove-encryption')
+    },
+
+    // 网络请求监控（主进程 axios 请求转发到渲染进程 DevTools）
+    network: {
+        onEvent: (callback: (event: any) => void) => {
+            ipcRenderer.on('network:event', (_event, data) => callback(data))
+        },
+        removeListener: () => {
+            ipcRenderer.removeAllListeners('network:event')
+        }
     }
 }
 

@@ -21,3 +21,4 @@ nul
 /tsconfig.tsbuildinfo
 /remind.key
 /remind.db.enc
+/skill-store.json

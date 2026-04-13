@@ -21,10 +21,18 @@
           <div class="channel-actions">
             <el-switch
                 :model-value="notificationsStore.isEnabled(channel.key)"
+                :disabled="channel.key !== 'desktop' && !isConfigured(channel.key)"
                 @change="(val: boolean) => handleToggle(channel.key, val)"
             />
+            <el-tooltip
+              v-if="channel.key !== 'desktop' && !isConfigured(channel.key)"
+              content="请先配置后再启用"
+              placement="top"
+            >
+              <el-icon :size="14" class="config-warn-icon"><WarningFilled/></el-icon>
+            </el-tooltip>
             <span
-                v-if="notificationsStore.isEnabled(channel.key) && channel.key !== 'desktop'"
+                v-if="(notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && channel.key !== 'desktop'"
                 class="expand-arrow"
                 :class="{ expanded: expandedChannels[channel.key] }"
                 @click="toggleExpand(channel.key)"
@@ -40,7 +48,7 @@
         </div>
 
         <!-- 邮件配置 -->
-        <div v-if="channel.key === 'email' && notificationsStore.isEnabled(channel.key) && expandedChannels['email']"
+        <div v-if="channel.key === 'email' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['email']"
              class="channel-config">
           <el-form :model="emailConfig" label-position="top" size="small">
             <div class="config-row">
@@ -100,7 +108,7 @@
 
         <!-- Telegram 配置 -->
         <div
-            v-if="channel.key === 'telegram' && notificationsStore.isEnabled(channel.key) && expandedChannels['telegram']"
+            v-if="channel.key === 'telegram' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['telegram']"
             class="channel-config">
           <div class="config-guide">
             <div class="guide-title">配置步骤</div>
@@ -152,7 +160,7 @@
 
         <!-- 企业微信配置 -->
         <div
-            v-if="channel.key === 'wechat_work' && notificationsStore.isEnabled(channel.key) && expandedChannels['wechat_work']"
+            v-if="channel.key === 'wechat_work' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['wechat_work']"
             class="channel-config">
           <el-form :model="wechatConfig" label-position="top" size="small">
             <el-form-item label="企业 ID (Corp ID)">
@@ -209,7 +217,7 @@
 
         <!-- 企业微信消息推送配置 -->
         <div
-            v-if="channel.key === 'wechat_work_webhook' && notificationsStore.isEnabled(channel.key) && expandedChannels['wechat_work_webhook']"
+            v-if="channel.key === 'wechat_work_webhook' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['wechat_work_webhook']"
             class="channel-config">
           <div class="config-guide">
             <div class="guide-title">配置步骤</div>
@@ -283,7 +291,7 @@
 
         <!-- Webhook 配置 -->
         <div
-            v-if="channel.key === 'webhook' && notificationsStore.isEnabled(channel.key) && expandedChannels['webhook']"
+            v-if="channel.key === 'webhook' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['webhook']"
             class="channel-config">
           <div class="config-guide">
             <div class="guide-title">配置说明</div>
@@ -348,7 +356,7 @@ import {onMounted, reactive, ref, watch} from 'vue'
 import {useNotificationsStore} from '@/stores/notifications'
 import {CHANNELS} from '@/types/notification'
 import {ElMessage} from 'element-plus'
-import {ArrowDown} from '@element-plus/icons-vue'
+import {ArrowDown, WarningFilled} from '@element-plus/icons-vue'
 import wechatWorkIcon from '@/../resources/wechat-work.png'
 
 const notificationsStore = useNotificationsStore()
@@ -413,6 +421,26 @@ function loadConfigFromStore(channel: string) {
     }
   } catch {
   }
+}
+
+function isConfigured(channel: string): boolean {
+  if (channel === 'desktop') return true
+  if (channel === 'email') {
+    return !!(emailConfig.value.smtp_host && emailConfig.value.smtp_user && emailConfig.value.smtp_pass)
+  }
+  if (channel === 'telegram') {
+    return !!(telegramConfig.value.bot_token && telegramConfig.value.chat_id)
+  }
+  if (channel === 'wechat_work') {
+    return !!(wechatConfig.value.corp_id && wechatConfig.value.corp_secret && wechatConfig.value.agent_id)
+  }
+  if (channel === 'wechat_work_webhook') {
+    return !!wechatWebhookConfig.value.webhook_url
+  }
+  if (channel === 'webhook') {
+    return !!webhookConfig.value.url
+  }
+  return false
 }
 
 async function handleToggle(channel: string, enabled: boolean) {
@@ -520,6 +548,11 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.config-warn-icon {
+  color: var(--el-color-warning, #E6A23C);
+  cursor: default;
 }
 
 .expand-arrow {

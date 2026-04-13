@@ -2,164 +2,31 @@ import axios from 'axios'
 import {skillsDb} from '../db/skills'
 import {modelConfigsDb} from '../db/model-configs'
 import {chatWithLLM, callSearchAPI} from '../llm'
+import {getLunarDate, getSolarTerms, getLunarFestivals, isHoliday, getDayDetail} from 'chinese-days'
+import {skillContentDb} from '../db/skill-content'
 
-// ======================== Built-in Content Databases ========================
+// ======================== AI Mode Helper ========================
 
-const QUOTES = {
-    motivational: [
-        '世上无难事，只怕有心人。',
-        '不积跬步，无以至千里。 —— 荀子',
-        '宝剑锋从磨砺出，梅花香自苦寒来。',
-        '天行健，君子以自强不息。 —— 《周易》',
-        '有志者事竟成。 —— 《后汉书》',
-        '千里之行，始于足下。 —— 老子',
-        '路漫漫其修远兮，吾将上下而求索。 —— 屈原',
-        '业精于勤，荒于嬉；行成于思，毁于随。 —— 韩愈',
-        '长风破浪会有时，直挂云帆济沧海。 —— 李白',
-        '山重水复疑无路，柳暗花明又一村。 —— 陆游',
-        '天生我材必有用，千金散尽还复来。 —— 李白',
-        '博观而约取，厚积而薄发。 —— 苏轼',
-        '不畏浮云遮望眼，自缘身在最高层。 —— 王安石',
-        '生活不是等待暴风雨过去，而是学会在雨中翩翩起舞。',
-        '你若盛开，蝴蝶自来；你若精彩，天自安排。',
-        '成功不是终点，失败也不是终结，唯有继续前行的勇气才是最重要的。 —— 丘吉尔',
-        '每一个不曾起舞的日子，都是对生命的辜负。 —— 尼采',
-        '你的时间有限，不要浪费在过别人的生活上。 —— 乔布斯',
-        ' Stay hungry, stay foolish. —— 乔布斯',
-        '把每一天当作生命的最后一天来过，终有一天你会发现自己是对的。'
-    ],
-    philosophy: [
-        '人生如逆旅，我亦是行人。 —— 苏轼',
-        '万物皆有裂痕，那是光照进来的地方。 —— 莱昂纳德·科恩',
-        '未经审视的人生不值得过。 —— 苏格拉底',
-        '知人者智，自知者明。 —— 老子',
-        '己所不欲，勿施于人。 —— 孔子',
-        '人法地，地法天，天法道，道法自然。 —— 老子',
-        '吾生也有涯，而知也无涯。 —— 庄子',
-        '学而不思则罔，思而不学则殆。 —— 孔子',
-        '三人行，必有我师焉。 —— 孔子',
-        '生命中最困难的时刻，恰恰是转变的最佳时机。',
-        '你所浪费的今天，是昨天去世的人奢望的明天。',
-        '世界上只有一种英雄主义，就是认清了生活的真相后依然热爱它。 —— 罗曼·罗兰',
-        '人的一切痛苦，本质上都是对自己无能的愤怒。 —— 王小波',
-        '你不能控制风的方向，但你可以调整帆的角度。',
-        '真正的平静，不是避开车马喧嚣，而是在心中修篱种菊。'
-    ],
-    aesthetic: [
-        '春风十里不如你。 —— 冯唐',
-        '从前的日色变得慢，车马邮件都慢，一生只够爱一个人。 —— 木心',
-        '我明白你会来，所以我等。 —— 沈从文',
-        '你是一树一树的花开，是燕在梁间呢喃。 —— 林徽因',
-        '草在结它的种子，风在摇它的叶子，我们站着，不说话，就十分美好。 —— 顾城',
-        '面朝大海，春暖花开。 —— 海子',
-        '黑夜给了我黑色的眼睛，我却用它寻找光明。 —— 顾城',
-        '生如夏花之绚烂，死如秋叶之静美。 —— 泰戈尔',
-        '天空没有翅膀的痕迹，而我已飞过。 —— 泰戈尔',
-        '愿你出走半生，归来仍是少年。'
-    ]
+type AiMode = 'auto' | 'always' | 'local'
+
+/** 解析用户配置中的 use_ai 模式 */
+function getAiMode(userConfig: Record<string, any>): AiMode {
+    const mode = userConfig.use_ai
+    if (mode === 'always' || mode === 'local') return mode
+    return 'auto'  // 默认 auto
 }
 
-const POEMS = [
-    { title: '静夜思', author: '李白', content: '床前明月光，疑是地上霜。\n举头望明月，低头思故乡。' },
-    { title: '春晓', author: '孟浩然', content: '春眠不觉晓，处处闻啼鸟。\n夜来风雨声，花落知多少。' },
-    { title: '登鹳雀楼', author: '王之涣', content: '白日依山尽，黄河入海流。\n欲穷千里目，更上一层楼。' },
-    { title: '相思', author: '王维', content: '红豆生南国，春来发几枝。\n愿君多采撷，此物最相思。' },
-    { title: '望庐山瀑布', author: '李白', content: '日照香炉生紫烟，遥看瀑布挂前川。\n飞流直下三千尺，疑是银河落九天。' },
-    { title: '绝句', author: '杜甫', content: '两个黄鹂鸣翠柳，一行白鹭上青天。\n窗含西岭千秋雪，门泊东吴万里船。' },
-    { title: '枫桥夜泊', author: '张继', content: '月落乌啼霜满天，江枫渔火对愁眠。\n姑苏城外寒山寺，夜半钟声到客船。' },
-    { title: '游子吟', author: '孟郊', content: '慈母手中线，游子身上衣。\n临行密密缝，意恐迟迟归。\n谁言寸草心，报得三春晖。' },
-    { title: '江雪', author: '柳宗元', content: '千山鸟飞绝，万径人踪灭。\n孤舟蓑笠翁，独钓寒江雪。' },
-    { title: '出塞', author: '王昌龄', content: '秦时明月汉时关，万里长征人未还。\n但使龙城飞将在，不教胡马度阴山。' },
-    { title: '送元二使安西', author: '王维', content: '渭城朝雨浥轻尘，客舍青青柳色新。\n劝君更尽一杯酒，西出阳关无故人。' },
-    { title: '悯农', author: '李绅', content: '锄禾日当午，汗滴禾下土。\n谁知盘中餐，粒粒皆辛苦。' },
-    { title: '早发白帝城', author: '李白', content: '朝辞白帝彩云间，千里江陵一日还。\n两岸猿声啼不住，轻舟已过万重山。' },
-    { title: '望岳', author: '杜甫', content: '岱宗夫如何？齐鲁青未了。\n造化钟神秀，阴阳割昏晓。\n荡胸生曾云，决眦入归鸟。\n会当凌绝顶，一览众山小。' },
-    { title: '竹石', author: '郑燮', content: '咬定青山不放松，立根原在破岩中。\n千磨万击还坚劲，任尔东西南北风。' }
-]
-
-const ENGLISH = [
-    { word: 'Serendipity', phonetic: '/ˌserənˈdɪpəti/', meaning: '意外发现美好事物的运气', example: 'Finding that book was pure serendipity.' },
-    { word: 'Resilience', phonetic: '/rɪˈzɪliəns/', meaning: '韧性，恢复力', example: 'Her resilience helped her overcome many challenges.' },
-    { word: 'Ephemeral', phonetic: '/ɪˈfemərəl/', meaning: '短暂的，转瞬即逝的', example: 'The beauty of cherry blossoms is ephemeral.' },
-    { word: 'Wanderlust', phonetic: '/ˈwɒndəlʌst/', meaning: '旅行癖，对远方的渴望', example: 'His wanderlust took him to every continent.' },
-    { word: 'Mellifluous', phonetic: '/meˈlɪfluəs/', meaning: '悦耳的，甜美流畅的', example: 'She has a mellifluous voice that calms everyone.' },
-    { word: 'Petrichor', phonetic: '/ˈpetrɪkɔːr/', meaning: '雨后泥土的芬芳', example: 'I love the petrichor after a summer rain.' },
-    { word: 'Eloquent', phonetic: '/ˈeləkwənt/', meaning: '雄辩的，有说服力的', example: 'He gave an eloquent speech at the ceremony.' },
-    { word: 'Nostalgia', phonetic: '/nɒˈstældʒə/', meaning: '怀旧之情', example: 'The old song filled her with nostalgia.' },
-    { word: 'Ubiquitous', phonetic: '/juːˈbɪkwɪtəs/', meaning: '无处不在的', example: 'Smartphones have become ubiquitous in modern life.' },
-    { word: 'Tenacious', phonetic: '/tɪˈneɪʃəs/', meaning: '坚韧不拔的', example: 'She is tenacious in pursuing her dreams.' },
-    { word: 'Luminous', phonetic: '/ˈluːmɪnəs/', meaning: '发光的，明亮的', example: 'The luminous stars lit up the night sky.' },
-    { word: 'Paradox', phonetic: '/ˈpærədɒks/', meaning: '悖论，自相矛盾的事物', example: 'It is a paradox that standing is more tiring than walking.' },
-    { word: 'Ethereal', phonetic: '/ɪˈθɪəriəl/', meaning: '空灵的，超凡的', example: 'The dancer moved with ethereal grace.' },
-    { word: 'Cogent', phonetic: '/ˈkəʊdʒənt/', meaning: '令人信服的，有说服力的', example: 'She presented a cogent argument for the proposal.' },
-    { word: 'Quintessential', phonetic: '/ˌkwɪntɪˈsenʃəl/', meaning: '典型的，精髓的', example: 'It is the quintessential example of modern architecture.' }
-]
-
-const JOKES = [
-    '老师说："同学们，你们觉得什么最浪费时间？"小明说："等下课。"',
-    '同事问我："你有什么特长？"我说："我特别擅长拖延。"',
-    '问：为什么程序员总是分不清万圣节和圣诞节？答：因为 Oct 31 = Dec 25。',
-    '问：数学书为什么总是不开心？答：因为它有太多"问题"了。',
-    '问：咖啡杯对茶杯说了什么？答："你太淡了。"',
-    '问：为什么海洋里没有电脑？答：因为那里太多网了（fish net）。',
-    '"医生，我觉得我有超能力。""什么超能力？""我能感觉别人感觉不到的冷。""那是空调开太大了。"',
-    '问：为什么手机不能告诉你一个秘密？答：因为它总是在信号（泄密）。',
-    '同事说："我这人说话直，你别介意。"我说："没事，我这人记仇，你也别介意。"',
-    '"你知道 procrastinate 是什么意思吗？""我知道，但明天再告诉你。"',
-    '我对自己说："今天一定要早点睡！"然后凌晨两点还在刷手机。',
-    '问：地球为什么是圆的？答：因为它要滚。不对，因为它要转。还不对，因为它要保持平衡。',
-    '"如果一天有25小时你会做什么？""多出来那一小时继续拖延。"',
-    '问：你知道为什么程序员喜欢深色模式吗？答：因为光明会吸引 bug。',
-    '世界上最遥远的距离不是生与死，而是周一上午到周五下午。'
-]
-
-const HEALTH_TIPS = {
-    morning: [
-        '早上起床后先喝一杯温水，帮助唤醒肠胃，促进新陈代谢。',
-        '早餐要吃好，推荐搭配：全谷物+蛋白质+水果，营养均衡一整天。',
-        '晨起做5分钟伸展运动，可以有效缓解肌肉僵硬，提神醒脑。',
-        '不要空腹喝咖啡，先吃点东西再喝，保护胃黏膜。',
-        '早上开窗通风15分钟，让新鲜空气进来，改善室内空气质量。'
-    ],
-    afternoon: [
-        '午后小憩15-20分钟，可以有效恢复精力，但不要超过30分钟。',
-        '下午3点是人体最容易犯困的时候，起来走动5分钟提提神。',
-        '下午茶选择坚果和水果，比饼干蛋糕更健康。',
-        '久坐1小时后起身活动5分钟，保护颈椎和腰椎。',
-        '下午多喝水，保持身体水分充足，有助于集中注意力。'
-    ],
-    evening: [
-        '晚餐不宜过饱，七分饱最合适，有助睡眠质量。',
-        '睡前2小时尽量不要进食，让胃有充分时间消化。',
-        '晚上用热水泡脚15分钟，有助于放松身心、改善睡眠。',
-        '睡前远离手机屏幕，蓝光会影响褪黑素分泌，导致失眠。',
-        '晚餐后散步30分钟，是最温和健康的运动方式。'
-    ]
+/** 根据模式决定是否尝试 AI：auto/always 返回 true，local 返回 false */
+function shouldTryAi(mode: AiMode): boolean {
+    return mode !== 'local'
 }
 
-const EXERCISE_TIPS = {
-    indoor: [
-        '今天适合室内运动：尝试一组HIIT训练，20分钟高效燃脂！',
-        '在家做瑜伽吧！推荐「下犬式」「战士式」「树式」，每个保持30秒。',
-        '室内运动推荐：平板支撑3组，每组30秒，有效锻炼核心力量。',
-        '跟着音乐跳一段有氧操吧，30分钟快乐运动，心情也会变好！',
-        '试试跳绳吧！每天1000个跳绳，相当于慢跑30分钟的消耗。'
-    ],
-    outdoor: [
-        '天气不错，出去跑步吧！30分钟慢跑，既能锻炼又能享受阳光。',
-        '今天适合户外骑行，戴上头盔出去转转，享受运动的快乐！',
-        '去公园散步吧，30分钟快走是最低门槛的有氧运动。',
-        '天气晴好，适合户外徒步！找一条身边的步道，探索身边的风景。',
-        '今天可以约朋友打球，羽毛球、篮球、网球都是好选择！'
-    ],
-    gentle: [
-        '今天做做拉伸运动吧，15分钟全身拉伸，缓解肌肉疲劳。',
-        '推荐一组简单的办公室运动：转颈、耸肩、扭腰，每项10次。',
-        '试试冥想+深呼吸：静坐5分钟，深吸气4秒，屏息4秒，呼气6秒。',
-        '今天做一套八段锦吧！传统养生功法，简单易学，老少皆宜。',
-        '今天休息为主，做一些轻度散步和拉伸，让身体充分恢复。'
-    ]
+/** 根据模式决定是否允许回退本地：auto/local 返回 true，always 返回 false */
+function canFallbackToLocal(mode: AiMode): boolean {
+    return mode !== 'always'
 }
+
+// ======================== Static Data (only for non-content skills) ========================
 
 const HOROSCOPE_DATA: Record<string, { name: string; element: string; traits: string }> = {
     aries: { name: '白羊座', element: '火', traits: '热情、勇敢、直率' },
@@ -178,7 +45,6 @@ const HOROSCOPE_DATA: Record<string, { name: string; element: string; traits: st
 
 // ======================== Utility Functions ========================
 
-
 function randomPick<T>(arr: T[]): T {
     return arr[Math.floor(Math.random() * arr.length)]
 }
@@ -187,11 +53,21 @@ function randomPick<T>(arr: T[]): T {
 
 const STRUCTURED_FORMAT_INSTRUCTION = `\n\n请严格按照以下 JSON 格式返回，不要返回其他内容：\n{"title": "简短标题（不超过20字）", "content": "正文内容"}\n如果无法严格 JSON，请确保输出包含明确的标题和正文。`
 
+/** 获取文本模型配置 ID，避免调用联网搜索模型导致 404 */
+function getTextModelConfigId(): number | undefined {
+    const allConfigs = modelConfigsDb.list()
+    const textConfig = allConfigs.find(c => c.model_type === 'text' && c.is_default === 1)
+        || allConfigs.find(c => c.model_type === 'text')
+        || allConfigs.find(c => c.is_default === 1 && c.model_type !== 'web_search')
+        || allConfigs.find(c => c.model_type !== 'web_search')
+    return textConfig ? textConfig.id : undefined
+}
+
 async function generateWithAI(prompt: string): Promise<string | null> {
     try {
         const result = await chatWithLLM(
             [{role: 'user', content: prompt}],
-            null, undefined, undefined, undefined
+            null, getTextModelConfigId(), undefined, undefined
         )
         return result.reply || null
     } catch {
@@ -225,27 +101,56 @@ async function executeWeather(userConfig: Record<string, any>): Promise<string> 
         '厦门': { lat: 24.4798, lon: 118.0894, name: '厦门' },
         '昆明': { lat: 25.0389, lon: 102.7183, name: '昆明' },
         '哈尔滨': { lat: 45.8038, lon: 126.5350, name: '哈尔滨' },
-        '沈阳': { lat: 41.8057, lon: 123.4315, name: '沈阳' }
+        '沈阳': { lat: 41.8057, lon: 123.4315, name: '沈阳' },
+        '济南': { lat: 36.6512, lon: 116.9972, name: '济南' },
+        '合肥': { lat: 31.8206, lon: 117.2272, name: '合肥' },
+        '福州': { lat: 26.0745, lon: 119.2965, name: '福州' },
+        '南昌': { lat: 28.6820, lon: 115.8579, name: '南昌' },
+        '石家庄': { lat: 38.0428, lon: 114.5149, name: '石家庄' },
+        '太原': { lat: 37.8706, lon: 112.5489, name: '太原' },
+        '兰州': { lat: 36.0611, lon: 103.8343, name: '兰州' },
+        '贵阳': { lat: 26.6470, lon: 106.6302, name: '贵阳' },
+        '南宁': { lat: 22.8170, lon: 108.3665, name: '南宁' },
+        '海口': { lat: 20.0440, lon: 110.1999, name: '海口' },
+        '银川': { lat: 38.4872, lon: 106.2309, name: '银川' },
+        '西宁': { lat: 36.6171, lon: 101.7782, name: '西宁' },
+        '呼和浩特': { lat: 40.8422, lon: 111.7500, name: '呼和浩特' },
+        '乌鲁木齐': { lat: 43.7930, lon: 87.6271, name: '乌鲁木齐' },
+        '拉萨': { lat: 29.6500, lon: 91.1000, name: '拉萨' },
+        '长春': { lat: 43.8171, lon: 125.3235, name: '长春' },
+        '无锡': { lat: 31.4912, lon: 120.3119, name: '无锡' },
+        '宁波': { lat: 29.8683, lon: 121.5440, name: '宁波' },
+        '佛山': { lat: 23.0218, lon: 113.1219, name: '佛山' },
+        '东莞': { lat: 23.0208, lon: 113.7518, name: '东莞' },
+        '珠海': { lat: 22.2710, lon: 113.5767, name: '珠海' },
+        '温州': { lat: 28.0006, lon: 120.6722, name: '温州' },
+        '常州': { lat: 31.8106, lon: 119.9741, name: '常州' },
+        '徐州': { lat: 34.2616, lon: 117.1847, name: '徐州' },
+        '烟台': { lat: 37.4638, lon: 121.4479, name: '烟台' },
+        '中山': { lat: 22.5171, lon: 113.3926, name: '中山' },
+        '惠州': { lat: 23.1116, lon: 114.4161, name: '惠州' },
+        '保定': { lat: 38.8739, lon: 115.4646, name: '保定' }
     }
 
     const coords = cityCoords[city]
-    if (!coords) {
-        // Try geocoding via Open-Meteo
-        try {
-            const geoRes = await axios.get('https://geocoding-api.open-meteo.com/v1/search', {
-                params: { name: city, count: 1, language: 'zh' },
-                timeout: 10000
-            })
-            const results = geoRes.data?.results
-            if (results && results.length > 0) {
-                const r = results[0]
-                return fetchWeatherFromApi(r.latitude, r.longitude, r.name || city)
-            }
-        } catch { /* fallback */ }
-        return `${city}天气信息暂不可用，请尝试使用具体的城市名称。`
+    if (coords) {
+        return fetchWeatherFromApi(coords.lat, coords.lon, coords.name)
     }
 
-    return fetchWeatherFromApi(coords.lat, coords.lon, coords.name)
+    // Try geocoding via Open-Meteo for cities not in the list
+    try {
+        const geoRes = await axios.get('https://geocoding-api.open-meteo.com/v1/search', {
+            params: { name: city, count: 5, language: 'zh' },
+            timeout: 10000
+        })
+        const results = geoRes.data?.results
+        if (results && results.length > 0) {
+            const cnResult = results.find((r: any) => r.country_code === 'CN') || results[0]
+            return fetchWeatherFromApi(cnResult.latitude, cnResult.longitude, cnResult.name || city)
+        }
+    } catch { /* fallback */ }
+
+    return `${city}天气信息暂不可用，请尝试使用具体的城市名称（如"北京"、"上海"）。`
 }
 
 async function fetchWeatherFromApi(lat: number, lon: number, cityName: string): Promise<string> {
@@ -296,16 +201,25 @@ function weatherCodeToDesc(code: number): string {
 
 async function executeDailyQuote(userConfig: Record<string, any>): Promise<string> {
     const type = userConfig.type || 'mixed'
+    const mode = getAiMode(userConfig)
     const typeLabel: Record<string, string> = {mixed: '任意类型', motivational: '励志', philosophy: '哲理', aesthetic: '唯美'}
-    const aiResult = await generateWithAI(
-        `请生成一条${typeLabel[type] || ''}每日一言（一句话即可，要有深度和美感，中英不限）。只输出句子本身和作者，不要额外解释。`
-    )
-    if (aiResult) return `💬 ${aiResult.trim()}`
 
-    const pool = type === 'mixed'
-        ? [...QUOTES.motivational, ...QUOTES.philosophy, ...QUOTES.aesthetic]
-        : (QUOTES[type as keyof typeof QUOTES] || QUOTES.motivational)
-    return `💬 ${randomPick(pool)}`
+    // AI 模式
+    if (shouldTryAi(mode)) {
+        const aiResult = await generateWithAI(
+            `请生成一条${typeLabel[type] || ''}每日一言（一句话即可，要有深度和美感，中英不限）。只输出句子本身和作者，不要额外解释。`
+        )
+        if (aiResult) return `💬 ${aiResult.trim()}`
+        if (!canFallbackToLocal(mode)) return 'AI 生成失败，请稍后再试或切换为"自动"模式。'
+    }
+
+    // 本地模式：从数据库读取
+    if (type === 'mixed') {
+        const row = skillContentDb.randomPickMultiCategory('daily_quote', ['motivational', 'philosophy', 'aesthetic'])
+        return row ? `💬 ${row.content}` : '💬 暂无名言数据'
+    }
+    const row = skillContentDb.randomPick('daily_quote', type)
+    return row ? `💬 ${row.content}` : '💬 暂无名言数据'
 }
 
 function executeCountdown(userConfig: Record<string, any>): string {
@@ -315,6 +229,8 @@ function executeCountdown(userConfig: Record<string, any>): string {
     if (!targetDate) return '请先配置倒计日的目标日期。'
 
     const target = new Date(targetDate)
+    if (isNaN(target.getTime())) return '目标日期格式不正确，请使用 YYYY-MM-DD 格式（如 2025-12-31）。'
+
     const now = new Date()
     const diffMs = target.getTime() - now.getTime()
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
@@ -329,122 +245,189 @@ function executeCountdown(userConfig: Record<string, any>): string {
 }
 
 function executeWaterReminder(userConfig: Record<string, any>): string {
-    const hour = new Date().getHours()
+    const now = new Date()
+    const hour = now.getHours()
     const cupMl = userConfig.cup_ml || 250
     let timeGreeting = ''
     let suggestion = ''
+    let recommendedCups = 0
 
     if (hour < 9) {
         timeGreeting = '🌅 早上好'
         suggestion = '起床后先喝一杯温水，唤醒身体代谢系统'
+        recommendedCups = 1
     } else if (hour < 11) {
         timeGreeting = '☀️ 上午好'
         suggestion = '工作间隙别忘了补充水分，保持精力充沛'
+        recommendedCups = 2
     } else if (hour < 14) {
         timeGreeting = '🌤️ 中午好'
         suggestion = '饭后半小时喝杯水，帮助消化吸收'
+        recommendedCups = 4
     } else if (hour < 17) {
         timeGreeting = '🌇 下午好'
         suggestion = '下午是缺水高发期，记得喝水提神'
+        recommendedCups = 5
     } else if (hour < 20) {
         timeGreeting = '🌆 傍晚好'
         suggestion = '傍晚适量饮水，不要太多以免影响睡眠'
+        recommendedCups = 6
     } else {
         timeGreeting = '🌙 晚上好'
         suggestion = '睡前少喝点水，保持良好的睡眠质量'
+        recommendedCups = 7
     }
 
-    return `💧 ${timeGreeting}！该喝水啦\n${suggestion}\n建议每次饮水 ${cupMl}ml，保持每天 1500-2000ml 的摄入量`
+    const totalMl = recommendedCups * cupMl
+    return `💧 ${timeGreeting}！该喝水啦\n${suggestion}\n建议每次饮水 ${cupMl}ml，到目前建议已饮 ${totalMl}ml（${recommendedCups} 杯），全天目标 1500-2000ml`
 }
 
-async function executePoetry(): Promise<string> {
-    const aiResult = await generateWithAI(
-        '请推荐一首优美的中国古诗词（唐诗宋词优先）。格式：\n📜 诗词名\n—— 作者\n\n内容。只输出诗词，不要额外解释。'
-    )
-    if (aiResult) return aiResult.trim()
+async function executePoetry(userConfig: Record<string, any>): Promise<string> {
+    const mode = getAiMode(userConfig)
 
-    const poem = randomPick(POEMS)
-    return `📜 ${poem.title}\n—— ${poem.author}\n\n${poem.content}`
+    if (shouldTryAi(mode)) {
+        const aiResult = await generateWithAI(
+            '请推荐一首优美的中国古诗词（唐诗宋词优先）。格式：\n📜 诗词名\n—— 作者\n\n内容。只输出诗词，不要额外解释。'
+        )
+        if (aiResult) return aiResult.trim()
+        if (!canFallbackToLocal(mode)) return 'AI 生成失败，请稍后再试或切换为"自动"模式。'
+    }
+
+    // 本地模式：从数据库读取
+    const row = skillContentDb.randomPick('poetry')
+    if (!row) return '📜 暂无诗词数据'
+    try {
+        const extra = JSON.parse(row.extra)
+        return `📜 ${extra.title || ''}\n—— ${extra.author || ''}\n\n${row.content}`
+    } catch {
+        return `📜 ${row.content}`
+    }
 }
 
-async function executeHealthTip(): Promise<string> {
+async function executeHealthTip(userConfig: Record<string, any>): Promise<string> {
     const hour = new Date().getHours()
     const period = hour < 12 ? '早晨' : hour < 18 ? '下午' : '晚间'
-    const aiResult = await generateWithAI(
-        `现在是${period}，请给出一条实用的健康养生小贴士（一两句话即可，简洁有针对性）。格式：🍎 {period}健康小贴士\n\n内容`
-    )
-    if (aiResult) return aiResult.trim()
-
     const periodKey = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
-    const tips = HEALTH_TIPS[periodKey]
-    return `🍎 ${period}健康小贴士\n\n${randomPick(tips)}`
+    const mode = getAiMode(userConfig)
+
+    if (shouldTryAi(mode)) {
+        const aiResult = await generateWithAI(
+            `现在是${period}，请给出一条实用的健康养生小贴士（一两句话即可，简洁有针对性）。格式：🍎 ${period}健康小贴士\n\n内容`
+        )
+        if (aiResult) return aiResult.trim()
+        if (!canFallbackToLocal(mode)) return 'AI 生成失败，请稍后再试或切换为"自动"模式。'
+    }
+
+    // 本地模式：从数据库读取
+    const row = skillContentDb.randomPick('health_tip', periodKey)
+    return row ? `🍎 ${period}健康小贴士\n\n${row.content}` : `🍎 ${period}健康小贴士\n\n暂无数据`
 }
 
-async function executeExercise(): Promise<string> {
-    const aiResult = await generateWithAI(
-        '请给出一条今天的运动建议（根据当前季节和时间段推荐，一两句话即可）。格式：🏃 今日运动建议\n\n建议内容'
-    )
-    if (aiResult) return aiResult.trim()
-    return `🏃 今日运动建议\n\n${randomPick(EXERCISE_TIPS.indoor)}`
+async function executeExercise(userConfig: Record<string, any>): Promise<string> {
+    const hour = new Date().getHours()
+    const month = new Date().getMonth() + 1
+    const mode = getAiMode(userConfig)
+
+    if (shouldTryAi(mode)) {
+        const aiResult = await generateWithAI(
+            `现在是${month}月，${hour < 12 ? '上午' : hour < 18 ? '下午' : '晚上'}，请给出一条今天的运动建议（根据当前季节和时间段推荐，一两句话即可）。格式：🏃 今日运动建议\n\n建议内容`
+        )
+        if (aiResult) return aiResult.trim()
+        if (!canFallbackToLocal(mode)) return 'AI 生成失败，请稍后再试或切换为"自动"模式。'
+    }
+
+    // 本地模式：根据季节和时间段智能选择运动建议分类
+    let season: string
+    let category: string
+    if (month >= 3 && month <= 5) {
+        season = '春季'
+        category = 'outdoor'
+    } else if (month >= 6 && month <= 8) {
+        season = '夏季'
+        category = hour >= 10 && hour <= 16 ? 'indoor' : 'outdoor'
+    } else if (month >= 9 && month <= 11) {
+        season = '秋季'
+        category = 'outdoor'
+    } else {
+        season = '冬季'
+        category = hour >= 10 && hour <= 14 ? 'outdoor' : 'indoor'
+    }
+
+    const row = skillContentDb.randomPick('exercise', category)
+    return row ? `🏃 ${season}运动建议\n\n${row.content}` : `🏃 ${season}运动建议\n\n暂无数据`
 }
 
-async function executeEnglish(): Promise<string> {
-    const aiResult = await generateWithAI(
-        '请教我一个实用的高级英语表达。格式：\n📚 每日英语\n\n单词 音标\n释义：中文意思\n例句：英文例句。只输出这些内容，不要额外解释。'
-    )
-    if (aiResult) return aiResult.trim()
+async function executeEnglish(userConfig: Record<string, any>): Promise<string> {
+    const mode = getAiMode(userConfig)
 
-    const item = randomPick(ENGLISH)
-    return `📚 每日英语\n\n${item.word} ${item.phonetic}\n释义：${item.meaning}\n例句：${item.example}`
+    if (shouldTryAi(mode)) {
+        const aiResult = await generateWithAI(
+            '请教我一个实用的高级英语表达。格式：\n📚 每日英语\n\n单词 音标\n释义：中文意思\n例句：英文例句。只输出这些内容，不要额外解释。'
+        )
+        if (aiResult) return aiResult.trim()
+        if (!canFallbackToLocal(mode)) return 'AI 生成失败，请稍后再试或切换为"自动"模式。'
+    }
+
+    // 本地模式：从数据库读取
+    const row = skillContentDb.randomPick('english')
+    if (!row) return '📚 暂无英语数据'
+    try {
+        const extra = JSON.parse(row.extra)
+        return `📚 每日英语\n\n${extra.word || ''} ${extra.phonetic || ''}\n释义：${extra.meaning || ''}\n例句：${extra.example || ''}`
+    } catch {
+        return `📚 每日英语\n\n${row.content}`
+    }
 }
 
-async function executeJoke(): Promise<string> {
-    const aiResult = await generateWithAI(
-        '请讲一个轻松幽默的笑话（中文，简短有趣，不要低俗）。格式：😄 每日一笑\n\n笑话内容'
-    )
-    if (aiResult) return aiResult.trim()
-    return `😄 每日一笑\n\n${randomPick(JOKES)}`
+async function executeJoke(userConfig: Record<string, any>): Promise<string> {
+    const mode = getAiMode(userConfig)
+
+    if (shouldTryAi(mode)) {
+        const aiResult = await generateWithAI(
+            '请讲一个轻松幽默的笑话（中文，简短有趣，不要低俗）。格式：😄 每日一笑\n\n笑话内容'
+        )
+        if (aiResult) return aiResult.trim()
+        if (!canFallbackToLocal(mode)) return 'AI 生成失败，请稍后再试或切换为"自动"模式。'
+    }
+
+    // 本地模式：从数据库读取
+    const row = skillContentDb.randomPick('joke')
+    return row ? `😄 每日一笑\n\n${row.content}` : '😄 暂无笑话数据'
 }
 
 async function executeHoroscope(userConfig: Record<string, any>): Promise<string> {
     const sign = userConfig.sign || 'aries'
     const data = HOROSCOPE_DATA[sign]
     if (!data) return '未知的星座，请检查配置。'
+    const mode = getAiMode(userConfig)
 
-    const aiResult = await generateWithAI(
-        `请为${data.name}生成今日运势分析，包含：综合运势（百分制+星级）、爱情运势、事业运势、幸运数字、一段建议。格式简洁。`
-    )
-    if (aiResult) return `⭐ ${data.name}今日运势（${data.element}象 · ${data.traits}）\n\n${aiResult.trim()}`
-
-    // Generate pseudo-random fortune based on today's date
-    const today = new Date()
-    const seed = today.toISOString().slice(0, 10) + sign
-    let hash = 0
-    for (let i = 0; i < seed.length; i++) {
-        hash = ((hash << 5) - hash) + seed.charCodeAt(i)
-        hash |= 0
+    if (shouldTryAi(mode)) {
+        const aiResult = await generateWithAI(
+            `请为${data.name}生成今日运势分析，包含：综合运势（百分制+星级）、爱情运势、事业运势、幸运数字、一段建议。格式简洁。`
+        )
+        if (aiResult) return `⭐ ${data.name}今日运势（${data.element}象 · ${data.traits}）\n\n${aiResult.trim()}`
+        if (!canFallbackToLocal(mode)) return 'AI 生成失败，请稍后再试或切换为"自动"模式。'
     }
-    const overall = (Math.abs(hash) % 40) + 60
-    const love = (Math.abs(hash * 7) % 40) + 60
-    const career = (Math.abs(hash * 13) % 40) + 60
-    const lucky = Math.abs(hash * 17) % 10 + 1
 
-    const stars = (s: number) => '★'.repeat(Math.round(s / 20)) + '☆'.repeat(5 - Math.round(s / 20))
-
-    const advices = [
-        '今天适合尝试新事物，好运将至。',
-        '保持积极心态，好事会自然而然发生。',
-        '注意与身边人的沟通，会有意想不到的收获。',
-        '今天适合独处思考，理清未来的方向。',
-        '勇敢迈出第一步，成功就在不远处。'
-    ]
+    // 本地模式：返回星座基本信息和通用建议
+    const generalAdvices: Record<string, string> = {
+        aries: '今天适合主动出击，但注意控制脾气，三思而后行。',
+        taurus: '今天适合处理财务相关的事务，稳扎稳打会有好结果。',
+        gemini: '今天社交运不错，适合沟通交流，但注意不要三心二意。',
+        cancer: '今天适合关注家庭和亲密关系，给自己一些安静的时间。',
+        leo: '今天自信满满，适合展示才华，但注意倾听他人意见。',
+        virgo: '今天适合整理和规划，细节决定成败，注意劳逸结合。',
+        libra: '今天适合处理人际关系，保持平衡和谐，果断做决定。',
+        scorpio: '今天直觉敏锐，适合深入思考，注意适当表达情感。',
+        sagittarius: '今天充满冒险精神，适合尝试新事物，注意脚踏实地。',
+        capricorn: '今天适合制定长远计划，坚持目标，注意放松身心。',
+        aquarius: '今天创意灵感涌现，适合头脑风暴，注意关注身边人感受。',
+        pisces: '今天感性丰富，适合艺术创作，注意保持理性判断。'
+    }
 
     return `⭐ ${data.name}今日运势（${data.element}象 · ${data.traits}）\n\n` +
-        `综合运势：${stars(overall)} ${overall}分\n` +
-        `爱情运势：${stars(love)} ${love}分\n` +
-        `事业运势：${stars(career)} ${career}分\n` +
-        `幸运数字：${lucky}\n\n` +
-        `${advices[Math.abs(hash) % advices.length]}`
+        `💡 ${generalAdvices[sign] || '保持积极心态，好运自然来。'}\n\n` +
+        `（注：详细运势分析需要 AI 支持，当前 AI 不可用）`
 }
 
 function executeLunarInfo(): string {
@@ -452,33 +435,86 @@ function executeLunarInfo(): string {
     const weekDays = ['日', '一', '二', '三', '四', '五', '六']
     const dateStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${weekDays[now.getDay()]}`
 
-    // Simple lunar approximation (for display only)
-    const lunarMonths = ['正月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '冬月', '腊月']
-    const lunarDays = ['初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十',
-        '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十',
-        '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十']
+    try {
+        const lunar = getLunarDate(now)
+        const lunarStr = `${lunar.lunarYearCN} ${lunar.lunarMonCN}${lunar.lunarDayCN}`
+        const zodiacStr = `生肖：${lunar.zodiac}`
+        const gzStr = `干支：${lunar.yearCyl}年 ${lunar.monCyl}月 ${lunar.dayCyl}日`
 
-    // Use day-of-year as a rough index for variety
-    const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24))
-    const lunarMonthIdx = dayOfYear % 12
-    const lunarDayIdx = dayOfYear % 30
+        let result = `🌙 今日农历信息\n\n` +
+            `公历：${dateStr}\n` +
+            `农历：${lunarStr}\n` +
+            `${zodiacStr}\n` +
+            `${gzStr}`
 
-    return `🌙 今日农历信息\n\n` +
-        `公历：${dateStr}\n` +
-        `农历：乙巳年 ${lunarMonths[lunarMonthIdx]}${lunarDays[lunarDayIdx]}\n\n` +
-        `（注：农历日期为近似值，准确日期请以万年历为准）`
+        try {
+            const todayStr = now.toISOString().slice(0, 10)
+            const nextWeek = new Date(now)
+            nextWeek.setDate(nextWeek.getDate() + 7)
+            const nextWeekStr = nextWeek.toISOString().slice(0, 10)
+            const terms = getSolarTerms(todayStr, nextWeekStr)
+            if (terms && terms.length > 0) {
+                const termInfo = terms.map(t => `${t.name}（${t.date}）`).join('、')
+                result += `\n\n🌱 近期节气：${termInfo}`
+            }
+        } catch { /* 节气查询失败不影响主功能 */ }
+
+        try {
+            const todayStr = now.toISOString().slice(0, 10)
+            const dayDetail = getDayDetail(todayStr)
+            if (dayDetail && dayDetail.name) {
+                result += `\n🎉 今日：${dayDetail.name}`
+            }
+        } catch { /* 节日查询失败不影响主功能 */ }
+
+        try {
+            const todayStr = now.toISOString().slice(0, 10)
+            const holiday = isHoliday(todayStr)
+            if (holiday) {
+                result += `\n📌 今日为节假日`
+            }
+        } catch { /* 忽略 */ }
+
+        return result
+    } catch (e: any) {
+        console.error('[技能执行器] 农历查询失败:', e.message)
+        return `🌙 今日信息\n\n公历：${dateStr}\n\n（农历数据获取失败，请稍后再试）`
+    }
 }
 
 function executeWorkReport(): string {
-    const hour = new Date().getHours()
+    const now = new Date()
+    const hour = now.getHours()
+    const weekDays = ['日', '一', '二', '三', '四', '五', '六']
+    const dateStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${weekDays[now.getDay()]}`
     const period = hour < 12 ? '上午' : hour < 18 ? '下午' : '今日'
 
-    return `📝 ${period}工作小结提醒\n\n` +
-        `请花5分钟回顾一下：\n` +
-        `✅ 已完成的任务有哪些？\n` +
-        `⏳ 进行中的任务进展如何？\n` +
-        `📋 明确下一步的待办事项\n` +
-        `🤔 需要协调或请支持的事项\n\n` +
+    let focus = ''
+    if (hour < 12) {
+        focus = `📌 上午总结重点：\n` +
+            `  · 昨天遗留的问题是否已解决？\n` +
+            `  · 今天上午完成了哪些关键任务？\n` +
+            `  · 下午需要优先处理什么？`
+    } else if (hour < 18) {
+        focus = `📌 下午总结重点：\n` +
+            `  · 今天已完成的核心工作有哪些？\n` +
+            `  · 遇到了什么阻碍？需要谁的协助？\n` +
+            `  · 明天需要跟进的事项是什么？`
+    } else {
+        focus = `📌 今日总结重点：\n` +
+            `  · 今天最重要的3项成果是什么？\n` +
+            `  · 有哪些未完成的事项需要明天继续？\n` +
+            `  · 今天有什么经验教训值得记录？`
+    }
+
+    return `📝 ${period}工作小结提醒\n` +
+        `${dateStr}\n\n` +
+        `请花5分钟回顾一下：\n\n` +
+        `✅ 已完成的任务\n` +
+        `⏳ 进行中的任务进展\n` +
+        `📋 下一步待办事项\n` +
+        `🤔 需要协调或支持的事项\n\n` +
+        `${focus}\n\n` +
         `及时总结，高效前行！`
 }
 
@@ -507,7 +543,6 @@ async function executeApiCall(actionConfig: Record<string, any>, userConfig: Rec
         const method = (actionConfig.method || 'GET').toLowerCase()
         const headers = typeof actionConfig.headers === 'string' ? JSON.parse(actionConfig.headers) : (actionConfig.headers || {})
 
-        // Replace template variables in URL
         let finalUrl = url
         for (const [key, value] of Object.entries(userConfig)) {
             finalUrl = finalUrl.replace(`{{${key}}}`, String(value))
@@ -516,7 +551,6 @@ async function executeApiCall(actionConfig: Record<string, any>, userConfig: Rec
         const res = await axios({ method, url: finalUrl, headers, timeout: 15000 })
         const data = res.data
 
-        // Format response using template if provided
         let apiResult: string
         if (actionConfig.response_template) {
             let template = actionConfig.response_template
@@ -540,19 +574,17 @@ async function executeApiCall(actionConfig: Record<string, any>, userConfig: Rec
             }
             apiResult = template
         } else {
-            // Default: return stringified JSON (truncated)
             const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2)
             apiResult = text.length > 500 ? text.substring(0, 500) + '...' : text
         }
 
-        // Optional AI summary
         if (actionConfig.enable_ai_summary) {
             const summaryPrompt = actionConfig.summary_prompt || '请根据以下 API 返回的数据，提取关键信息并用简洁的中文总结'
             const fullPrompt = `${summaryPrompt}${STRUCTURED_FORMAT_INSTRUCTION}\n\n---\nAPI 返回数据：\n${apiResult}`
             try {
                 const result = await chatWithLLM(
                     [{role: 'user', content: fullPrompt}],
-                    null, undefined, undefined, undefined
+                    null, getTextModelConfigId(), undefined, undefined
                 )
                 if (result.reply) return result.reply
             } catch (e: any) {
@@ -570,12 +602,10 @@ async function executeAiPrompt(actionConfig: Record<string, any>, userConfig: Re
     const promptTemplate = actionConfig.prompt_template || actionConfig.prompt || ''
     if (!promptTemplate) return 'AI 提示词未配置'
 
-    // Replace template variables
     let prompt = promptTemplate
     for (const [key, value] of Object.entries(userConfig)) {
         prompt = prompt.replace(`{{${key}}}`, String(value))
     }
-    // Also replace {{date}} and {{time}}
     const now = new Date()
     prompt = prompt.replace('{{date}}', now.toISOString().slice(0, 10))
     prompt = prompt.replace('{{time}}', now.toLocaleTimeString('zh-CN'))
@@ -583,10 +613,10 @@ async function executeAiPrompt(actionConfig: Record<string, any>, userConfig: Re
     try {
         const result = await chatWithLLM(
             [{ role: 'user', content: prompt }],
-            null, // no scheduler
-            undefined, // use default model
+            null,
+            getTextModelConfigId(),
             undefined,
-            undefined // no stream events
+            undefined
         )
         return result.reply || 'AI 未返回结果'
     } catch (e: any) {
@@ -600,13 +630,11 @@ async function executeSearchAndSummarize(actionConfig: Record<string, any>): Pro
     if (!searchQuery) return '搜索问题未配置'
     if (!searchModelId) return '未选择联网搜索模型'
 
-    // Replace template variables in search query
     const now = new Date()
     let query = searchQuery
     query = query.replace('{{date}}', now.toISOString().slice(0, 10))
     query = query.replace('{{time}}', now.toLocaleTimeString('zh-CN'))
 
-    // Step 1: Web search using the selected search model
     const searchConfig = modelConfigsDb.get(searchModelId)
     if (!searchConfig) return '联网搜索模型配置不存在，请检查技能设置'
 
@@ -619,7 +647,6 @@ async function executeSearchAndSummarize(actionConfig: Record<string, any>): Pro
         return `联网搜索失败: ${e.message}`
     }
 
-    // Step 2: AI summarization using default chat model
     const summaryPrompt = actionConfig.summary_prompt || '请根据以下搜索结果，用简洁的中文进行总结，提炼关键信息'
     const fullPrompt = `${summaryPrompt}${STRUCTURED_FORMAT_INSTRUCTION}\n\n---\n搜索结果：\n${searchResult}`
 
@@ -628,13 +655,12 @@ async function executeSearchAndSummarize(actionConfig: Record<string, any>): Pro
         const result = await chatWithLLM(
             [{role: 'user', content: fullPrompt}],
             null,
-            undefined,
+            getTextModelConfigId(),
             undefined,
             undefined
         )
         return result.reply || searchResult
     } catch (e: any) {
-        // If summarization fails, return raw search results
         console.error('[技能执行器] AI 总结失败，返回原始搜索结果:', e.message)
         return searchResult
     }

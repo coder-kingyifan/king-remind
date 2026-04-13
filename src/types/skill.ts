@@ -11,6 +11,8 @@ export interface Skill {
     user_config: string
     is_builtin: number
     is_enabled: number
+    store_version: string | null
+    store_source: string | null
     created_at: string
     updated_at: string
 }
@@ -30,10 +32,30 @@ export interface CreateSkillInput {
     description?: string
     icon?: string
     category?: string
-    action_type: 'api_call' | 'ai_prompt' | 'search_and_summarize'
+    action_type: 'builtin' | 'api_call' | 'ai_prompt' | 'search_and_summarize'
     action_config: string
     config_schema?: string
     user_config?: string
+}
+
+export interface StoreSkill {
+    skill_key: string
+    name: string
+    description: string
+    icon: string
+    category: string
+    action_type: 'builtin' | 'api_call' | 'ai_prompt' | 'search_and_summarize'
+    action_config: string
+    config_schema: string
+    version: string
+    author: string
+    tags: string[]
+}
+
+export interface StoreSkillWithStatus extends StoreSkill {
+    installed: boolean
+    hasUpdate: boolean
+    localVersion?: string
 }
 
 export const SKILL_CATEGORIES = [

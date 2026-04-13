@@ -17,11 +17,11 @@
           </div>
           <div class="setting-actions">
             <el-input
-              :model-value="settingsStore.settings.user_nickname || ''"
-              @change="(val: string) => settingsStore.setSetting('user_nickname', val)"
-              placeholder="输入称呼"
-              size="small"
-              style="width: 160px;"
+                :model-value="settingsStore.settings.user_nickname || ''"
+                @change="(val: string) => settingsStore.setSetting('user_nickname', val)"
+                placeholder="输入称呼"
+                size="small"
+                style="width: 160px;"
             />
           </div>
         </div>
@@ -90,6 +90,26 @@
         </div>
       </div>
 
+      <!-- 技能商店设置 -->
+      <div class="setting-section">
+        <h3 class="section-title">技能商店</h3>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">商店数据源地址</div>
+            <div class="setting-desc">GitHub 仓库中技能商店 JSON 文件的 raw 地址</div>
+          </div>
+          <el-input
+            :model-value="skillStoreUrl"
+            @change="onSkillStoreUrlChange"
+            placeholder="https://raw.githubusercontent.com/..."
+            size="small"
+            style="width: 320px;"
+            clearable
+          />
+        </div>
+      </div>
+
       <!-- 调度设置 -->
       <div class="setting-section">
         <h3 class="section-title">调度</h3>
@@ -145,7 +165,9 @@
           <div class="setting-item">
             <div class="setting-info">
               <div class="setting-label">监听地址</div>
-              <div class="setting-desc"><span class="api-code">0.0.0.0</span> 允许外部访问，<span class="api-code">127.0.0.1</span> 仅本机</div>
+              <div class="setting-desc"><span class="api-code">0.0.0.0</span> 允许外部访问，<span class="api-code">127.0.0.1</span>
+                仅本机
+              </div>
             </div>
             <el-input
                 :model-value="settingsStore.settings.api_host || '0.0.0.0'"
@@ -174,20 +196,25 @@
           <div class="api-doc-collapse">
             <div class="api-doc-header" @click="showApiDoc = !showApiDoc">
               <span class="api-doc-title">API 接口文档</span>
-              <el-icon :class="{ 'rotate-icon': showApiDoc }"><ArrowDown /></el-icon>
+              <el-icon :class="{ 'rotate-icon': showApiDoc }">
+                <ArrowDown/>
+              </el-icon>
             </div>
 
             <transition name="doc-slide">
               <div v-if="showApiDoc" class="api-doc-body">
                 <div class="api-doc">
                   <p class="api-intro">
-                    应用已在本地开启 HTTP 服务，外部程序（脚本、AI Agent、自动化工具等）可通过该接口创建和管理提醒，也可通过 AI 对话接口用自然语言创建提醒。
+                    应用已在本地开启 HTTP 服务，外部程序（脚本、AI Agent、自动化工具等）可通过该接口创建和管理提醒，也可通过
+                    AI 对话接口用自然语言创建提醒。
                   </p>
 
                   <!-- 基本信息 -->
                   <div class="api-row">
                     <span class="api-label">服务地址</span>
-                    <span class="api-value api-code">http://{{ settingsStore.settings.api_host || '0.0.0.0' }}:{{ settingsStore.settings.api_port || '33333' }}</span>
+                    <span class="api-value api-code">http://{{
+                        settingsStore.settings.api_host || '0.0.0.0'
+                      }}:{{ settingsStore.settings.api_port || '33333' }}</span>
                   </div>
                   <div class="api-row">
                     <span class="api-label">认证方式</span>
@@ -264,13 +291,15 @@
                       <span class="api-field-name api-code">remind_type</span>
                       <span class="api-field-type">string</span>
                       <span class="api-field-req req">✅</span>
-                      <span class="api-field-desc"><span class="api-code">interval</span>（周期循环）或 <span class="api-code">scheduled</span>（定时一次）</span>
+                      <span class="api-field-desc"><span class="api-code">interval</span>（周期循环）或 <span
+                          class="api-code">scheduled</span>（定时一次）</span>
                     </div>
                     <div class="api-field-row">
                       <span class="api-field-name api-code">start_time</span>
                       <span class="api-field-type">string</span>
                       <span class="api-field-req req">✅</span>
-                      <span class="api-field-desc">开始时间，ISO 8601，如 <span class="api-code">2025-03-20T09:00:00</span></span>
+                      <span class="api-field-desc">开始时间，ISO 8601，如 <span
+                          class="api-code">2025-03-20T09:00:00</span></span>
                     </div>
                     <div class="api-field-row">
                       <span class="api-field-name api-code">description</span>
@@ -294,13 +323,16 @@
                       <span class="api-field-name api-code">interval_unit</span>
                       <span class="api-field-type">string</span>
                       <span class="api-field-req">-</span>
-                      <span class="api-field-desc"><span class="api-code">minutes</span> / <span class="api-code">hours</span> / <span class="api-code">days</span> / <span class="api-code">months</span> / <span class="api-code">years</span></span>
+                      <span class="api-field-desc"><span class="api-code">minutes</span> / <span
+                          class="api-code">hours</span> / <span class="api-code">days</span> / <span class="api-code">months</span> / <span
+                          class="api-code">years</span></span>
                     </div>
                     <div class="api-field-row">
                       <span class="api-field-name api-code">weekdays</span>
                       <span class="api-field-type">number[]</span>
                       <span class="api-field-req">-</span>
-                      <span class="api-field-desc">仅指定星期触发，0=周日 … 6=周六，如 <span class="api-code">[1,3,5]</span></span>
+                      <span class="api-field-desc">仅指定星期触发，0=周日 … 6=周六，如 <span
+                          class="api-code">[1,3,5]</span></span>
                     </div>
                     <div class="api-field-row">
                       <span class="api-field-name api-code">workday_only</span>
@@ -318,7 +350,8 @@
                       <span class="api-field-name api-code">lunar_date</span>
                       <span class="api-field-type">string</span>
                       <span class="api-field-req">-</span>
-                      <span class="api-field-desc">农历日期 <span class="api-code">MM-DD</span>，如 <span class="api-code">01-01</span></span>
+                      <span class="api-field-desc">农历日期 <span class="api-code">MM-DD</span>，如 <span
+                          class="api-code">01-01</span></span>
                     </div>
                     <div class="api-field-row">
                       <span class="api-field-name api-code">active_hours_start</span>
@@ -336,7 +369,10 @@
                       <span class="api-field-name api-code">channels</span>
                       <span class="api-field-type">string[]</span>
                       <span class="api-field-req">-</span>
-                      <span class="api-field-desc">通知渠道，默认 <span class="api-code">["desktop"]</span>，可选：<span class="api-code">desktop</span> / <span class="api-code">email</span> / <span class="api-code">telegram</span> / <span class="api-code">wechat_work</span> / <span class="api-code">wechat_work_webhook</span> / <span class="api-code">webhook</span></span>
+                      <span class="api-field-desc">通知渠道，默认 <span class="api-code">["desktop"]</span>，可选：<span
+                          class="api-code">desktop</span> / <span class="api-code">email</span> / <span
+                          class="api-code">telegram</span> / <span class="api-code">wechat_work</span> / <span
+                          class="api-code">wechat_work_webhook</span> / <span class="api-code">webhook</span></span>
                     </div>
                     <div class="api-field-row">
                       <span class="api-field-name api-code">icon</span>
@@ -355,7 +391,8 @@
                   <!-- AI 对话接口 -->
                   <div class="api-endpoints-title" style="margin-top:14px;">POST /api/chat - AI 对话接口</div>
                   <p class="api-intro">
-                    通过 AI 对话接口，可以用自然语言创建提醒。AI 会自动识别意图并调用对应的工具。适合集成到外部 AI Agent 或自动化流程中。
+                    通过 AI 对话接口，可以用自然语言创建提醒。AI 会自动识别意图并调用对应的工具。适合集成到外部 AI Agent
+                    或自动化流程中。
                   </p>
 
                   <div class="api-fields-table">
@@ -387,8 +424,8 @@
 
                   <div class="api-example-title" style="margin-top:8px;">AI 对话请求示例</div>
                   <pre class="api-pre">curl -X POST http://127.0.0.1:{{
-              settingsStore.settings.api_port || '33333'
-            }}/api/chat \
+                      settingsStore.settings.api_port || '33333'
+                    }}/api/chat \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer &lt;your_token&gt;" \
   -d '{
@@ -419,8 +456,8 @@
                   <!-- 调用示例 -->
                   <div class="api-example-title" style="margin-top:14px;">创建提醒 - curl 示例</div>
                   <pre class="api-pre">curl -X POST http://127.0.0.1:{{
-              settingsStore.settings.api_port || '33333'
-            }}/api/reminders \
+                      settingsStore.settings.api_port || '33333'
+                    }}/api/reminders \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer &lt;your_token&gt;" \
   -d '{
@@ -438,7 +475,9 @@
                   <p class="api-intro">通过 AI 对话接口，直接用自然语言即可创建提醒：</p>
                   <div class="api-chat-examples">
                     <div class="api-chat-bubble user">每30分钟提醒我喝水</div>
-                    <div class="api-chat-bubble ai">好的，已为你创建喝水提醒 📋 每 30 分钟循环提醒，活跃时段 09:00-18:00，通过桌面通知推送。</div>
+                    <div class="api-chat-bubble ai">好的，已为你创建喝水提醒 📋 每 30 分钟循环提醒，活跃时段
+                      09:00-18:00，通过桌面通知推送。
+                    </div>
                     <div class="api-chat-bubble user">明天下午3点提醒我开会</div>
                     <div class="api-chat-bubble ai">已创建会议提醒 📋 明天 15:00 定时提醒，通过桌面通知推送。</div>
                   </div>
@@ -480,7 +519,8 @@ print(resp.json())</pre>
                     <span class="api-field-name">状态码</span>
                     <span style="flex:1">含义</span>
                   </div>
-                  <div class="api-field-row"><span class="api-field-name api-code">200</span><span style="flex:1">成功</span>
+                  <div class="api-field-row"><span class="api-field-name api-code">200</span><span
+                      style="flex:1">成功</span>
                   </div>
                   <div class="api-field-row"><span class="api-field-name api-code">400</span><span
                       style="flex:1">请求参数错误</span></div>
@@ -504,7 +544,9 @@ print(resp.json())</pre>
         <div class="setting-item">
           <div class="setting-info">
             <div class="setting-label">数据库加密</div>
-            <div class="setting-desc">{{ settingsStore.settings.db_encrypted === 'true' ? '已启用，数据库文件已加密' : '未加密' }}</div>
+            <div class="setting-desc">
+              {{ settingsStore.settings.db_encrypted === 'true' ? '已启用，数据库文件已加密' : '未加密' }}
+            </div>
           </div>
           <el-button size="small" plain @click="showEncryptionDialog = true">
             {{ settingsStore.settings.db_encrypted === 'true' ? '管理密码' : '设置密码' }}
@@ -524,7 +566,7 @@ print(resp.json())</pre>
       <div class="setting-section">
         <h3 class="section-title">
           关于
-          <span class="gift-link" @click="showBlessing = true">送给默默努力的你</span>
+          <span class="gift-link" @click="showBlessing = true">🎁</span>
         </h3>
 
         <div class="about-info">
@@ -544,6 +586,17 @@ print(resp.json())</pre>
             <span class="about-label">联系作者</span>
             <span class="about-value">kingyifan@88.com</span>
           </div>
+          <div class="about-row">
+            <span class="about-label">Github</span>
+            <span class="about-value"><a target="_blank"
+                                         href="https://github.com/coder-kingyifan/king-remind">https://github.com/coder-kingyifan/king-remind</a></span>
+          </div>
+          <div class="about-row">
+            <span class="about-label">Gitee(码云)</span>
+            <span class="about-value">  <a target="_blank" href="https://gitee.com/kingyifan/king-remind">https://gitee.com/kingyifan/king-remind</a>
+              </span>
+          </div>
+
           <div class="about-row">
             <span class="about-label">友链社区</span>
             <span class="about-value"><a target="_blank" href="https://linux.do/">Linux.do</a></span>
@@ -601,14 +654,15 @@ print(resp.json())</pre>
         <template v-if="settingsStore.settings.db_encrypted === 'true'">
           <div class="setup-field">
             <label class="setup-label">当前密码</label>
-            <el-input v-model="encCurrentPassword" type="password" show-password placeholder="请输入当前密码" />
+            <el-input v-model="encCurrentPassword" type="password" show-password placeholder="请输入当前密码"/>
           </div>
           <div class="setup-field">
             <label class="setup-label">新密码（留空则不修改）</label>
-            <el-input v-model="encNewPassword" type="password" show-password placeholder="输入新密码" />
+            <el-input v-model="encNewPassword" type="password" show-password placeholder="输入新密码"/>
           </div>
           <div class="enc-actions">
-            <el-button type="danger" plain size="small" @click="removeEncryption" :loading="encLoading">移除加密</el-button>
+            <el-button type="danger" plain size="small" @click="removeEncryption" :loading="encLoading">移除加密
+            </el-button>
             <el-button type="primary" @click="changeEncryptionPassword" :loading="encLoading">修改密码</el-button>
           </div>
         </template>
@@ -616,13 +670,15 @@ print(resp.json())</pre>
         <template v-else>
           <div class="setup-field">
             <label class="setup-label">设置密码</label>
-            <el-input v-model="encNewPassword" type="password" show-password placeholder="设置数据库加密密码" />
+            <el-input v-model="encNewPassword" type="password" show-password placeholder="设置数据库加密密码"/>
           </div>
           <div class="setup-field">
             <label class="setup-label">确认密码</label>
-            <el-input v-model="encConfirmPassword" type="password" show-password placeholder="再次输入密码" />
+            <el-input v-model="encConfirmPassword" type="password" show-password placeholder="再次输入密码"/>
           </div>
-          <el-button type="primary" style="width: 100%; margin-top: 8px;" @click="setEncryption" :loading="encLoading">设置密码并加密</el-button>
+          <el-button type="primary" style="width: 100%; margin-top: 8px;" @click="setEncryption" :loading="encLoading">
+            设置密码并加密
+          </el-button>
         </template>
         <div v-if="encError" class="enc-error">{{ encError }}</div>
       </div>
@@ -631,7 +687,7 @@ print(resp.json())</pre>
 </template>
 
 <script setup lang="ts">
-import {ref} from 'vue'
+import {onMounted, ref} from 'vue'
 import {useSettingsStore} from '@/stores/settings'
 import {ElMessage} from 'element-plus'
 import {ArrowDown} from '@element-plus/icons-vue'
@@ -646,6 +702,23 @@ const encNewPassword = ref('')
 const encConfirmPassword = ref('')
 const encError = ref('')
 const encLoading = ref(false)
+const skillStoreUrl = ref('')
+
+onMounted(async () => {
+  try {
+    skillStoreUrl.value = await window.electronAPI.skillStore.getUrl()
+  } catch { /* ignore */ }
+})
+
+async function onSkillStoreUrlChange(val: string) {
+  try {
+    await window.electronAPI.skillStore.setUrl(val || '')
+    skillStoreUrl.value = val || ''
+    ElMessage.success('商店地址已更新')
+  } catch (e: any) {
+    ElMessage.error('设置失败: ' + (e.message || '未知错误'))
+  }
+}
 
 function starStyle(i: number) {
   const angle = (i / 12) * 360
@@ -692,7 +765,8 @@ async function onApiEnabledChange(val: boolean) {
     try {
       await window.electronAPI.api.toggle(false)
       ElMessage.success('API 接口已关闭')
-    } catch { /* ignore */ }
+    } catch { /* ignore */
+    }
   }
 }
 
@@ -702,7 +776,8 @@ async function onApiSettingChange(key: string, value: string) {
   try {
     await window.electronAPI.api.restart()
     ElMessage.success('API 配置已更新')
-  } catch { /* ignore */ }
+  } catch { /* ignore */
+  }
 }
 
 async function restartApp() {

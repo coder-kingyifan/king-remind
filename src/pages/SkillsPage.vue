@@ -3,12 +3,18 @@
     <div class="page-header">
       <div>
         <h1 class="page-title">技能中心</h1>
-        <p class="page-subtitle">管理和配置提醒技能，绑定技能后提醒触发时会自动获取动态内容</p>
+        <p class="page-subtitle">管理已启用的技能，绑定技能后提醒触发时会自动获取动态内容</p>
       </div>
-      <el-button type="primary" @click="openCreateDialog">
-        <el-icon><Plus/></el-icon>
-        新建技能
-      </el-button>
+      <div class="header-actions">
+        <el-button type="primary" @click="router.push('/skill-store')">
+          <el-icon><ShoppingBag/></el-icon>
+          技能商店
+        </el-button>
+        <el-button @click="openCreateDialog">
+          <el-icon><Plus/></el-icon>
+          新建技能
+        </el-button>
+      </div>
     </div>
 
     <!-- 过滤栏 -->
@@ -18,7 +24,7 @@
           class="chip"
           :class="{ active: activeCategory === 'all' }"
           @click="activeCategory = 'all'"
-        >全部 {{ skillsStore.skills.length }}</span>
+        >全部 {{ enabledCount }}</span>
         <span
           v-for="cat in SKILL_CATEGORIES"
           :key="cat.key"
@@ -27,13 +33,16 @@
           @click="activeCategory = cat.key"
         >{{ cat.icon }} {{ cat.label }}</span>
       </div>
-      <el-input
-        v-model="searchText"
-        placeholder="搜索技能..."
-        prefix-icon="Search"
-        clearable
-        style="width: 200px;"
-      />
+      <div class="filter-right">
+        <el-checkbox v-model="showDisabled" label="显示已禁用" size="small" />
+        <el-input
+          v-model="searchText"
+          placeholder="搜索技能..."
+          prefix-icon="Search"
+          clearable
+          style="width: 200px;"
+        />
+      </div>
     </div>
 
     <!-- 加载态 -->
@@ -45,8 +54,10 @@
     <!-- 空态 -->
     <div v-else-if="filteredSkills.length === 0" class="empty-state">
       <div class="empty-icon">⚡</div>
-      <p class="empty-title">暂无技能</p>
-      <p class="empty-text">点击"新建技能"创建您的第一个自定义技能</p>
+      <p class="empty-title">暂无已启用的技能</p>
+      <p class="empty-text">
+        <el-button type="primary" link @click="router.push('/skill-store')">前往技能商店安装</el-button>
+      </p>
     </div>
 
     <!-- 技能网格 -->
@@ -76,12 +87,10 @@
             <el-tag v-else-if="skill.action_type === 'search_and_summarize'" size="small" type="danger" effect="plain" round>搜索</el-tag>
           </div>
           <div class="card-btns">
-            <span class="card-btn" title="配置" @click="openConfigDialog(skill)"><el-icon><Setting/></el-icon></span>
+            <span v-if="hasConfig(skill)" class="card-btn" title="配置" @click="openConfigDialog(skill)"><el-icon><Setting/></el-icon></span>
             <span class="card-btn" title="测试" @click="testSkill(skill)"><el-icon><VideoPlay/></el-icon></span>
-            <template v-if="!skill.is_builtin">
-              <span class="card-btn" title="编辑" @click="editSkill(skill)"><el-icon><Edit/></el-icon></span>
-              <span class="card-btn danger" title="删除" @click="deleteSkill(skill)"><el-icon><Delete/></el-icon></span>
-            </template>
+            <span class="card-btn" title="编辑" @click="editSkill(skill)"><el-icon><Edit/></el-icon></span>
+            <span class="card-btn danger" title="删除" @click="deleteSkill(skill)"><el-icon><Delete/></el-icon></span>
           </div>
         </div>
       </div>
@@ -141,16 +150,19 @@
 
 <script setup lang="ts">
 import {computed, onMounted, reactive, ref} from 'vue'
+import {useRouter} from 'vue-router'
 import {useSkillsStore} from '@/stores/skills'
-import {Delete, Edit, Loading, Plus, Setting, VideoPlay} from '@element-plus/icons-vue'
+import {Delete, Edit, Loading, Plus, Setting, ShoppingBag, VideoPlay} from '@element-plus/icons-vue'
 import {SKILL_CATEGORIES} from '@/types/skill'
 import type {Skill, SkillConfigField} from '@/types/skill'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import SkillForm from '@/components/skill/SkillForm.vue'
 
+const router = useRouter()
 const skillsStore = useSkillsStore()
 const searchText = ref('')
 const activeCategory = ref('all')
+const showDisabled = ref(false)
 
 const GRADIENTS: Record<string, string> = {
   weather: 'linear-gradient(135deg, #74b9ff, #0984e3)',
@@ -165,8 +177,14 @@ function categoryGradient(key: string): string {
   return GRADIENTS[key] || GRADIENTS.custom
 }
 
+const enabledCount = computed(() => skillsStore.skills.filter(s => s.is_enabled === 1).length)
+
 const filteredSkills = computed(() => {
   let list = skillsStore.skills
+  // 默认只显示已启用的技能
+  if (!showDisabled.value) {
+    list = list.filter(s => s.is_enabled === 1)
+  }
   if (activeCategory.value !== 'all') {
     list = list.filter(s => s.category === activeCategory.value)
   }
@@ -193,6 +211,15 @@ const testDialogVisible = ref(false)
 const testingSkill = ref<Skill | null>(null)
 const testing = ref(false)
 const testResult = ref('')
+
+function hasConfig(skill: Skill): boolean {
+  try {
+    const fields = JSON.parse(skill.config_schema || '[]')
+    return Array.isArray(fields) && fields.length > 0
+  } catch {
+    return false
+  }
+}
 
 function openConfigDialog(skill: Skill) {
   configDialogInited.value = true
@@ -298,6 +325,11 @@ onMounted(() => {
   color: var(--text-tertiary);
 }
 
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
 /* 过滤栏 */
 .filter-bar {
   display: flex;
@@ -305,6 +337,12 @@ onMounted(() => {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.filter-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .filter-chips {
