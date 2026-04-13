@@ -81,15 +81,16 @@
         <div class="card-desc">{{ skill.description || '暂无描述' }}</div>
         <div class="card-bottom">
           <div class="card-tags">
-            <el-tag v-if="skill.is_builtin" size="small" effect="plain" round>内置</el-tag>
+            <el-tag v-if="skill.store_source" size="small" effect="plain" round>商店</el-tag>
             <el-tag v-else-if="skill.action_type === 'api_call'" size="small" type="success" effect="plain" round>API</el-tag>
             <el-tag v-else-if="skill.action_type === 'ai_prompt'" size="small" type="warning" effect="plain" round>AI</el-tag>
             <el-tag v-else-if="skill.action_type === 'search_and_summarize'" size="small" type="danger" effect="plain" round>搜索</el-tag>
+            <el-tag v-else size="small" type="info" effect="plain" round>自定义</el-tag>
           </div>
           <div class="card-btns">
             <span v-if="hasConfig(skill)" class="card-btn" title="配置" @click="openConfigDialog(skill)"><el-icon><Setting/></el-icon></span>
             <span class="card-btn" title="测试" @click="testSkill(skill)"><el-icon><VideoPlay/></el-icon></span>
-            <span class="card-btn" title="编辑" @click="editSkill(skill)"><el-icon><Edit/></el-icon></span>
+            <span v-if="!skill.store_source" class="card-btn" title="编辑" @click="editSkill(skill)"><el-icon><Edit/></el-icon></span>
             <span class="card-btn danger" title="删除" @click="deleteSkill(skill)"><el-icon><Delete/></el-icon></span>
           </div>
         </div>

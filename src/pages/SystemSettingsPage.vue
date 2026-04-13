@@ -90,26 +90,6 @@
         </div>
       </div>
 
-      <!-- 技能商店设置 -->
-      <div class="setting-section">
-        <h3 class="section-title">技能商店</h3>
-
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-label">商店数据源地址</div>
-            <div class="setting-desc">GitHub 仓库中技能商店 JSON 文件的 raw 地址</div>
-          </div>
-          <el-input
-            :model-value="skillStoreUrl"
-            @change="onSkillStoreUrlChange"
-            placeholder="https://raw.githubusercontent.com/..."
-            size="small"
-            style="width: 320px;"
-            clearable
-          />
-        </div>
-      </div>
-
       <!-- 调度设置 -->
       <div class="setting-section">
         <h3 class="section-title">调度</h3>
@@ -702,23 +682,9 @@ const encNewPassword = ref('')
 const encConfirmPassword = ref('')
 const encError = ref('')
 const encLoading = ref(false)
-const skillStoreUrl = ref('')
 
 onMounted(async () => {
-  try {
-    skillStoreUrl.value = await window.electronAPI.skillStore.getUrl()
-  } catch { /* ignore */ }
 })
-
-async function onSkillStoreUrlChange(val: string) {
-  try {
-    await window.electronAPI.skillStore.setUrl(val || '')
-    skillStoreUrl.value = val || ''
-    ElMessage.success('商店地址已更新')
-  } catch (e: any) {
-    ElMessage.error('设置失败: ' + (e.message || '未知错误'))
-  }
-}
 
 function starStyle(i: number) {
   const angle = (i / 12) * 360

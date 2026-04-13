@@ -4,6 +4,7 @@ import {is} from '@electron-toolkit/utils'
 import {settingsDb} from './db/settings'
 
 let tray: Tray | null = null
+let mainWindowRef: BrowserWindow | null = null
 
 function createTrayIcon(): nativeImage {
     const iconPath = is.dev
@@ -12,19 +13,16 @@ function createTrayIcon(): nativeImage {
     return nativeImage.createFromPath(iconPath).resize({width: 16, height: 16})
 }
 
-export function createTray(mainWindow: BrowserWindow | null): Tray {
-    const icon = createTrayIcon()
-    tray = new Tray(icon)
-
+function buildContextMenu(): Menu {
     const alwaysOnTopSaved = settingsDb.get('always_on_top') === 'true'
 
-    const contextMenu = Menu.buildFromTemplate([
-        ...(mainWindow ? [
+    return Menu.buildFromTemplate([
+        ...(mainWindowRef ? [
             {
                 label: '打开 king提醒助手',
                 click: () => {
-                    mainWindow!.show()
-                    mainWindow!.focus()
+                    mainWindowRef!.show()
+                    mainWindowRef!.focus()
                 }
             },
             {type: 'separator' as const},
@@ -33,7 +31,7 @@ export function createTray(mainWindow: BrowserWindow | null): Tray {
                 type: 'checkbox' as const,
                 checked: false,
                 click: (menuItem: Electron.MenuItem) => {
-                    mainWindow!.webContents.send('scheduler:toggle-pause', menuItem.checked)
+                    mainWindowRef!.webContents.send('scheduler:toggle-pause', menuItem.checked)
                 }
             },
             {
@@ -41,8 +39,12 @@ export function createTray(mainWindow: BrowserWindow | null): Tray {
                 type: 'checkbox' as const,
                 checked: alwaysOnTopSaved,
                 click: (menuItem: Electron.MenuItem) => {
-                    mainWindow!.setAlwaysOnTop(menuItem.checked)
+                    mainWindowRef!.setAlwaysOnTop(menuItem.checked)
                     settingsDb.set('always_on_top', String(menuItem.checked))
+                    // 通知渲染进程同步置顶按钮状态
+                    if (!mainWindowRef!.isDestroyed()) {
+                        mainWindowRef!.webContents.send('window:always-on-top-changed', menuItem.checked)
+                    }
                 }
             },
             {type: 'separator' as const},
@@ -55,7 +57,14 @@ export function createTray(mainWindow: BrowserWindow | null): Tray {
             }
         }
     ])
+}
 
+export function createTray(mainWindow: BrowserWindow | null): Tray {
+    mainWindowRef = mainWindow
+    const icon = createTrayIcon()
+    tray = new Tray(icon)
+
+    const contextMenu = buildContextMenu()
     tray.setToolTip('king提醒助手')
     tray.setContextMenu(contextMenu)
 
@@ -69,6 +78,14 @@ export function createTray(mainWindow: BrowserWindow | null): Tray {
     })
 
     return tray
+}
+
+/** 更新托盘菜单中"置顶窗口"的勾选状态 */
+export function updateTrayAlwaysOnTop(checked: boolean): void {
+    if (!tray) return
+    settingsDb.set('always_on_top', String(checked))
+    const contextMenu = buildContextMenu()
+    tray.setContextMenu(contextMenu)
 }
 
 export function destroyTray(): void {

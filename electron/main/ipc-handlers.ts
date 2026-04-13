@@ -15,6 +15,7 @@ import {skillsDb} from './db/skills'
 import {skillContentDb, seedSkillContent} from './db/skill-content'
 import {startApiServer, stopApiServer} from './api-server'
 import {ReminderScheduler} from './scheduler'
+import {updateTrayAlwaysOnTop} from './tray'
 import {
     isDatabaseEncrypted,
     setEncryptionPassword,
@@ -159,9 +160,12 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
 
     safeHandle('window:toggle-always-on-top', () => {
         const isOnTop = mainWindow.isAlwaysOnTop()
-        mainWindow.setAlwaysOnTop(!isOnTop)
-        settingsDb.set('always_on_top', String(!isOnTop))
-        return !isOnTop
+        const newState = !isOnTop
+        mainWindow.setAlwaysOnTop(newState)
+        settingsDb.set('always_on_top', String(newState))
+        // 同步托盘菜单勾选状态
+        updateTrayAlwaysOnTop(newState)
+        return newState
     })
 
     safeHandle('window:is-always-on-top', () => {
@@ -535,9 +539,8 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
     safeHandle('skill-store:fetch', async () => {
         const {fetchStoreManifest, getStoreSkillsWithStatus} = await import('./skill-store')
         try {
-            const storeUrl = settingsDb.get('skill_store_url') || undefined
-            const manifest = await fetchStoreManifest(storeUrl)
-            return getStoreSkillsWithStatus(manifest, storeUrl)
+            const manifest = await fetchStoreManifest()
+            return getStoreSkillsWithStatus(manifest)
         } catch (e: any) {
             throw new Error(`获取技能商店失败: ${e.message}`)
         }
@@ -545,25 +548,15 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
 
     safeHandle('skill-store:install', async (_event, skillKey: string) => {
         const {fetchStoreManifest, installStoreSkill} = await import('./skill-store')
-        const storeUrl = settingsDb.get('skill_store_url') || undefined
-        const manifest = await fetchStoreManifest(storeUrl)
+        const manifest = await fetchStoreManifest()
         const storeSkill = manifest.skills.find(s => s.skill_key === skillKey)
         if (!storeSkill) throw new Error('未找到该技能')
-        return installStoreSkill(storeSkill, storeUrl)
+        return installStoreSkill(storeSkill)
     })
 
     safeHandle('skill-store:uninstall', async (_event, skillKey: string) => {
         const {uninstallStoreSkill} = await import('./skill-store')
         return uninstallStoreSkill(skillKey)
-    })
-
-    safeHandle('skill-store:set-url', (_event, url: string) => {
-        settingsDb.set('skill_store_url', url)
-        return true
-    })
-
-    safeHandle('skill-store:get-url', () => {
-        return settingsDb.get('skill_store_url') || ''
     })
 
     // ========== 模型配置 ==========
@@ -618,17 +611,26 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
     // ========== API 接口控制 ==========
     safeHandle('api:toggle', (_event, enabled: boolean) => {
         settingsDb.set('api_enabled', String(enabled))
-        if (!enabled) {
+        if (enabled) {
+            const scheduler = schedulerRef
+            if (scheduler) {
+                stopApiServer()
+                startApiServer(scheduler)
+            }
+        } else {
             stopApiServer()
         }
         return true
     })
 
     safeHandle('api:restart', (_event) => {
+        const apiEnabled = settingsDb.get('api_enabled')
         stopApiServer()
-        const scheduler = schedulerRef
-        if (scheduler) {
-            startApiServer(scheduler)
+        if (apiEnabled === 'true') {
+            const scheduler = schedulerRef
+            if (scheduler) {
+                startApiServer(scheduler)
+            }
         }
         return true
     })

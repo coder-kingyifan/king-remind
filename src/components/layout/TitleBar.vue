@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, onMounted} from 'vue'
+import {ref, onMounted, onUnmounted} from 'vue'
 
 const isAlwaysOnTop = ref(false)
 
@@ -41,8 +41,17 @@ function close() {
   window.electronAPI.window.close()
 }
 
+function onAlwaysOnTopChanged(checked: boolean) {
+  isAlwaysOnTop.value = checked
+}
+
 onMounted(async () => {
   try { isAlwaysOnTop.value = await window.electronAPI.window.isAlwaysOnTop() } catch { /* ignore */ }
+  window.electronAPI.window.onAlwaysOnTopChanged(onAlwaysOnTopChanged)
+})
+
+onUnmounted(() => {
+  // ipcRenderer listener will be cleaned up on page unload
 })
 </script>
 

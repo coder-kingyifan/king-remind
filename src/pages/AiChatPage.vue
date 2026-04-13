@@ -116,7 +116,7 @@
           <el-input
             ref="inputRef"
             v-model="inputText"
-            placeholder="说点什么吧..."
+            placeholder="说点什么吧，我可以帮你快速创建提醒（我也可以通粘贴图片创建提醒）"
             :disabled="loading"
             @keydown.enter.exact.prevent="send"
             @paste="onInputPaste"

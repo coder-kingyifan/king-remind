@@ -73,7 +73,10 @@ const electronAPI = {
         close: () => safeInvoke('window:close'),
         isMaximized: () => safeInvoke('window:is-maximized'),
         toggleAlwaysOnTop: () => safeInvoke('window:toggle-always-on-top'),
-        isAlwaysOnTop: () => safeInvoke('window:is-always-on-top')
+        isAlwaysOnTop: () => safeInvoke('window:is-always-on-top'),
+        onAlwaysOnTopChanged: (callback: (checked: boolean) => void) => {
+            ipcRenderer.on('window:always-on-top-changed', (_event, checked) => callback(checked))
+        }
     },
 
     // 日志
@@ -153,9 +156,7 @@ const electronAPI = {
     skillStore: {
         fetch: () => safeInvoke('skill-store:fetch'),
         install: (skillKey: string) => safeInvoke('skill-store:install', skillKey),
-        uninstall: (skillKey: string) => safeInvoke('skill-store:uninstall', skillKey),
-        setUrl: (url: string) => safeInvoke('skill-store:set-url', url),
-        getUrl: () => safeInvoke('skill-store:get-url')
+        uninstall: (skillKey: string) => safeInvoke('skill-store:uninstall', skillKey)
     },
 
     // 应用控制

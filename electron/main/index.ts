@@ -112,19 +112,19 @@ async function continueAppInit(win: BrowserWindow | null): Promise<void> {
     // 创建通知分发器
     const dispatcher = new NotificationDispatcher(win)
 
-    // 注册IPC处理器
+    // 启动提醒调度器
+    const intervalStr = settingsDb.get('scheduler_interval') || '60'
+    const intervalMs = parseInt(intervalStr) * 1000
+    scheduler = new ReminderScheduler(dispatcher)
+    scheduler.start(intervalMs)
+
+    // 注册IPC处理器（在 scheduler 创建之后，确保 schedulerRef 不为 null）
     if (win) {
         registerIpcHandlers(win, dispatcher, scheduler)
         // 初始化网络请求拦截器，将主进程 axios 请求转发到 DevTools
         initNetworkInterceptor(win)
         console.log('[主进程] IPC处理器已注册')
     }
-
-    // 启动提醒调度器
-    const intervalStr = settingsDb.get('scheduler_interval') || '60'
-    const intervalMs = parseInt(intervalStr) * 1000
-    scheduler = new ReminderScheduler(dispatcher)
-    scheduler.start(intervalMs)
 
     // 启动本地 API Server
     const apiEnabled = settingsDb.get('api_enabled')

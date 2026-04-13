@@ -1,8 +1,8 @@
 import axios from 'axios'
 import {skillsDb} from './db/skills'
 
-// 默认技能商店 URL（GitHub 仓库 raw 文件地址）
-const DEFAULT_STORE_URL = 'https://raw.githubusercontent.com/coder-kingyifan/king-remind-skill-store/main/skill-store.json'
+// 技能商店 URL（GitHub 仓库 raw 文件地址）
+const STORE_URL = 'https://raw.githubusercontent.com/coder-kingyifan/king-remind-skill-store/main/skill-store.json'
 
 export interface StoreSkill {
     skill_key: string
@@ -33,17 +33,16 @@ export interface StoreSkillWithStatus extends StoreSkill {
 /**
  * 从 GitHub 获取商店清单
  */
-export async function fetchStoreManifest(storeUrl?: string): Promise<StoreManifest> {
-    const url = storeUrl || DEFAULT_STORE_URL
+export async function fetchStoreManifest(): Promise<StoreManifest> {
     try {
-        const response = await axios.get<StoreManifest>(url, {
+        const response = await axios.get<StoreManifest>(STORE_URL, {
             timeout: 15000,
             headers: {'Accept': 'application/json'}
         })
         return response.data
     } catch (e: any) {
         if (e.response?.status === 404) {
-            throw new Error('商店数据源未找到（404），请在系统设置中检查商店地址配置，或确保仓库中存在 skill-store.json 文件')
+            throw new Error('商店数据源未找到（404），请确保仓库中存在 skill-store.json 文件')
         }
         throw e
     }
@@ -52,12 +51,8 @@ export async function fetchStoreManifest(storeUrl?: string): Promise<StoreManife
 /**
  * 获取带有安装状态的商店技能列表
  */
-export function getStoreSkillsWithStatus(
-    manifest: StoreManifest,
-    storeUrl?: string
-): StoreSkillWithStatus[] {
+export function getStoreSkillsWithStatus(manifest: StoreManifest): StoreSkillWithStatus[] {
     const localSkills = skillsDb.list()
-    const source = storeUrl || DEFAULT_STORE_URL
 
     return manifest.skills.map(storeSkill => {
         const localMatch = localSkills.find(s => s.skill_key === storeSkill.skill_key)
@@ -75,11 +70,7 @@ export function getStoreSkillsWithStatus(
 /**
  * 从商店安装技能（如果已存在则更新）
  */
-export function installStoreSkill(
-    storeSkill: StoreSkill,
-    storeUrl?: string
-): any {
-    const source = storeUrl || DEFAULT_STORE_URL
+export function installStoreSkill(storeSkill: StoreSkill): any {
     const existing = skillsDb.getByKey(storeSkill.skill_key)
 
     if (existing) {
@@ -92,7 +83,7 @@ export function installStoreSkill(
             action_config: storeSkill.action_config,
             config_schema: storeSkill.config_schema,
             store_version: storeSkill.version,
-            store_source: source
+            store_source: STORE_URL
         })
     }
 
@@ -110,7 +101,7 @@ export function installStoreSkill(
         user_config: '{}',
         is_builtin: isBuiltin,
         store_version: storeSkill.version,
-        store_source: source
+        store_source: STORE_URL
     })
 }
 
@@ -123,5 +114,3 @@ export function uninstallStoreSkill(skillKey: string): boolean {
     skillsDb.delete(existing.id)
     return true
 }
-
-export {DEFAULT_STORE_URL}

@@ -32,7 +32,7 @@ function main() {
     EXE_PATH,
     '--set-version-string', 'FileDescription', pkg.description,
     '--set-version-string', 'ProductName', 'king-remind',
-    '--set-version-string', 'LegalCopyright', 'Copyright (c) 2025 kingyifan',
+    '--set-version-string', 'LegalCopyright', 'Copyright (c) 2026 kingyifan',
     '--set-file-version', pkg.version,
     '--set-product-version', pkg.version + '.0',
     '--set-version-string', 'InternalName', 'king-remind',
