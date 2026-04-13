@@ -1,5 +1,5 @@
 appId: com.kingyifan.king-remind
-productName: King-remind
+productName: king-remind
 copyright: Copyright (c) 2025 kingyifan
 
 asar: true
@@ -26,8 +26,9 @@ extraResources:
       - "**/*"
 
 win:
-  icon: resources/icon.png
+  icon: resources/build/icons/win/icon.ico
   sign: false
+  signAndEditExecutable: false
   target:
     - target: portable
       arch:
@@ -37,7 +38,7 @@ win:
         - x64
 
 portable:
-  artifactName: "King-remind-${version}-portable.exe"
+  artifactName: "king-remind-${version}-portable.exe"
 
 nsis:
   oneClick: false
@@ -45,7 +46,7 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: King提醒助手
-  artifactName: "King-remind-${version}-setup.exe"
+  artifactName: "king-remind-${version}-setup.exe"
 
 mac:
   icon: resources/icon.png

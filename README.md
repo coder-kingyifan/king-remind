@@ -232,8 +232,8 @@ npm run pack:dir    # 打包为免安装目录
 ```
 
 产物输出到 `dist/` 目录：
-- `King-remind-{version}-setup.exe` — NSIS 安装程序
-- `King-remind-{version}-portable.exe` — 免安装便携版
+- `king-remind-{version}-setup.exe` — NSIS 安装程序
+- `king-remind-{version}-portable.exe` — 免安装便携版
 
 **macOS：**
 
