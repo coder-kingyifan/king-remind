@@ -165,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, onUnmounted, reactive, ref} from 'vue'
+import {computed, onMounted, onUnmounted, onActivated, onDeactivated, reactive, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {useRemindersStore} from '@/stores/reminders'
 import {useSettingsStore} from '@/stores/settings'
@@ -262,12 +262,26 @@ function formatTime(iso: string): string {
 
 onMounted(async () => {
   await refreshData()
-  // 每30秒自动刷新
-  refreshTimer = setInterval(refreshData, 30000)
   // 收到通知时立即刷新
   window.electronAPI.notifications.onShow(() => {
     refreshData()
   })
+})
+
+// keep-alive: 页面激活时刷新数据并启动定时器
+onActivated(() => {
+  refreshData()
+  if (!refreshTimer) {
+    refreshTimer = setInterval(refreshData, 30000)
+  }
+})
+
+// keep-alive: 页面离开时停止定时器，避免后台轮询
+onDeactivated(() => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
 })
 
 onUnmounted(() => {

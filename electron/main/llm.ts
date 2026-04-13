@@ -16,6 +16,8 @@ export interface ProviderPreset {
     defaultModel: string
     protocol: 'openai' | 'anthropic'
     models: string[]
+    /** 联网搜索 API 协议，仅 web_search 类型使用 */
+    searchProtocol?: 'openai' | 'tavily' | 'jina' | 'bochaai' | 'exa'
 }
 
 export const PROVIDERS: ProviderPreset[] = [
@@ -180,6 +182,7 @@ export const PROVIDERS: ProviderPreset[] = [
         apiKeyRequired: true,
         defaultModel: 'sonar',
         protocol: 'openai',
+        searchProtocol: 'openai',
         models: ['sonar', 'sonar-pro', 'sonar-reasoning', 'sonar-reasoning-pro', 'sonar-deep-research']
     },
     {
@@ -189,6 +192,7 @@ export const PROVIDERS: ProviderPreset[] = [
         apiKeyRequired: true,
         defaultModel: 'tavily-search',
         protocol: 'openai',
+        searchProtocol: 'tavily',
         models: ['tavily-search', 'tavily-extract']
     },
     {
@@ -198,6 +202,7 @@ export const PROVIDERS: ProviderPreset[] = [
         apiKeyRequired: true,
         defaultModel: 'jina-search',
         protocol: 'openai',
+        searchProtocol: 'jina',
         models: ['jina-search', 'jina-reader', 'grounding']
     },
     {
@@ -207,6 +212,7 @@ export const PROVIDERS: ProviderPreset[] = [
         apiKeyRequired: true,
         defaultModel: 'bocha-web-search',
         protocol: 'openai',
+        searchProtocol: 'bochaai',
         models: ['bocha-web-search', 'bocha-ai-search']
     },
     {
@@ -216,6 +222,7 @@ export const PROVIDERS: ProviderPreset[] = [
         apiKeyRequired: true,
         defaultModel: 'exa-search',
         protocol: 'openai',
+        searchProtocol: 'exa',
         models: ['exa-search', 'exa-contents']
     }
 ]
@@ -1186,6 +1193,60 @@ export async function testModelConnection(data: {
         if (!baseUrl) {
             return {ok: false, message: '请填写 API 地址'}
         }
+
+        // 搜索 API 走各自的协议测试
+        const searchProtocol = provider.searchProtocol
+        if (searchProtocol && searchProtocol !== 'openai') {
+            switch (searchProtocol) {
+                case 'tavily': {
+                    const url = `${baseUrl}/search`
+                    const res = await axios.post(url, {
+                        api_key: data.api_key,
+                        query: 'test',
+                        max_results: 1
+                    }, {timeout: 15000})
+                    return {ok: true, message: '连接成功', reply: `返回 ${res.data?.results?.length || 0} 条结果`}
+                }
+                case 'jina': {
+                    const url = baseUrl + '/'
+                    const res = await axios.post(url, {q: 'test', num: 1}, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${data.api_key}`
+                        },
+                        timeout: 15000
+                    })
+                    return {ok: true, message: '连接成功'}
+                }
+                case 'bochaai': {
+                    const url = `${baseUrl}/web-search`
+                    const res = await axios.post(url, {query: 'test', count: 1}, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${data.api_key}`
+                        },
+                        timeout: 15000
+                    })
+                    return {ok: true, message: '连接成功'}
+                }
+                case 'exa': {
+                    const url = `${baseUrl}/search`
+                    const res = await axios.post(url, {
+                        query: 'test',
+                        numResults: 1
+                    }, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-api-key': data.api_key
+                        },
+                        timeout: 15000
+                    })
+                    return {ok: true, message: '连接成功'}
+                }
+            }
+        }
+
+        // OpenAI 兼容协议（含 Perplexity）
         if (!data.model) {
             return {ok: false, message: '请填写至少一个模型名称'}
         }
@@ -1222,5 +1283,124 @@ export async function testModelConnection(data: {
     } catch (e: any) {
         const msg = e.response?.data?.error?.message || e.response?.data?.message || e.message || '连接失败'
         return {ok: false, message: msg}
+    }
+}
+
+// ======================== 联网搜索 API 专用调用 ========================
+
+/**
+ * 根据搜索服务商协议，调用对应的搜索 API 并返回文本结果。
+ * 仅用于 model_type === 'web_search' 的配置。
+ */
+export async function callSearchAPI(configId: number, query: string): Promise<string> {
+    const saved = modelConfigsDb.get(configId)
+    if (!saved) throw new Error('搜索模型配置不存在')
+
+    const provider = getProviderById(saved.provider)
+    const baseUrl = saved.base_url || provider.baseUrl
+    const apiKey = saved.api_key || ''
+    const searchProtocol = provider.searchProtocol || 'openai'
+
+    console.log(`[搜索API] 协议: ${searchProtocol}, 服务商: ${provider.name}, 查询: "${query}"`)
+
+    switch (searchProtocol) {
+        case 'openai': {
+            // Perplexity 等兼容 OpenAI 的搜索服务
+            const result = await chatWithLLM(
+                [{role: 'user', content: query}],
+                null, configId, undefined, undefined
+            )
+            return result.reply || ''
+        }
+        case 'tavily': {
+            // Tavily Search API: POST https://api.tavily.com/search
+            const url = `${baseUrl}/search`
+            const res = await axios.post(url, {
+                api_key: apiKey,
+                query,
+                search_depth: 'advanced',
+                include_answer: true,
+                max_results: 5
+            }, {timeout: 30000})
+
+            const data = res.data
+            let result = ''
+            if (data.answer) result += data.answer + '\n\n'
+            if (data.results && data.results.length > 0) {
+                for (const r of data.results) {
+                    result += `### ${r.title}\n${r.url}\n${r.content}\n\n`
+                }
+            }
+            if (!result) result = JSON.stringify(data, null, 2)
+            return result
+        }
+        case 'jina': {
+            // Jina Search API: POST https://s.jina.ai/
+            const url = baseUrl + '/'
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'Accept': 'text/plain'
+            }
+            const res = await axios.post(url, {
+                q: query,
+                num: 5
+            }, {headers, timeout: 30000})
+
+            const data = res.data
+            if (typeof data === 'string') return data
+            if (data.data && data.data.length > 0) {
+                return data.data.map((r: any) => `### ${r.title}\n${r.url}\n${r.content || r.description}\n`).join('\n')
+            }
+            return JSON.stringify(data, null, 2)
+        }
+        case 'bochaai': {
+            // 博查 AI: POST https://api.bochaai.com/v1/web-search
+            const url = `${baseUrl}/web-search`
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            }
+            const res = await axios.post(url, {
+                query,
+                freshness: 'noLimit',
+                summary: true,
+                count: 5
+            }, {headers, timeout: 30000})
+
+            const data = res.data
+            if (data.data && data.data.webPages && data.data.webPages.value) {
+                return data.data.webPages.value.map((r: any) =>
+                    `### ${r.name}\n${r.url}\n${r.snippet}\n`
+                ).join('\n')
+            }
+            return JSON.stringify(data, null, 2)
+        }
+        case 'exa': {
+            // Exa Search API: POST https://api.exa.ai/search
+            const url = `${baseUrl}/search`
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey
+            }
+            const res = await axios.post(url, {
+                query,
+                type: 'auto',
+                numResults: 5,
+                contents: {
+                    text: {maxCharacters: 1000}
+                }
+            }, {headers, timeout: 30000})
+
+            const data = res.data
+            if (data.results && data.results.length > 0) {
+                return data.results.map((r: any) =>
+                    `### ${r.title}\n${r.url}\n${r.text || ''}\n`
+                ).join('\n')
+            }
+            return JSON.stringify(data, null, 2)
+        }
+        default:
+            throw new Error(`不支持的搜索协议: ${searchProtocol}`)
     }
 }

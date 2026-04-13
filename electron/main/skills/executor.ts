@@ -1,7 +1,7 @@
 import axios from 'axios'
 import {skillsDb} from '../db/skills'
 import {modelConfigsDb} from '../db/model-configs'
-import {chatWithLLM} from '../llm'
+import {chatWithLLM, callSearchAPI} from '../llm'
 
 // ======================== Built-in Content Databases ========================
 
@@ -613,14 +613,7 @@ async function executeSearchAndSummarize(actionConfig: Record<string, any>): Pro
     console.log(`[技能执行器] 联网搜索: "${query}"，使用模型: ${searchConfig.name}`)
     let searchResult: string
     try {
-        const result = await chatWithLLM(
-            [{role: 'user', content: query}],
-            null,
-            searchModelId,
-            undefined,
-            undefined
-        )
-        searchResult = result.reply || ''
+        searchResult = await callSearchAPI(searchModelId, query)
         if (!searchResult) return '联网搜索未返回结果'
     } catch (e: any) {
         return `联网搜索失败: ${e.message}`
