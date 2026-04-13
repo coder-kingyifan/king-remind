@@ -2,7 +2,11 @@ appId: com.kingyifan.king-remind
 productName: King-remind
 copyright: Copyright (c) 2025 kingyifan
 
-asar: false
+asar: true
+
+asarUnpack:
+  - "node_modules/sql.js/**/*"
+  - "node_modules/chinese-days/**/*"
 
 directories:
   buildResources: resources
@@ -23,6 +27,7 @@ extraResources:
 
 win:
   icon: resources/icon.png
+  sign: false
   target:
     - target: portable
       arch:
@@ -41,3 +46,16 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: King提醒助手
   artifactName: "King-remind-${version}-setup.exe"
+
+mac:
+  icon: resources/icon.png
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  category: public.app-category.productivity
