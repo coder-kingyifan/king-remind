@@ -5,7 +5,7 @@
 <h1 align="center">King 提醒助手</h1>
 
 <p align="center">
-  <b>功能丰富的桌面提醒应用，支持多渠道通知、AI 对话、农历提醒与外部 API 集成</b>
+  <b>功能丰富的桌面提醒应用，支持多渠道通知、AI 对话、技能商店、农历提醒与外部 API 集成</b>
 </p>
 
 <p align="center">
@@ -13,6 +13,7 @@
   <img src="https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white" alt="Vue" />
   <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Element%20Plus-2.9-409EFF?logo=element&logoColor=white" alt="Element Plus" />
+  <img src="https://img.shields.io/badge/Version-2.0.0-blue" alt="Version" />
   <img src="https://img.shields.io/badge/License-MIT-green" alt="License" />
 </p>
 
@@ -91,33 +92,44 @@
 内置 AI 助手，支持自然语言创建和管理提醒，无需手动填写表单。
 
 - **自然语言创建提醒** — "明天下午3点提醒我开会"、"每30分钟提醒我喝水"、"工作日每天早上9点站会"
+- **多会话管理** — 支持创建多个对话，独立上下文，历史记录持久化存储
 - **多轮对话** — 支持连续对话，上下文关联
 - **图片识别** — 发送图片内容，AI 识别后可创建相关提醒
+- **思维链展示** — 支持展示 AI 推理过程（DeepSeek-R1、qwq 等推理模型）
 - **提醒管理** — "查看我的提醒"、"删除第3个提醒"
 - **技能调用** — AI 可自动调用技能获取动态内容（如天气）并绑定到提醒
+- **联网搜索** — AI 对话可调用联网搜索技能，获取实时信息
 
 **支持的 AI 服务商：**
 
 | 服务商 | 说明 |
 |:-----|:-----|
-| OpenAI | GPT-4o、GPT-4o-mini 等 |
+| OpenAI | GPT-4o、GPT-4o-mini、o1-mini、o3-mini 等 |
 | DeepSeek | deepseek-chat、deepseek-reasoner |
-| 阿里百炼（通义千问） | qwen-plus、qwq-plus 等 |
+| 阿里百炼（通义千问） | qwen-plus、qwq-plus、qwen-coder-plus 等 |
 | Kimi（月之暗面） | moonshot-v1 系列 |
-| 智谱 GLM | glm-4 系列 |
-| Claude（Anthropic） | claude-sonnet、claude-haiku、claude-opus |
-| 字节豆包 | doubao 系列 |
-| 腾讯混元 | hunyuan 系列 |
-| 百度文心一言 | ernie 系列 |
-| 讯飞星火 | spark 系列 |
-| 零一万物（Yi） | yi-lightning 等 |
-| SiliconFlow（硅基流动） | Qwen、DeepSeek 等开源模型 |
-| Groq | llama、mixtral 等 |
+| 智谱 GLM | glm-4-flash、glm-4-plus、glm-z1-flash 等 |
+| Claude（Anthropic） | claude-sonnet-4、claude-haiku-4、claude-opus-4 |
+| 字节豆包 | doubao-pro、doubao-lite 系列 |
+| 腾讯混元 | hunyuan-lite、hunyuan-turbo 等 |
+| 百度文心一言 | ernie-4.0、ernie-3.5、ernie-speed 系列 |
+| 讯飞星火 | 4.0Ultra、generalv3.5 等 |
+| 零一万物（Yi） | yi-lightning、yi-large 等 |
+| SiliconFlow（硅基流动） | Qwen、DeepSeek、GLM 等开源模型 |
+| Groq | llama-3.3、mixtral 等 |
 | 小米 | MiMo |
-| Ollama（本地） | 本地部署任意模型 |
+| Ollama（本地） | 本地部署任意模型（qwen3、deepseek-r1、llama3 等） |
 | 自定义 | OpenAI / Anthropic 兼容接口 |
 
-联网搜索模型：Perplexity、Tavily、Jina、博查 AI、Exa
+**联网搜索服务商：**
+
+| 服务商 | 搜索协议 | 说明 |
+|:-----|:------|:-----|
+| Perplexity | OpenAI 兼容 | sonar、sonar-pro、sonar-reasoning 等 |
+| Tavily | Tavily 协议 | tavily-search、tavily-extract |
+| Jina | Jina 协议 | jina-search、jina-reader、grounding |
+| 博查 AI | 博查协议 | bocha-web-search、bocha-ai-search |
+| Exa | Exa 协议 | exa-search、exa-contents |
 
 ### 技能系统
 
@@ -128,13 +140,13 @@
 | 技能 | 说明 |
 |:-----|:-----|
 | 🌤️ 天气查询 | 实时天气信息 |
-| 💬 每日一言 | 励志名言 / 哲理金句 |
+| 💬 每日一言 | 励志名言 / 哲理金句 / 唯美句子 |
 | ⏳ 倒计时 | 日期倒计时计算 |
 | 💧 喝水提醒 | 按时间段推荐饮水量 |
 | 📜 诗词推荐 | 古典诗词赏析 |
-| 🏥 健康贴士 | 按时段健康建议 |
-| 🏃 运动推荐 | 运动动作推荐 |
-| 📖 每日英语 | 英语词汇学习 |
+| 🏥 健康贴士 | 按时段健康建议（早/午/晚） |
+| 🏃 运动推荐 | 室内/户外/轻量运动推荐 |
+| 📖 每日英语 | 英语词汇学习（含音标和例句） |
 | 😄 每日一笑 | 笑话 / 段子 |
 | ⭐ 星座运势 | 每日星座运势 |
 | 🌙 农历信息 | 农历日期展示 |
@@ -144,6 +156,15 @@
 - **API 调用** — 调用外部 API 获取数据
 - **AI 提示词** — 通过 AI 动态生成内容
 - **搜索总结** — 联网搜索 + AI 总结
+
+### 技能商店
+
+内置社区技能商店，一键浏览、安装和更新社区技能，无需手动配置。
+
+- **在线浏览** — 从 GitHub 社区仓库获取最新技能列表，支持分类筛选和关键词搜索
+- **一键安装** — 点击安装即可自动下载技能配置，保留用户自定义设置
+- **版本更新** — 自动检测已安装技能的版本差异，提示可更新的技能
+- **多源支持** — 支持自定义商店数据源地址
 
 ### 多渠道通知
 
@@ -171,6 +192,7 @@
 - 关闭窗口最小化到系统托盘
 - 可调节调度检查间隔（默认 60 秒）
 - 通知日志记录，支持查看与清理
+- **网络调试** — 主进程网络请求自动同步到 DevTools Network 面板，API Key 等敏感信息自动脱敏
 - **Headless 模式** — 无界面纯后台运行，支持终端 REPL 交互
 - **本地 HTTP API** — 供外部程序通过 REST 接口创建和管理提醒
 
@@ -464,17 +486,28 @@ king-remind/
 │   │   ├── scheduler.ts       # 提醒调度器（含农历 / 工作日判定）
 │   │   ├── ipc-handlers.ts    # IPC 通信处理
 │   │   ├── api-server.ts      # 本地 HTTP API 服务
-│   │   ├── llm.ts             # LLM 集成（多服务商 / 流式 / 工具调用）
-│   │   ├── db/                # 数据库层（SQLite CRUD / 迁移 / 加密）
+│   │   ├── llm.ts             # LLM 集成（多服务商 / 流式 / 工具调用 / 联网搜索）
+│   │   ├── skill-store.ts     # 技能商店（远程清单 / 安装 / 更新 / 卸载）
+│   │   ├── network-interceptor.ts  # 网络请求拦截器（DevTools 调试）
+│   │   ├── db/                # 数据库层
+│   │   │   ├── connection.ts  # SQLite 连接 / 加密
+│   │   │   ├── migrations.ts  # 数据库迁移（v1-v19）
+│   │   │   ├── reminders.ts   # 提醒 CRUD
+│   │   │   ├── skills.ts      # 技能 CRUD
+│   │   │   ├── skill-content.ts  # 技能内容数据（诗词/名言/英语等）
+│   │   │   ├── chat-history.ts   # AI 对话会话与消息
+│   │   │   ├── model-configs.ts  # 模型配置
+│   │   │   └── ...            # 其他数据表
 │   │   ├── notifications/     # 通知渠道（桌面 / 邮件 / TG / 企微 / Webhook）
 │   │   └── skills/            # 技能执行器
 │   └── preload/               # 预加载脚本（contextBridge）
 ├── src/
-│   ├── pages/                 # 页面：仪表盘 / 提醒 / AI对话 / 技能 / 通知 / 设置
+│   ├── pages/                 # 页面：AI 对话 / 仪表盘 / 提醒 / 技能 / 技能商店 / 通知 / 模型 / 设置
 │   ├── components/            # 布局组件 / 提醒表单 / 聊天 / 设置向导
 │   ├── stores/                # Pinia 状态管理
 │   ├── types/                 # TypeScript 类型定义
 │   ├── router/                # 路由配置
+│   ├── network-proxy.ts       # 渲染进程网络代理（DevTools 调试）
 │   └── assets/                # SCSS 样式 / 静态资源
 ├── resources/                 # 应用图标 / 提示音 / 截图
 ├── API.md                     # HTTP API 文档
