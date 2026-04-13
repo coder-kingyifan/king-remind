@@ -1,10 +1,7 @@
 <template>
   <div class="app-root">
-    <!-- 数据库解锁 -->
-    <UnlockDialog v-if="showUnlock" @unlocked="onUnlocked" />
-
     <!-- 首次启动向导 -->
-    <SetupWizard v-else-if="showSetup" @finish="onSetupFinish" />
+    <SetupWizard v-if="showSetup" @finish="onSetupFinish" />
 
     <!-- 主界面 -->
     <template v-else>
@@ -35,7 +32,6 @@ import {useSettingsStore} from '@/stores/settings'
 import {useSkillsStore} from '@/stores/skills'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import SetupWizard from '@/components/setup/SetupWizard.vue'
-import UnlockDialog from '@/components/setup/UnlockDialog.vue'
 
 const settingsStore = useSettingsStore()
 const skillsStore = useSkillsStore()
@@ -43,19 +39,9 @@ const showNotification = ref(false)
 const notificationData = ref({title: '', body: ''})
 let notifTimer: any = null
 
-const showUnlock = ref(false)
 const showSetup = ref(false)
 
 onMounted(async () => {
-  // Check if database is encrypted first
-  try {
-    const encrypted = await window.electronAPI.db.isEncrypted()
-    if (encrypted) {
-      showUnlock.value = true
-      return
-    }
-  } catch { /* ignore */ }
-
   await settingsStore.fetchSettings()
   settingsStore.initThemeListener()
 
@@ -67,10 +53,6 @@ onMounted(async () => {
 
   initApp()
 })
-
-function onUnlocked() {
-  window.electronAPI.app.restart()
-}
 
 async function onSetupFinish(data: {
   nickname: string;

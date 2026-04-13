@@ -80,18 +80,47 @@ export function isDatabaseEncrypted(): boolean {
 export function setEncryptionPassword(password: string | null): void {
     if (password) {
         encryptionPassword = password
-        // Save password hash for verification on next launch
-        writeFileSync(getKeyFilePath(), hashPassword(password))
+        // 存储密钥到 remind.key 文件（base64 编码）
+        // 启动时自动读取，无需用户输入密码
+        writeFileSync(getKeyFilePath(), Buffer.from(password, 'utf-8').toString('base64'))
     } else {
         encryptionPassword = ''
+    }
+}
+
+/**
+ * 自动从 remind.key 文件加载密钥并解密数据库
+ * 返回 true 表示成功加载或不需要加密，false 表示加载失败
+ */
+export function loadEncryptionKey(): boolean {
+    if (!isDatabaseEncrypted()) return true
+
+    const keyFilePath = getKeyFilePath()
+    if (!existsSync(keyFilePath)) {
+        console.error('[数据库] 数据库已加密，但密钥文件不存在')
+        return false
+    }
+
+    try {
+        const encoded = readFileSync(keyFilePath, 'utf-8').trim()
+        encryptionPassword = Buffer.from(encoded, 'base64').toString('utf-8')
+        return true
+    } catch {
+        console.error('[数据库] 读取密钥文件失败')
+        return false
     }
 }
 
 export function verifyEncryptionPassword(password: string): boolean {
     const keyFilePath = getKeyFilePath()
     if (!existsSync(keyFilePath)) return false
-    const stored = readFileSync(keyFilePath, 'utf-8').trim()
-    return verifyPasswordHash(password, stored)
+    try {
+        const encoded = readFileSync(keyFilePath, 'utf-8').trim()
+        const storedPassword = Buffer.from(encoded, 'base64').toString('utf-8')
+        return storedPassword === password
+    } catch {
+        return false
+    }
 }
 
 /** Remove encryption: decrypt and save as plain .db, remove .enc and .key files */

@@ -1,12 +1,11 @@
-import {app, BrowserWindow, ipcMain, shell} from 'electron'
+import {app, BrowserWindow, shell} from 'electron'
 import {join} from 'path'
 import {is} from '@electron-toolkit/utils'
 import {
     closeDatabase,
     initDatabase,
     isDatabaseEncrypted,
-    setEncryptionPassword,
-    verifyEncryptionPassword
+    loadEncryptionKey
 } from './db/connection'
 import {runMigrations} from './db/migrations'
 import {createTray, destroyTray} from './tray'
@@ -17,6 +16,7 @@ import {settingsDb} from './db/settings'
 import {closeAllNotifications} from './notifications/notification-window'
 import {startApiServer, stopApiServer} from './api-server'
 import {seedBuiltinSkills} from './db/skills'
+import {continueHeadlessInit} from './repl'
 import {execSync} from 'child_process'
 
 // Windows 控制台中文乱码修复
@@ -134,31 +134,6 @@ async function continueAppInit(win: BrowserWindow | null): Promise<void> {
     console.log('[主进程] 启动完成')
 }
 
-/** Register IPC handler for database unlock during startup */
-function registerUnlockIpc(win: BrowserWindow): void {
-    // Register db:is-encrypted so renderer can check before trying to load settings
-    ipcMain.handle('db:is-encrypted', () => {
-        return isDatabaseEncrypted()
-    })
-
-    ipcMain.handle('db:unlock', async (_event, password: string) => {
-        const valid = verifyEncryptionPassword(password)
-        if (!valid) {
-            return {success: false, error: '密码错误'}
-        }
-
-        setEncryptionPassword(password)
-
-        try {
-            await initDatabase()
-            await continueAppInit(win)
-            return {success: true}
-        } catch (e: any) {
-            return {success: false, error: e.message}
-        }
-    })
-}
-
 // 确保单实例
 const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {
@@ -176,28 +151,28 @@ if (!gotTheLock) {
         app.setAppUserModelId('com.kingyifan.king-remind')
 
         try {
-            // Check if database is encrypted before initializing
-            const encrypted = isDatabaseEncrypted()
-            console.log('[主进程] 数据库加密状态:', encrypted)
-
-            if (encrypted) {
-                // Encrypted DB: need password from user before init
-                console.log('[主进程] 数据库已加密，需要输入密码')
-                const win = createWindow()
-                registerUnlockIpc(win)
-            } else {
-                // Normal init
-                console.log('[主进程] 正在初始化数据库...')
-                await initDatabase()
-                console.log('[主进程] 数据库初始化成功')
-
-                let win: BrowserWindow | null = null
-                if (!isHeadless) {
-                    win = createWindow()
-                } else {
-                    console.log('[主进程] headless 模式，跳过创建主窗口')
+            // 自动加载加密密钥（从 remind.key 文件读取，无需用户输入）
+            if (isDatabaseEncrypted()) {
+                console.log('[主进程] 检测到加密数据库，正在自动加载密钥...')
+                const loaded = loadEncryptionKey()
+                if (!loaded) {
+                    console.error('[主进程] 密钥文件加载失败，无法启动')
+                    app.quit()
+                    return
                 }
+                console.log('[主进程] 密钥加载成功')
+            }
 
+            // 初始化数据库
+            console.log('[主进程] 正在初始化数据库...')
+            await initDatabase()
+            console.log('[主进程] 数据库初始化成功')
+
+            if (isHeadless) {
+                console.log('[主进程] headless 模式，启动 REPL...')
+                await continueHeadlessInit()
+            } else {
+                const win = createWindow()
                 await continueAppInit(win)
             }
         } catch (error: any) {

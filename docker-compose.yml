@@ -3,6 +3,8 @@ services:
     build: .
     container_name: king-remind
     restart: unless-stopped
+    stdin_open: true
+    tty: true
     ports:
       - "${API_PORT:-33333}:33333"
     volumes:

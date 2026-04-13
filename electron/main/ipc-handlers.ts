@@ -16,7 +16,6 @@ import {startApiServer, stopApiServer} from './api-server'
 import {ReminderScheduler} from './scheduler'
 import {
     isDatabaseEncrypted,
-    verifyEncryptionPassword,
     setEncryptionPassword,
     removeEncryption as removeDbEncryption,
     saveDatabase
@@ -522,10 +521,6 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
     // ========== 数据库加密 ==========
     safeHandle('db:is-encrypted', () => {
         return isDatabaseEncrypted()
-    })
-
-    safeHandle('db:verify-password', (_event, password: string) => {
-        return verifyEncryptionPassword(password)
     })
 
     safeHandle('db:set-encryption', (_event, password: string) => {
