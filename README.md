@@ -5,7 +5,7 @@
 <h1 align="center">King 提醒助手</h1>
 
 <p align="center">
-  <b>功能丰富的 Windows 桌面提醒应用，支持多渠道通知、农历提醒与外部 API 集成</b>
+  <b>功能丰富的桌面提醒应用，支持多渠道通知、AI 对话、农历提醒与外部 API 集成</b>
 </p>
 
 <p align="center">
@@ -86,17 +86,83 @@
 - **自定义图标 / 颜色** — 每条提醒可选独立 emoji 图标和颜色标识
 - **托盘暂停** — 通过系统托盘一键暂停 / 恢复所有提醒
 
+### AI 智能对话
+
+内置 AI 助手，支持自然语言创建和管理提醒，无需手动填写表单。
+
+- **自然语言创建提醒** — "明天下午3点提醒我开会"、"每30分钟提醒我喝水"、"工作日每天早上9点站会"
+- **多轮对话** — 支持连续对话，上下文关联
+- **图片识别** — 发送图片内容，AI 识别后可创建相关提醒
+- **提醒管理** — "查看我的提醒"、"删除第3个提醒"
+- **技能调用** — AI 可自动调用技能获取动态内容（如天气）并绑定到提醒
+
+**支持的 AI 服务商：**
+
+| 服务商 | 说明 |
+|:-----|:-----|
+| OpenAI | GPT-4o、GPT-4o-mini 等 |
+| DeepSeek | deepseek-chat、deepseek-reasoner |
+| 阿里百炼（通义千问） | qwen-plus、qwq-plus 等 |
+| Kimi（月之暗面） | moonshot-v1 系列 |
+| 智谱 GLM | glm-4 系列 |
+| Claude（Anthropic） | claude-sonnet、claude-haiku、claude-opus |
+| 字节豆包 | doubao 系列 |
+| 腾讯混元 | hunyuan 系列 |
+| 百度文心一言 | ernie 系列 |
+| 讯飞星火 | spark 系列 |
+| 零一万物（Yi） | yi-lightning 等 |
+| SiliconFlow（硅基流动） | Qwen、DeepSeek 等开源模型 |
+| Groq | llama、mixtral 等 |
+| 小米 | MiMo |
+| Ollama（本地） | 本地部署任意模型 |
+| 自定义 | OpenAI / Anthropic 兼容接口 |
+
+联网搜索模型：Perplexity、Tavily、Jina、博查 AI、Exa
+
+### 技能系统
+
+提醒可绑定技能，每次触发时自动执行技能获取动态内容。
+
+**内置技能：**
+
+| 技能 | 说明 |
+|:-----|:-----|
+| 🌤️ 天气查询 | 实时天气信息 |
+| 💬 每日一言 | 励志名言 / 哲理金句 |
+| ⏳ 倒计时 | 日期倒计时计算 |
+| 💧 喝水提醒 | 按时间段推荐饮水量 |
+| 📜 诗词推荐 | 古典诗词赏析 |
+| 🏥 健康贴士 | 按时段健康建议 |
+| 🏃 运动推荐 | 运动动作推荐 |
+| 📖 每日英语 | 英语词汇学习 |
+| 😄 每日一笑 | 笑话 / 段子 |
+| ⭐ 星座运势 | 每日星座运势 |
+| 🌙 农历信息 | 农历日期展示 |
+| 📋 工作汇报 | 工作总结提醒 |
+
+**自定义技能类型：**
+- **API 调用** — 调用外部 API 获取数据
+- **AI 提示词** — 通过 AI 动态生成内容
+- **搜索总结** — 联网搜索 + AI 总结
+
 ### 多渠道通知
 
 每个提醒可同时启用多个通知渠道，每个渠道均支持独立配置和发送测试。
 
-| 渠道           | 说明                                                                                          |
-|:-------------|:--------------------------------------------------------------------------------------------|
-| **桌面通知**     | 自定义浮窗（最多同时 3 条），支持提示音、自动消失、进度条动画                                                            |
-| **邮件**       | SMTP 发送，支持 SSL/TLS，多收件人                                                                     |
-| **Telegram** | Bot API 推送，支持多 Chat ID，支持 HTTP 代理                                                           |
-| **企业微信**     | 应用消息推送，支持 `@all` 或指定用户，自动刷新 access_token                                                    |
-| **Webhook**  | 自定义 HTTP 请求（GET/POST/PUT/PATCH），支持自定义 Header 和模板变量 `{{title}}` `{{body}}` `{{reminder_id}}` |
+| 渠道 | 说明 |
+|:-----|:-----|
+| **桌面通知** | 自定义浮窗（最多同时 3 条），支持提示音、自动消失、进度条动画 |
+| **邮件** | SMTP 发送，支持 SSL/TLS，多收件人 |
+| **Telegram** | Bot API 推送，支持多 Chat ID，支持 HTTP 代理 |
+| **企业微信** | 应用消息推送，支持 `@all` 或指定用户，自动刷新 access_token |
+| **企微群机器人** | Webhook 群消息推送 |
+| **Webhook** | 自定义 HTTP 请求（GET/POST/PUT/PATCH），支持自定义 Header 和模板变量 |
+
+### 数据安全
+
+- **AES-256-GCM 加密** — 数据库文件可选加密，密钥独立存储
+- **密钥分离** — 加密数据库（`remind.db.enc`）与密钥文件（`remind.key`）分开存放，拿到数据库文件无法直接读取
+- **透明加解密** — 应用启动自动加载密钥，无需手动输入密码
 
 ### 系统功能
 
@@ -105,26 +171,26 @@
 - 关闭窗口最小化到系统托盘
 - 可调节调度检查间隔（默认 60 秒）
 - 通知日志记录，支持查看与清理
-- **Headless 模式** — 无界面纯后台运行，仅保留托盘图标，适合服务器或静默启动
-- **本地 HTTP API** — 供外部程序（脚本、AI Agent 等）通过 REST 接口创建和管理提醒
+- **Headless 模式** — 无界面纯后台运行，支持终端 REPL 交互
+- **本地 HTTP API** — 供外部程序通过 REST 接口创建和管理提醒
 
 <br />
 
 ## 技术栈
 
-| 分类   | 技术                     |
-|:-----|:-----------------------|
-| 桌面框架 | Electron 33            |
-| 前端   | Vue 3 + TypeScript     |
-| 构建   | electron-vite + Vite   |
-| UI   | Element Plus           |
-| 状态管理 | Pinia                  |
-| 数据库  | sql.js（SQLite）         |
-| 节假日  | chinese-days           |
-| 邮件   | Nodemailer             |
-| HTTP | Axios                  |
-| 样式   | SCSS                   |
-| 打包   | electron-builder（NSIS） |
+| 分类 | 技术 |
+|:-----|:-----|
+| 桌面框架 | Electron 33 |
+| 前端 | Vue 3 + TypeScript |
+| 构建 | electron-vite + Vite |
+| UI | Element Plus |
+| 状态管理 | Pinia |
+| 数据库 | sql.js（SQLite），支持 AES-256-GCM 加密 |
+| 节假日 | chinese-days |
+| 邮件 | Nodemailer |
+| HTTP | Axios |
+| 样式 | SCSS |
+| 打包 | electron-builder |
 
 <br />
 
@@ -142,16 +208,14 @@
 git clone https://github.com/coder-kingyifan/king-remind.git
 cd king-remind
 
-# 安装依赖
-可以设置一个国内镜像源：
+# 安装依赖（建议设置国内镜像源）
 npm config set registry https://registry.npmmirror.com
-进行安装
 npm install
 
 # 启动开发模式（带界面）
 npm run dev
 
-# 启动 Headless 模式（仅后台服务）
+# 启动 Headless 模式（终端 REPL 交互）
 npm run dev:headless
 ```
 
@@ -159,19 +223,63 @@ npm run dev:headless
 
 ### 构建打包
 
+**Windows：**
+
 ```bash
 npm run build       # 编译前端和主进程
-npm run pack        # 打包 Windows 安装程序 (NSIS)
+npm run pack        # 打包 Windows 安装程序 (NSIS) + 便携版
 npm run pack:dir    # 打包为免安装目录
 ```
 
-产物输出到 `dist/` 目录。
+产物输出到 `dist/` 目录：
+- `King-remind-{version}-setup.exe` — NSIS 安装程序
+- `King-remind-{version}-portable.exe` — 免安装便携版
+
+**macOS：**
+
+```bash
+# 编译
+npm run build
+
+# 打包 Mac 应用（需要在 macOS 上操作）
+npx electron-builder --mac --config
+```
+
+产物：
+- `.dmg` — macOS 磁盘镜像（标准分发格式）
+- `.zip` — 压缩包
+
+> **注意：** macOS 打包需要在 macOS 系统上操作。如需签名和公证，需配置 Apple Developer 证书。详见 [electron-builder macOS 文档](https://www.electron.build/configuration/mac)。
+
+如需自定义 macOS 打包配置，在 `electron-builder.yml` 中添加：
+
+```yaml
+mac:
+  icon: resources/icon.png
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  category: public.app-category.productivity
+```
+
+**Linux：**
+
+```bash
+npm run build
+npx electron-builder --linux --config
+```
 
 <br />
 
 ## Docker 部署
 
-适用于 Linux 服务器、NAS、云主机等无图形界面环境，以 Headless 模式运行后台服务（调度器 + HTTP API）。
+适用于 Linux 服务器、NAS、云主机等无图形界面环境。以 Headless 模式运行，提供终端 REPL 交互和 HTTP API 服务。
 
 ### 环境要求
 
@@ -185,9 +293,53 @@ npm run pack:dir    # 打包为免安装目录
 git clone https://github.com/coder-kingyifan/king-remind.git
 cd king-remind
 
-# 构建并启动（后台运行）
+# 构建并启动（交互模式，进入终端 REPL）
+docker compose run --rm king-remind
+
+# 后台运行（仅 API 服务）
 docker compose up -d --build
 ```
+
+### 终端 REPL 交互
+
+Docker 交互模式下，提供完整的终端命令行界面：
+
+```
+================================================
+  King 提醒助手 - 终端模式
+================================================
+
+  可用命令:
+    /help          显示帮助
+    /config        配置 AI 模型
+    /chat          AI 对话模式
+    /reminders     管理提醒
+    /models        管理模型配置
+    /status        系统状态
+    /setup         初始设置
+    /quit          退出
+
+  提示: 直接输入文字即可与 AI 对话
+================================================
+```
+
+| 命令 | 说明 |
+|:-----|:-----|
+| `/config` | 交互式配置 AI 模型（选服务商 → API Key → 模型） |
+| `/config show` | 查看当前模型配置 |
+| `/config test` | 测试模型连接 |
+| `/chat` | 进入 AI 聊天模式（流式输出） |
+| `/chat <消息>` | 发送单条消息 |
+| `/models` | 列出所有模型配置 |
+| `/models default <id>` | 设置默认模型 |
+| `/reminders` | 列出提醒 |
+| `/reminders toggle <id>` | 启用/禁用提醒 |
+| `/reminders delete <id>` | 删除提醒 |
+| `/status` | 系统状态 |
+| `/setup` | 初始设置（昵称、API 端口等） |
+| `/quit` | 退出应用 |
+
+> 直接输入文字（不带 `/` 前缀）自动发送给 AI 对话。
 
 ### 验证服务
 
@@ -231,26 +383,34 @@ docker cp king-remind:/app/data/remind.db ./remind.db.bak
 
 ### 环境变量
 
-| 变量         | 默认值         | 说明                               |
-|:-----------|:------------|:---------------------------------|
-| `API_HOST` | `127.0.0.1` | API 监听地址，Docker 中自动设为 `0.0.0.0`  |
-| `API_PORT` | `33333`     | 宿主机映射端口                          |
-| `DB_DIR`   | 当前目录        | 数据库文件目录，Docker 中自动设为 `/app/data` |
+| 变量 | 默认值 | 说明 |
+|:-----|:------|:-----|
+| `API_HOST` | `127.0.0.1` | API 监听地址，Docker 中自动设为 `0.0.0.0` |
+| `API_PORT` | `33333` | 宿主机映射端口 |
+| `DB_DIR` | 当前目录 | 数据库文件目录，Docker 中自动设为 `/app/data` |
 
 <br />
 
 ## Headless 模式
 
-不创建主窗口，仅运行后台服务（数据库、调度器、API Server）并保留系统托盘图标（仅显示退出菜单）。
+不创建主窗口，仅运行后台服务（数据库、调度器、API Server）并提供终端 REPL 交互。
 
 适用场景：
 
+- 服务器 / Docker 无图形界面环境
 - 开机静默启动，不弹出界面
-- 无显示器环境运行
 - 仅通过 HTTP API 管理提醒
+- 通过终端 REPL 交互配置和对话
 
 ```bash
-king提醒助手.exe --headless
+# 桌面应用
+King提醒助手.exe --headless
+
+# Docker 交互模式
+docker compose run --rm king-remind
+
+# Docker 后台模式（无 REPL，仅 API）
+docker compose up -d
 ```
 
 <br />
@@ -273,8 +433,16 @@ curl -X POST http://127.0.0.1:33333/api/reminders \
   -H "Content-Type: application/json" \
   -d '{"title":"活动一下","remind_type":"interval","start_time":"2025-06-01T09:00:00","interval_value":30,"interval_unit":"minutes","workday_only":true,"active_hours_start":"09:00","active_hours_end":"18:00","channels":["desktop","webhook"]}'
 
+# AI 对话
+curl -X POST http://127.0.0.1:33333/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"明天下午3点提醒我开会"}'
+
 # 获取所有激活的提醒
 curl http://127.0.0.1:33333/api/reminders?is_active=1
+
+# 获取模型配置列表
+curl http://127.0.0.1:33333/api/models
 
 # 删除提醒
 curl -X DELETE http://127.0.0.1:33333/api/reminders/42
@@ -291,22 +459,27 @@ king-remind/
 ├── electron/
 │   ├── main/                  # 主进程
 │   │   ├── index.ts           # 入口，窗口 / 托盘 / 调度器初始化
+│   │   ├── repl.ts            # 终端 REPL 交互模式（Docker/Headless）
 │   │   ├── tray.ts            # 系统托盘
 │   │   ├── scheduler.ts       # 提醒调度器（含农历 / 工作日判定）
 │   │   ├── ipc-handlers.ts    # IPC 通信处理
 │   │   ├── api-server.ts      # 本地 HTTP API 服务
-│   │   ├── db/                # 数据库层（SQLite CRUD / 迁移）
-│   │   └── notifications/     # 通知渠道（桌面 / 邮件 / TG / 企微 / Webhook）
+│   │   ├── llm.ts             # LLM 集成（多服务商 / 流式 / 工具调用）
+│   │   ├── db/                # 数据库层（SQLite CRUD / 迁移 / 加密）
+│   │   ├── notifications/     # 通知渠道（桌面 / 邮件 / TG / 企微 / Webhook）
+│   │   └── skills/            # 技能执行器
 │   └── preload/               # 预加载脚本（contextBridge）
 ├── src/
-│   ├── pages/                 # 页面：仪表盘 / 提醒管理 / 通知配置 / 系统设置
-│   ├── components/            # 布局组件 / 提醒表单
+│   ├── pages/                 # 页面：仪表盘 / 提醒 / AI对话 / 技能 / 通知 / 设置
+│   ├── components/            # 布局组件 / 提醒表单 / 聊天 / 设置向导
 │   ├── stores/                # Pinia 状态管理
 │   ├── types/                 # TypeScript 类型定义
 │   ├── router/                # 路由配置
 │   └── assets/                # SCSS 样式 / 静态资源
-├── resources/                 # 应用图标 / 提示音
+├── resources/                 # 应用图标 / 提示音 / 截图
 ├── API.md                     # HTTP API 文档
+├── Dockerfile                 # Docker 构建文件
+├── docker-compose.yml         # Docker Compose 配置
 ├── electron.vite.config.ts
 ├── electron-builder.yml
 └── package.json
@@ -334,11 +507,11 @@ king-remind/
 
 在「通知渠道 → 邮件」中填写 SMTP 服务器信息：
 
-| 邮箱     | SMTP 服务器       | 端口  | SSL |
-|:-------|:---------------|:----|:----|
-| QQ 邮箱  | smtp.qq.com    | 465 | 是   |
-| 163 邮箱 | smtp.163.com   | 465 | 是   |
-| Gmail  | smtp.gmail.com | 587 | 否   |
+| 邮箱 | SMTP 服务器 | 端口 | SSL |
+|:-----|:----------|:-----|:-----|
+| QQ 邮箱 | smtp.qq.com | 465 | 是 |
+| 163 邮箱 | smtp.163.com | 465 | 是 |
+| Gmail | smtp.gmail.com | 587 | 否 |
 
 > 密码字段填写邮箱的**授权码**（非登录密码）。收件人支持多个地址，逗号分隔。
 
