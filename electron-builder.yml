@@ -1,8 +1,10 @@
-appId: com.kingyifan.king-remind
+﻿appId: com.kingyifan.king-remind
 productName: king提醒助手
 copyright: Copyright (c) 2026 kingyifan
 
 asar: true
+
+afterPack: scripts/after-pack-rcedit.cjs
 
 asarUnpack:
   - "node_modules/sql.js/**/*"
@@ -28,6 +30,7 @@ extraResources:
 win:
   icon: resources/favicon.ico
   executableName: king-remind
+  signAndEditExecutable: false
   target:
     - target: portable
       arch:
@@ -59,3 +62,4 @@ mac:
         - x64
         - arm64
   category: public.app-category.productivity
+
