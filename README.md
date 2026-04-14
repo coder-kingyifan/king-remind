@@ -22,21 +22,31 @@
 ## 界面预览
 
 <table>
-  <tr>
-    <td><img src="./resources/readme/1.jpg" width="280" alt="仪表盘" /></td>
-    <td><img src="./resources/readme/2.jpg" width="280" alt="提醒管理" /></td>
-    <td><img src="./resources/readme/3.jpg" width="280" alt="创建提醒" /></td>
-  </tr>
-  <tr>
-    <td><img src="./resources/readme/4.jpg" width="280" alt="通知渠道" /></td>
-    <td><img src="./resources/readme/5.jpg" width="280" alt="渠道配置" /></td>
-    <td><img src="./resources/readme/6.jpg" width="280" alt="系统设置" /></td>
-  </tr>
-  <tr>
-    <td><img src="./resources/readme/7.jpg" width="280" alt="暗色主题" /></td>
-    <td><img src="./resources/readme/8.jpg" width="280" alt="桌面通知" /></td>
-    <td><img src="./resources/readme/9.jpg" width="280" alt="托盘菜单" /></td>
-  </tr>
+    <tr>
+        <td><img src="./docs/readme/1.jpg" width="280" alt="欢迎页"/></td>
+        <td><img src="./docs/readme/2.jpg" width="280" alt="数据库密码设置"/></td>
+        <td><img src="./docs/readme/3.jpg" width="280" alt="Api接口设置"/></td>
+    </tr>
+    <tr>
+        <td><img src="./docs/readme/4.jpg" width="280" alt="欢迎页"/></td>
+        <td><img src="./docs/readme/5.jpg" width="280" alt="ai对话页（黑）"/></td>
+        <td><img src="./docs/readme/6.jpg" width="280" alt="ai对话页（白）"/></td>
+    </tr>
+    <tr>
+        <td><img src="./docs/readme/7.jpg" width="280" alt="数据概览"/></td>
+        <td><img src="./docs/readme/8.jpg" width="280" alt="提醒管理"/></td>
+        <td><img src="./docs/readme/9.jpg" width="280" alt="通知渠道"/></td>
+    </tr>
+    <tr>
+        <td><img src="./docs/readme/10.jpg" width="280" alt="模型配置"/></td>
+        <td><img src="./docs/readme/11.jpg" width="280" alt="技能中心"/></td>
+        <td><img src="./docs/readme/12.jpg" width="280" alt="技能商店"/></td>
+    </tr>
+    <tr>
+        <td><img src="./docs/readme/13.jpg" width="280" alt="系统设置"/></td>
+        <td><img src="./docs/readme/14.jpg" width="280" alt="系统设置"/></td>
+        <td><img src="./docs/readme/15.jpg" width="280" alt="对话示例"/></td>
+    </tr>
 </table>
 
 <br />
@@ -102,34 +112,34 @@
 
 **支持的 AI 服务商：**
 
-| 服务商 | 说明 |
-|:-----|:-----|
-| OpenAI | GPT-4o、GPT-4o-mini、o1-mini、o3-mini 等 |
-| DeepSeek | deepseek-chat、deepseek-reasoner |
-| 阿里百炼（通义千问） | qwen-plus、qwq-plus、qwen-coder-plus 等 |
-| Kimi（月之暗面） | moonshot-v1 系列 |
-| 智谱 GLM | glm-4-flash、glm-4-plus、glm-z1-flash 等 |
+| 服务商               | 说明                                           |
+|:------------------|:---------------------------------------------|
+| OpenAI            | GPT-4o、GPT-4o-mini、o1-mini、o3-mini 等         |
+| DeepSeek          | deepseek-chat、deepseek-reasoner              |
+| 阿里百炼（通义千问）        | qwen-plus、qwq-plus、qwen-coder-plus 等         |
+| Kimi（月之暗面）        | moonshot-v1 系列                               |
+| 智谱 GLM            | glm-4-flash、glm-4-plus、glm-z1-flash 等        |
 | Claude（Anthropic） | claude-sonnet-4、claude-haiku-4、claude-opus-4 |
-| 字节豆包 | doubao-pro、doubao-lite 系列 |
-| 腾讯混元 | hunyuan-lite、hunyuan-turbo 等 |
-| 百度文心一言 | ernie-4.0、ernie-3.5、ernie-speed 系列 |
-| 讯飞星火 | 4.0Ultra、generalv3.5 等 |
-| 零一万物（Yi） | yi-lightning、yi-large 等 |
-| SiliconFlow（硅基流动） | Qwen、DeepSeek、GLM 等开源模型 |
-| Groq | llama-3.3、mixtral 等 |
-| 小米 | MiMo |
-| Ollama（本地） | 本地部署任意模型（qwen3、deepseek-r1、llama3 等） |
-| 自定义 | OpenAI / Anthropic 兼容接口 |
+| 字节豆包              | doubao-pro、doubao-lite 系列                    |
+| 腾讯混元              | hunyuan-lite、hunyuan-turbo 等                 |
+| 百度文心一言            | ernie-4.0、ernie-3.5、ernie-speed 系列           |
+| 讯飞星火              | 4.0Ultra、generalv3.5 等                       |
+| 零一万物（Yi）          | yi-lightning、yi-large 等                      |
+| SiliconFlow（硅基流动） | Qwen、DeepSeek、GLM 等开源模型                      |
+| Groq              | llama-3.3、mixtral 等                          |
+| 小米                | MiMo                                         |
+| Ollama（本地）        | 本地部署任意模型（qwen3、deepseek-r1、llama3 等）         |
+| 自定义               | OpenAI / Anthropic 兼容接口                      |
 
 **联网搜索服务商：**
 
-| 服务商 | 搜索协议 | 说明 |
-|:-----|:------|:-----|
+| 服务商        | 搜索协议      | 说明                                |
+|:-----------|:----------|:----------------------------------|
 | Perplexity | OpenAI 兼容 | sonar、sonar-pro、sonar-reasoning 等 |
-| Tavily | Tavily 协议 | tavily-search、tavily-extract |
-| Jina | Jina 协议 | jina-search、jina-reader、grounding |
-| 博查 AI | 博查协议 | bocha-web-search、bocha-ai-search |
-| Exa | Exa 协议 | exa-search、exa-contents |
+| Tavily     | Tavily 协议 | tavily-search、tavily-extract      |
+| Jina       | Jina 协议   | jina-search、jina-reader、grounding |
+| 博查 AI      | 博查协议      | bocha-web-search、bocha-ai-search  |
+| Exa        | Exa 协议    | exa-search、exa-contents           |
 
 ### 技能系统
 
@@ -137,22 +147,23 @@
 
 **内置技能：**
 
-| 技能 | 说明 |
-|:-----|:-----|
-| 🌤️ 天气查询 | 实时天气信息 |
-| 💬 每日一言 | 励志名言 / 哲理金句 / 唯美句子 |
-| ⏳ 倒计时 | 日期倒计时计算 |
-| 💧 喝水提醒 | 按时间段推荐饮水量 |
-| 📜 诗词推荐 | 古典诗词赏析 |
-| 🏥 健康贴士 | 按时段健康建议（早/午/晚） |
-| 🏃 运动推荐 | 室内/户外/轻量运动推荐 |
-| 📖 每日英语 | 英语词汇学习（含音标和例句） |
-| 😄 每日一笑 | 笑话 / 段子 |
-| ⭐ 星座运势 | 每日星座运势 |
-| 🌙 农历信息 | 农历日期展示 |
-| 📋 工作汇报 | 工作总结提醒 |
+| 技能       | 说明                 |
+|:---------|:-------------------|
+| 🌤️ 天气查询 | 实时天气信息             |
+| 💬 每日一言  | 励志名言 / 哲理金句 / 唯美句子 |
+| ⏳ 倒计时    | 日期倒计时计算            |
+| 💧 喝水提醒  | 按时间段推荐饮水量          |
+| 📜 诗词推荐  | 古典诗词赏析             |
+| 🏥 健康贴士  | 按时段健康建议（早/午/晚）     |
+| 🏃 运动推荐  | 室内/户外/轻量运动推荐       |
+| 📖 每日英语  | 英语词汇学习（含音标和例句）     |
+| 😄 每日一笑  | 笑话 / 段子            |
+| ⭐ 星座运势   | 每日星座运势             |
+| 🌙 农历信息  | 农历日期展示             |
+| 📋 工作汇报  | 工作总结提醒             |
 
 **自定义技能类型：**
+
 - **API 调用** — 调用外部 API 获取数据
 - **AI 提示词** — 通过 AI 动态生成内容
 - **搜索总结** — 联网搜索 + AI 总结
@@ -169,14 +180,14 @@
 
 每个提醒可同时启用多个通知渠道，每个渠道均支持独立配置和发送测试。
 
-| 渠道 | 说明 |
-|:-----|:-----|
-| **桌面通知** | 自定义浮窗（最多同时 3 条），支持提示音、自动消失、进度条动画 |
-| **邮件** | SMTP 发送，支持 SSL/TLS，多收件人 |
-| **Telegram** | Bot API 推送，支持多 Chat ID，支持 HTTP 代理 |
-| **企业微信** | 应用消息推送，支持 `@all` 或指定用户，自动刷新 access_token |
-| **企微群机器人** | Webhook 群消息推送 |
-| **Webhook** | 自定义 HTTP 请求（GET/POST/PUT/PATCH），支持自定义 Header 和模板变量 |
+| 渠道           | 说明                                                 |
+|:-------------|:---------------------------------------------------|
+| **桌面通知**     | 自定义浮窗（最多同时 3 条），支持提示音、自动消失、进度条动画                   |
+| **邮件**       | SMTP 发送，支持 SSL/TLS，多收件人                            |
+| **Telegram** | Bot API 推送，支持多 Chat ID，支持 HTTP 代理                  |
+| **企业微信**     | 应用消息推送，支持 `@all` 或指定用户，自动刷新 access_token           |
+| **企微群机器人**   | Webhook 群消息推送                                      |
+| **Webhook**  | 自定义 HTTP 请求（GET/POST/PUT/PATCH），支持自定义 Header 和模板变量 |
 
 ### 数据安全
 
@@ -199,19 +210,19 @@
 
 ## 技术栈
 
-| 分类 | 技术 |
-|:-----|:-----|
-| 桌面框架 | Electron 33 |
-| 前端 | Vue 3 + TypeScript |
-| 构建 | electron-vite + Vite |
-| UI | Element Plus |
-| 状态管理 | Pinia |
-| 数据库 | sql.js（SQLite），支持 AES-256-GCM 加密 |
-| 节假日 | chinese-days |
-| 邮件 | Nodemailer |
-| HTTP | Axios |
-| 样式 | SCSS |
-| 打包 | electron-builder |
+| 分类   | 技术                               |
+|:-----|:---------------------------------|
+| 桌面框架 | Electron 33                      |
+| 前端   | Vue 3 + TypeScript               |
+| 构建   | electron-vite + Vite             |
+| UI   | Element Plus                     |
+| 状态管理 | Pinia                            |
+| 数据库  | sql.js（SQLite），支持 AES-256-GCM 加密 |
+| 节假日  | chinese-days                     |
+| 邮件   | Nodemailer                       |
+| HTTP | Axios                            |
+| 样式   | SCSS                             |
+| 打包   | electron-builder                 |
 
 <br />
 
@@ -256,6 +267,7 @@ npm run pack:dir    # 打包为免安装目录
 ```
 
 产物输出到 `dist/` 目录：
+
 - `king-remind-{version}-setup.exe` — NSIS 安装程序
 - `king-remind-{version}-portable.exe` — 免安装便携版
 
@@ -270,10 +282,12 @@ npx electron-builder --mac --config
 ```
 
 产物：
+
 - `.dmg` — macOS 磁盘镜像（标准分发格式）
 - `.zip` — 压缩包
 
-> **注意：** macOS 打包需要在 macOS 系统上操作。如需签名和公证，需配置 Apple Developer 证书。详见 [electron-builder macOS 文档](https://www.electron.build/mac)。
+> **注意：** macOS 打包需要在 macOS 系统上操作。如需签名和公证，需配置 Apple Developer
+> 证书。详见 [electron-builder macOS 文档](https://www.electron.build/mac)。
 
 如需自定义 macOS 打包配置，在 `electron-builder.yml` 中添加：
 
@@ -324,7 +338,8 @@ docker compose run --rm king-remind
 docker compose up -d --build
 ```
 
-> **注意：** Docker 构建使用 Node.js 22 镜像，`package.json` 中的平台特定依赖（rollup）通过 `optionalDependencies` 自动适配。Windows 生成的 `package-lock.json` 不会复制到容器中，由 Docker 构建时重新解析。
+> **注意：** Docker 构建使用 Node.js 22 镜像，`package.json` 中的平台特定依赖（rollup）通过 `optionalDependencies`
+> 自动适配。Windows 生成的 `package-lock.json` 不会复制到容器中，由 Docker 构建时重新解析。
 
 ### 终端 REPL 交互
 
@@ -349,21 +364,21 @@ Docker 交互模式下，提供完整的终端命令行界面：
 ================================================
 ```
 
-| 命令 | 说明 |
-|:-----|:-----|
-| `/config` | 交互式配置 AI 模型（选服务商 → API Key → 模型） |
-| `/config show` | 查看当前模型配置 |
-| `/config test` | 测试模型连接 |
-| `/chat` | 进入 AI 聊天模式（流式输出） |
-| `/chat <消息>` | 发送单条消息 |
-| `/models` | 列出所有模型配置 |
-| `/models default <id>` | 设置默认模型 |
-| `/reminders` | 列出提醒 |
-| `/reminders toggle <id>` | 启用/禁用提醒 |
-| `/reminders delete <id>` | 删除提醒 |
-| `/status` | 系统状态 |
-| `/setup` | 初始设置（昵称、API 端口等） |
-| `/quit` | 退出应用 |
+| 命令                       | 说明                               |
+|:-------------------------|:---------------------------------|
+| `/config`                | 交互式配置 AI 模型（选服务商 → API Key → 模型） |
+| `/config show`           | 查看当前模型配置                         |
+| `/config test`           | 测试模型连接                           |
+| `/chat`                  | 进入 AI 聊天模式（流式输出）                 |
+| `/chat <消息>`             | 发送单条消息                           |
+| `/models`                | 列出所有模型配置                         |
+| `/models default <id>`   | 设置默认模型                           |
+| `/reminders`             | 列出提醒                             |
+| `/reminders toggle <id>` | 启用/禁用提醒                          |
+| `/reminders delete <id>` | 删除提醒                             |
+| `/status`                | 系统状态                             |
+| `/setup`                 | 初始设置（昵称、API 端口等）                 |
+| `/quit`                  | 退出应用                             |
 
 > 直接输入文字（不带 `/` 前缀）自动发送给 AI 对话。
 
@@ -409,11 +424,11 @@ docker cp king-remind:/app/data/remind.db ./remind.db.bak
 
 ### 环境变量
 
-| 变量 | 默认值 | 说明 |
-|:-----|:------|:-----|
-| `API_HOST` | `127.0.0.1` | API 监听地址，Docker 中自动设为 `0.0.0.0` |
-| `API_PORT` | `33333` | 宿主机映射端口 |
-| `DB_DIR` | 当前目录 | 数据库文件目录，Docker 中自动设为 `/app/data` |
+| 变量         | 默认值         | 说明                               |
+|:-----------|:------------|:---------------------------------|
+| `API_HOST` | `127.0.0.1` | API 监听地址，Docker 中自动设为 `0.0.0.0`  |
+| `API_PORT` | `33333`     | 宿主机映射端口                          |
+| `DB_DIR`   | 当前目录        | 数据库文件目录，Docker 中自动设为 `/app/data` |
 
 <br />
 
@@ -544,11 +559,11 @@ king-remind/
 
 在「通知渠道 → 邮件」中填写 SMTP 服务器信息：
 
-| 邮箱 | SMTP 服务器 | 端口 | SSL |
-|:-----|:----------|:-----|:-----|
-| QQ 邮箱 | smtp.qq.com | 465 | 是 |
-| 163 邮箱 | smtp.163.com | 465 | 是 |
-| Gmail | smtp.gmail.com | 587 | 否 |
+| 邮箱     | SMTP 服务器       | 端口  | SSL |
+|:-------|:---------------|:----|:----|
+| QQ 邮箱  | smtp.qq.com    | 465 | 是   |
+| 163 邮箱 | smtp.163.com   | 465 | 是   |
+| Gmail  | smtp.gmail.com | 587 | 否   |
 
 > 密码字段填写邮箱的**授权码**（非登录密码）。收件人支持多个地址，逗号分隔。
 
