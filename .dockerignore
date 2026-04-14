@@ -7,3 +7,4 @@ dist
 *.md
 resources/readme
 nul
+package-lock.json

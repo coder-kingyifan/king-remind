@@ -9,8 +9,8 @@ let mainWindowRef: BrowserWindow | null = null
 function createTrayIcon(): nativeImage {
     const iconPath = is.dev
         ? join(__dirname, '../../resources/icon.png')
-        : join(process.resourcesPath, 'resources/build/icons/win/icon.ico')
-    return nativeImage.createFromPath(iconPath).resize({width: 16, height: 16})
+        : join(process.resourcesPath, 'resources/icon.png')
+    return nativeImage.createFromPath(iconPath).resize({width: 32, height: 32})
 }
 
 function buildContextMenu(): Menu {

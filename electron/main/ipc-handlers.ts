@@ -8,7 +8,7 @@ import {reminderLogsDb} from './db/reminder-logs'
 import {workdaysDb} from './db/workdays'
 import {NotificationDispatcher} from './notifications/dispatcher'
 import {getSolarDateFromLunar} from 'chinese-days'
-import {chatWithLLM, generateSessionTitle, PROVIDERS, testModelConnection} from './llm'
+import {chatWithLLM, generateSessionTitle, PROVIDERS, testModelConnection, hasTextModelConfigured} from './llm'
 import {chatHistoryDb} from './db/chat-history'
 import {modelConfigsDb} from './db/model-configs'
 import {skillsDb} from './db/skills'
@@ -592,6 +592,10 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
         model: string
     }) => {
         return await testModelConnection(data)
+    })
+
+    safeHandle('models:has-text-model', () => {
+        return hasTextModelConfigured()
     })
 
     // ========== 应用控制 ==========

@@ -233,6 +233,25 @@ export function getProviderById(id: string): ProviderPreset {
 
 // ======================== 配置读取 ========================
 
+/** 检查是否存在已配置的文本模型（非默认 Ollama 回退） */
+export function hasTextModelConfigured(): boolean {
+    const allConfigs = modelConfigsDb.list()
+    // 有任何 model_configs 记录说明用户配置过模型
+    if (allConfigs.length > 0) {
+        // 检查是否有非 web_search 类型的模型
+        return allConfigs.some(c => c.model_type !== 'web_search')
+    }
+    // 没有任何 model_configs 记录，检查旧版 settings 是否配置过
+    const provider = settingsDb.get('llm_provider')
+    const baseUrl = settingsDb.get('llm_base_url')
+    const model = settingsDb.get('llm_model')
+    // 如果用户手动设置过非默认值，视为已配置
+    if (baseUrl && baseUrl !== 'http://127.0.0.1:11434/v1') return true
+    if (model && model !== 'qwen3:8b') return true
+    if (provider && provider !== 'ollama') return true
+    return false
+}
+
 function parseModelNotes(notesJson: string): Record<string, string> {
     if (!notesJson) return {}
     try {
@@ -1138,6 +1157,13 @@ export async function chatWithLLM(
     modelOverride?: string,
     onEvent?: (event: StreamEvent) => void
 ): Promise<{ reply: string; messages: Array<{ role: string; content: string }> }> {
+    // 检查是否配置了文本模型
+    if (!configId && !hasTextModelConfigured()) {
+        const friendlyMsg = '尚未配置文本模型，请先前往「模型配置」页面添加并配置一个文本模型。'
+        onEvent?.({type: 'error', message: friendlyMsg})
+        return {reply: friendlyMsg, messages: []}
+    }
+
     const config = getLLMConfig(configId, modelOverride)
     const systemMsg = buildSystemPrompt()
 

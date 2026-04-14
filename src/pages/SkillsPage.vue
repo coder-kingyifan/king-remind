@@ -271,6 +271,14 @@ function handleSaved() {
 }
 
 async function testSkill(skill: Skill) {
+  // AI 相关技能需要检查模型配置
+  if (skill.action_type === 'ai_prompt' || skill.action_type === 'search_and_summarize') {
+    const hasModel = await window.electronAPI.models.hasTextModel()
+    if (!hasModel) {
+      ElMessage.warning('尚未配置文本模型，请先前往「模型配置」页面添加模型')
+      return
+    }
+  }
   testingSkill.value = skill
   testResult.value = ''
   testing.value = true
@@ -286,6 +294,14 @@ async function testSkill(skill: Skill) {
 
 async function runTest() {
   if (!testingSkill.value) return
+  // AI 相关技能需要检查模型配置
+  if (testingSkill.value.action_type === 'ai_prompt' || testingSkill.value.action_type === 'search_and_summarize') {
+    const hasModel = await window.electronAPI.models.hasTextModel()
+    if (!hasModel) {
+      ElMessage.warning('尚未配置文本模型，请先前往「模型配置」页面添加模型')
+      return
+    }
+  }
   testing.value = true
   testResult.value = ''
   try {

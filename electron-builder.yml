@@ -26,9 +26,8 @@ extraResources:
       - "**/*"
 
 win:
-  icon: resources/build/icons/win/icon.ico
+  icon: resources/icon.png
   executableName: king-remind
-  signAndEditExecutable: false
   target:
     - target: portable
       arch:

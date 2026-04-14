@@ -137,7 +137,8 @@ const electronAPI = {
         delete: (id: number) => safeInvoke('models:delete', id),
         setDefault: (id: number) => safeInvoke('models:set-default', id),
         test: (data: { provider: string; base_url: string; api_key: string; model: string }) =>
-            safeInvoke('models:test', data)
+            safeInvoke('models:test', data),
+        hasTextModel: () => safeInvoke('models:has-text-model')
     },
 
     // 技能管理

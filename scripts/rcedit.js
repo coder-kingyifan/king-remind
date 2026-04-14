@@ -4,7 +4,7 @@ const fs = require('fs')
 
 const ROOT = path.resolve(__dirname, '..')
 const EXE_PATH = path.join(ROOT, 'dist', 'win-unpacked', 'king-remind.exe')
-const ICON_PATH = path.join(ROOT, 'resources', 'build', 'icons', 'win', 'icon.ico')
+const ICON_PATH = path.join(ROOT, 'resources', 'icon.png')
 
 // Find rcedit in electron-builder cache
 const RCEDIT_PATH = path.join(

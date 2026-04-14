@@ -1,7 +1,7 @@
 import axios from 'axios'
 import {skillsDb} from '../db/skills'
 import {modelConfigsDb} from '../db/model-configs'
-import {chatWithLLM, callSearchAPI} from '../llm'
+import {chatWithLLM, callSearchAPI, hasTextModelConfigured} from '../llm'
 import {getLunarDate, getSolarTerms, getLunarFestivals, isHoliday, getDayDetail} from 'chinese-days'
 import {skillContentDb} from '../db/skill-content'
 
@@ -64,6 +64,9 @@ function getTextModelConfigId(): number | undefined {
 }
 
 async function generateWithAI(prompt: string): Promise<string | null> {
+    if (!hasTextModelConfigured()) {
+        return '尚未配置文本模型，请先前往「模型配置」页面添加并配置一个文本模型。'
+    }
     try {
         const result = await chatWithLLM(
             [{role: 'user', content: prompt}],
@@ -602,6 +605,10 @@ async function executeAiPrompt(actionConfig: Record<string, any>, userConfig: Re
     const promptTemplate = actionConfig.prompt_template || actionConfig.prompt || ''
     if (!promptTemplate) return 'AI 提示词未配置'
 
+    if (!hasTextModelConfigured()) {
+        return '尚未配置文本模型，请先前往「模型配置」页面添加并配置一个文本模型。'
+    }
+
     let prompt = promptTemplate
     for (const [key, value] of Object.entries(userConfig)) {
         prompt = prompt.replace(`{{${key}}}`, String(value))
@@ -629,6 +636,10 @@ async function executeSearchAndSummarize(actionConfig: Record<string, any>): Pro
     const searchModelId = actionConfig.search_model_id
     if (!searchQuery) return '搜索问题未配置'
     if (!searchModelId) return '未选择联网搜索模型'
+
+    if (!hasTextModelConfigured()) {
+        return '尚未配置文本模型，请先前往「模型配置」页面添加并配置一个文本模型。'
+    }
 
     const now = new Date()
     let query = searchQuery

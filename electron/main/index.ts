@@ -39,15 +39,9 @@ function createWindow(): BrowserWindow {
         maximizable: false,
         show: false,
         frame: false,
-        titleBarStyle: 'hidden',
-        titleBarOverlay: {
-            color: '#00000000',
-            symbolColor: '#909399',
-            height: 40
-        },
         icon: is.dev
             ? join(__dirname, '../../resources/icon.png')
-            : join(process.resourcesPath, 'resources/build/icons/win/icon.ico'),
+            : join(process.resourcesPath, 'resources/icon.png'),
         webPreferences: {
             preload: join(__dirname, '../preload/index.js'),
             sandbox: false,

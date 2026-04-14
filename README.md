@@ -219,7 +219,7 @@
 
 ### 环境要求
 
-- Node.js >= 18
+- Node.js >= 22
 - npm
 
 ### 安装与运行
@@ -235,6 +235,9 @@ npm install
 
 # 启动开发模式（带界面）
 npm run dev
+
+# Windows 用户如遇控制台中文乱码，使用：
+npm run dev:win
 
 # 启动 Headless 模式（终端 REPL 交互）
 npm run dev:headless
@@ -320,6 +323,8 @@ docker compose run --rm king-remind
 # 后台运行（仅 API 服务）
 docker compose up -d --build
 ```
+
+> **注意：** Docker 构建使用 Node.js 22 镜像，`package.json` 中的平台特定依赖（rollup）通过 `optionalDependencies` 自动适配。Windows 生成的 `package-lock.json` 不会复制到容器中，由 Docker 构建时重新解析。
 
 ### 终端 REPL 交互
 

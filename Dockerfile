@@ -1,13 +1,18 @@
 # ---- build stage ----
-FROM node:20-bookworm AS builder
+FROM node:22-bookworm AS builder
 WORKDIR /app
-COPY package.json package-lock.json* ./
+
+# 先复制依赖描述文件，利用 Docker 缓存
+COPY package.json ./
+# 不复制 package-lock.json，在 Linux 容器中重新生成
+# 因为 Windows 生成的 lock 文件包含平台特定的依赖
 RUN npm install
+
 COPY . .
 RUN npm run build
 
 # ---- runtime stage ----
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 WORKDIR /app
 
 RUN apt-get update && \
