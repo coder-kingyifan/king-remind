@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>King 提醒助手 - 让科技有温度，让提醒有意义</title>
+  <meta name="description" content="功能丰富的桌面提醒应用，支持多渠道通知、AI 对话、技能商店、农历提醒与外部 API 集成" />
+  <meta name="keywords" content="提醒,桌面应用,AI,Electron,通知,农历,技能商店" />
+  <meta property="og:title" content="King 提醒助手" />
+  <meta property="og:description" content="功能丰富的桌面提醒应用，支持多渠道通知、AI 对话、技能商店、农历提醒" />
+  <meta property="og:image" content="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/resources/icon.png" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/resources/icon.png" />
+  <style>
+    :root {
+      --primary: #409EFF;
+      --primary-dark: #2b7de9;
+      --bg: #0a0e17;
+      --bg-card: rgba(255,255,255,0.04);
+      --bg-card-hover: rgba(255,255,255,0.08);
+      --text: #e4e8f1;
+      --text-secondary: #8b95a8;
+      --border: rgba(255,255,255,0.08);
+      --gradient-1: linear-gradient(135deg, #409EFF 0%, #a855f7 100%);
+      --gradient-2: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+      --gradient-3: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+      --shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* ===== Particle Canvas ===== */
+    #particles {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ===== Background Glow ===== */
+    .bg-glow {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .bg-glow::before {
+      content: '';
+      position: absolute;
+      top: -20%; left: -10%;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(64,158,255,0.1) 0%, transparent 70%);
+      animation: float1 20s ease-in-out infinite;
+    }
+    .bg-glow::after {
+      content: '';
+      position: absolute;
+      bottom: -10%; right: -10%;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(168,85,247,0.08) 0%, transparent 70%);
+      animation: float2 25s ease-in-out infinite;
+    }
+    @keyframes float1 {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(80px, 60px); }
+    }
+    @keyframes float2 {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(-60px, -80px); }
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ===== Navbar ===== */
+    .navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 16px 0;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(0px);
+    }
+    .navbar.scrolled {
+      background: rgba(10,14,23,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 0;
+    }
+    .navbar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    .navbar-brand img {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+    }
+    .navbar-links {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+    .navbar-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+    .navbar-links a:hover { color: var(--primary); }
+    .nav-download {
+      background: var(--gradient-1);
+      color: #fff !important;
+      padding: 6px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.85rem !important;
+      transition: transform 0.2s, box-shadow 0.2s !important;
+    }
+    .nav-download:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(64,158,255,0.3);
+    }
+    .mobile-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    /* ===== Hero ===== */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+    }
+    .hero-content { max-width: 800px; }
+    .hero-logo {
+      width: 120px; height: 120px;
+      border-radius: 28px;
+      margin: 0 auto 32px;
+      overflow: hidden;
+      box-shadow: 0 12px 40px rgba(64,158,255,0.3);
+      animation: logoFloat 3s ease-in-out infinite;
+    }
+    .hero-logo img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    @keyframes logoFloat {
+      0%, 100% { transform: translateY(0) scale(1); box-shadow: 0 12px 40px rgba(64,158,255,0.3); }
+      50% { transform: translateY(-8px) scale(1.03); box-shadow: 0 20px 50px rgba(64,158,255,0.4); }
+    }
+    .hero h1 {
+      font-size: 3.2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+      background: var(--gradient-1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero .tagline {
+      font-size: 1.25rem;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    .hero .slogan {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      opacity: 0.7;
+      font-style: italic;
+      margin-bottom: 40px;
+    }
+    .hero-badges {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 40px;
+    }
+    .hero-badges img { height: 24px; }
+    .hero-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      border: none;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 0; height: 0;
+      background: rgba(255,255,255,0.15);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      transition: width 0.5s, height 0.5s;
+    }
+    .btn:active::after {
+      width: 300px; height: 300px;
+    }
+    .btn-primary {
+      background: var(--gradient-1);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(64,158,255,0.3);
+    }
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 30px rgba(64,158,255,0.4);
+    }
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover {
+      background: var(--bg-card-hover);
+      transform: translateY(-3px);
+      border-color: rgba(64,158,255,0.3);
+    }
+    .btn-success {
+      background: var(--gradient-3);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(16,185,129,0.3);
+    }
+    .btn-success:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 30px rgba(16,185,129,0.4);
+    }
+
+    /* ===== Section ===== */
+    .section { padding: 100px 0; }
+    .section-title {
+      font-size: 2rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .section-desc {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      margin-bottom: 60px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ===== Screenshots ===== */
+    .screenshots {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .screenshots img {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      transition: transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94), box-shadow 0.4s ease;
+    }
+    .screenshots img:hover {
+      transform: scale(1.04) translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    }
+
+    /* ===== Feature Cards ===== */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 28px;
+      transition: all 0.4s cubic-bezier(0.25,0.46,0.45,0.94);
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--gradient-1);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s ease;
+    }
+    .feature-card:hover::before { transform: scaleX(1); }
+    .feature-card:hover {
+      background: var(--bg-card-hover);
+      transform: translateY(-6px);
+      box-shadow: var(--shadow);
+    }
+    .feature-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px;
+      margin-bottom: 20px;
+      transition: transform 0.3s ease;
+    }
+    .feature-card:hover .feature-icon { transform: scale(1.15) rotate(-5deg); }
+    .feature-icon.blue { background: rgba(64,158,255,0.15); }
+    .feature-icon.purple { background: rgba(168,85,247,0.15); }
+    .feature-icon.green { background: rgba(16,185,129,0.15); }
+    .feature-icon.orange { background: rgba(245,158,11,0.15); }
+    .feature-icon.red { background: rgba(239,68,68,0.15); }
+    .feature-icon.cyan { background: rgba(6,182,212,0.15); }
+    .feature-card h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .feature-card ul {
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+      list-style: none;
+      padding: 0;
+    }
+    .feature-card ul li { padding: 3px 0; }
+    .feature-card ul li::before {
+      content: '\2726 ';
+      color: var(--primary);
+      font-size: 0.75rem;
+    }
+
+    /* ===== Download Section ===== */
+    .download-section {
+      padding: 100px 0;
+      position: relative;
+    }
+    .download-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .download-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 24px;
+      text-align: center;
+      transition: all 0.4s cubic-bezier(0.25,0.46,0.45,0.94);
+      position: relative;
+      overflow: hidden;
+    }
+    .download-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--gradient-3);
+      transform: scaleX(0);
+      transition: transform 0.4s ease;
+    }
+    .download-card:hover::before { transform: scaleX(1); }
+    .download-card:hover {
+      background: var(--bg-card-hover);
+      transform: translateY(-6px);
+      box-shadow: var(--shadow);
+    }
+    .download-card .dl-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      display: block;
+    }
+    .download-card h4 {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+    .download-card p {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+    }
+    .download-card .btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    /* ===== AI Providers ===== */
+    .providers {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .provider-tag {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      text-align: center;
+      font-size: 0.88rem;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+    .provider-tag:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    /* ===== Notification Channels ===== */
+    .channels-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .channel-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    .channel-card:hover {
+      background: var(--bg-card-hover);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+    .channel-card .icon { font-size: 36px; margin-bottom: 12px; }
+    .channel-card h4 { font-size: 1rem; margin-bottom: 6px; }
+    .channel-card p { color: var(--text-secondary); font-size: 0.85rem; }
+
+    /* ===== Skills ===== */
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+    .skill-tag {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+    }
+    .skill-tag:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(16,185,129,0.4);
+      transform: translateY(-2px);
+    }
+    .skill-tag .emoji { font-size: 1.3rem; }
+
+    /* ===== Tech Stack ===== */
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+    }
+    .tech-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    .tech-item:hover {
+      background: var(--bg-card-hover);
+      transform: translateY(-3px);
+    }
+    .tech-item .name { font-weight: 600; font-size: 0.95rem; margin-top: 4px; }
+    .tech-item .version { color: var(--text-secondary); font-size: 0.8rem; }
+
+    /* ===== Quick Start ===== */
+    .quickstart {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    .quickstart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+    }
+    .quickstart-card h4 {
+      font-size: 1.05rem;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .quickstart-card pre {
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: #a8d8a8;
+      border: 1px solid var(--border);
+    }
+
+    /* ===== Stats ===== */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      margin: 60px 0;
+    }
+    .stat-item { text-align: center; padding: 24px; }
+    .stat-item .number {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: var(--gradient-1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-item .label { color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px; }
+
+    /* ===== Footer ===== */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+    }
+    .footer a { color: var(--primary); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+    .footer-links { display: flex; gap: 24px; justify-content: center; margin-bottom: 16px; }
+
+    /* ===== Scroll Animations ===== */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.7s cubic-bezier(0.25,0.46,0.45,0.94), transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+    .fade-left {
+      opacity: 0;
+      transform: translateX(-40px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .fade-left.visible { opacity: 1; transform: translateX(0); }
+
+    .fade-right {
+      opacity: 0;
+      transform: translateX(40px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .fade-right.visible { opacity: 1; transform: translateX(0); }
+
+    .scale-in {
+      opacity: 0;
+      transform: scale(0.9);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .scale-in.visible { opacity: 1; transform: scale(1); }
+
+    /* Stagger children */
+    .stagger-children > * {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .stagger-children.visible > *:nth-child(1) { transition-delay: 0s; opacity: 1; transform: translateY(0); }
+    .stagger-children.visible > *:nth-child(2) { transition-delay: 0.08s; opacity: 1; transform: translateY(0); }
+    .stagger-children.visible > *:nth-child(3) { transition-delay: 0.16s; opacity: 1; transform: translateY(0); }
+    .stagger-children.visible > *:nth-child(4) { transition-delay: 0.24s; opacity: 1; transform: translateY(0); }
+    .stagger-children.visible > *:nth-child(5) { transition-delay: 0.32s; opacity: 1; transform: translateY(0); }
+    .stagger-children.visible > *:nth-child(6) { transition-delay: 0.4s; opacity: 1; transform: translateY(0); }
+    .stagger-children.visible > *:nth-child(7) { transition-delay: 0.48s; opacity: 1; transform: translateY(0); }
+    .stagger-children.visible > *:nth-child(8) { transition-delay: 0.56s; opacity: 1; transform: translateY(0); }
+    .stagger-children.visible > *:nth-child(9) { transition-delay: 0.64s; opacity: 1; transform: translateY(0); }
+    .stagger-children.visible > *:nth-child(10) { transition-delay: 0.72s; opacity: 1; transform: translateY(0); }
+    .stagger-children.visible > *:nth-child(11) { transition-delay: 0.8s; opacity: 1; transform: translateY(0); }
+    .stagger-children.visible > *:nth-child(12) { transition-delay: 0.88s; opacity: 1; transform: translateY(0); }
+    .stagger-children.visible > *:nth-child(n+13) { transition-delay: 0.96s; opacity: 1; transform: translateY(0); }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 900px) {
+      .hero h1 { font-size: 2.2rem; }
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .screenshots { grid-template-columns: repeat(2, 1fr); }
+      .providers { grid-template-columns: repeat(3, 1fr); }
+      .channels-grid { grid-template-columns: repeat(2, 1fr); }
+      .skills-grid { grid-template-columns: repeat(3, 1fr); }
+      .tech-grid { grid-template-columns: repeat(3, 1fr); }
+      .quickstart { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .download-cards { grid-template-columns: 1fr; max-width: 400px; }
+    }
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 1.8rem; }
+      .hero .tagline { font-size: 1rem; }
+      .hero { padding: 100px 16px 60px; }
+      .section { padding: 60px 0; }
+      .features-grid { grid-template-columns: 1fr; }
+      .screenshots { grid-template-columns: 1fr; }
+      .providers { grid-template-columns: repeat(2, 1fr); }
+      .channels-grid { grid-template-columns: 1fr; }
+      .skills-grid { grid-template-columns: repeat(2, 1fr); }
+      .tech-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .hero-buttons { flex-direction: column; align-items: center; }
+      .hero-buttons .btn { width: 100%; justify-content: center; }
+      .navbar-links { display: none; }
+      .navbar-links.open {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        top: 100%; left: 0; right: 0;
+        background: rgba(10,14,23,0.95);
+        backdrop-filter: blur(12px);
+        padding: 16px 24px;
+        gap: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      .mobile-toggle { display: block; }
+      .section-title { font-size: 1.5rem; }
+      .section-desc { font-size: 0.95rem; margin-bottom: 40px; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+<div class="bg-glow"></div>
+
+<!-- ===== Navbar ===== -->
+<nav class="navbar" id="navbar">
+  <div class="navbar-inner">
+    <a class="navbar-brand" href="#">
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/resources/icon.png" alt="King" />
+      <span>King 提醒助手</span>
+    </a>
+    <div class="navbar-links" id="navLinks">
+      <a href="#features">功能</a>
+      <a href="#screenshots">预览</a>
+      <a href="#download">下载</a>
+      <a href="#tech">技术栈</a>
+      <a class="nav-download" href="https://github.com/coder-kingyifan/king-remind/releases/latest" target="_blank">下载</a>
+    </div>
+    <button class="mobile-toggle" id="mobileToggle" aria-label="Menu">&#9776;</button>
+  </div>
+</nav>
+
+<!-- ===== Hero ===== -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-logo">
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/resources/icon.png" alt="King 提醒助手" />
+    </div>
+    <h1>King 提醒助手</h1>
+    <p class="tagline">功能丰富的桌面提醒应用，支持多渠道通知、AI 对话、技能商店、农历提醒</p>
+    <p class="slogan">让科技有温度，让提醒有意义，让生活无遗憾</p>
+    <div class="hero-badges">
+      <img src="https://img.shields.io/badge/Electron-33-47848F?logo=electron&logoColor=white" alt="Electron" />
+      <img src="https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white" alt="Vue" />
+      <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+      <img src="https://img.shields.io/badge/Platform-Win%20%7C%20Mac%20%7C%20Linux-blue" alt="Platform" />
+      <img src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-orange" alt="License" />
+    </div>
+    <div class="hero-buttons">
+      <a class="btn btn-success" href="https://github.com/coder-kingyifan/king-remind/releases/latest" target="_blank">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        立即下载
+      </a>
+      <a class="btn btn-primary" href="https://github.com/coder-kingyifan/king-remind" target="_blank">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        GitHub
+      </a>
+      <a class="btn btn-secondary" href="https://github.com/coder-kingyifan/king-remind/issues" target="_blank">
+        反馈问题
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Screenshots ===== -->
+<section class="section" id="screenshots">
+  <div class="container">
+    <h2 class="section-title fade-up">界面预览</h2>
+    <p class="section-desc fade-up">精心设计的用户界面，亮色暗色随心切换</p>
+    <div class="screenshots stagger-children">
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/docs/readme/1.jpg" alt="欢迎页" />
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/docs/readme/2.jpg" alt="数据库密码设置" />
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/docs/readme/3.jpg" alt="API 接口设置" />
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/docs/readme/4.jpg" alt="欢迎页" />
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/docs/readme/5.jpg" alt="AI 对话页（暗色）" />
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/docs/readme/6.jpg" alt="AI 对话页（亮色）" />
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/docs/readme/7.jpg" alt="数据概览" />
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/docs/readme/8.jpg" alt="提醒管理" />
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/docs/readme/9.jpg" alt="通知渠道" />
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/docs/readme/10.jpg" alt="模型配置" />
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/docs/readme/11.jpg" alt="技能中心" />
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/docs/readme/12.jpg" alt="技能商店" />
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/docs/readme/13.jpg" alt="系统设置" />
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/docs/readme/14.jpg" alt="系统设置" />
+      <img src="https://raw.githubusercontent.com/coder-kingyifan/king-remind/master/docs/readme/15.jpg" alt="对话示例" />
+    </div>
+  </div>
+</section>
+
+<!-- ===== Core Features ===== -->
+<section class="section" id="features">
+  <div class="container">
+    <h2 class="section-title fade-up">核心功能</h2>
+    <p class="section-desc fade-up">覆盖提醒、AI、技能、通知的全方位功能体系</p>
+    <div class="features-grid stagger-children">
+      <div class="feature-card">
+        <div class="feature-icon blue">&#9200;</div>
+        <h3>智能提醒管理</h3>
+        <ul>
+          <li>循环 / 定时 / 农历提醒</li>
+          <li>星期筛选 &amp; 工作日模式</li>
+          <li>活跃时段 &amp; 结束时间</li>
+          <li>自定义图标 / 颜色</li>
+          <li>托盘一键暂停</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">&#129302;</div>
+        <h3>AI 智能对话</h3>
+        <ul>
+          <li>自然语言创建提醒</li>
+          <li>多会话 &amp; 多轮对话</li>
+          <li>图片识别创建提醒</li>
+          <li>思维链推理展示</li>
+          <li>联网搜索实时信息</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">&#127919;</div>
+        <h3>技能系统</h3>
+        <ul>
+          <li>12 种内置技能</li>
+          <li>API 调用 / AI 提示词</li>
+          <li>搜索总结技能</li>
+          <li>社区技能商店</li>
+          <li>一键安装 &amp; 版本更新</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon orange">&#128226;</div>
+        <h3>多渠道通知</h3>
+        <ul>
+          <li>桌面浮窗通知</li>
+          <li>邮件 (SMTP)</li>
+          <li>Telegram Bot</li>
+          <li>企业微信 &amp; 群机器人</li>
+          <li>自定义 Webhook</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon red">&#128274;</div>
+        <h3>数据安全</h3>
+        <ul>
+          <li>AES-256-GCM 加密</li>
+          <li>密钥与数据库分离</li>
+          <li>透明加解密</li>
+          <li>本地存储，数据不外传</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon cyan">&#128187;</div>
+        <h3>多模式运行</h3>
+        <ul>
+          <li>桌面 GUI 模式</li>
+          <li>Headless 无界面模式</li>
+          <li>Docker 容器部署</li>
+          <li>本地 HTTP API</li>
+          <li>终端 REPL 交互</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Download ===== -->
+<section class="section download-section" id="download">
+  <div class="container">
+    <h2 class="section-title fade-up">下载安装</h2>
+    <p class="section-desc fade-up">选择你的平台，立即开始使用 King 提醒助手</p>
+    <div class="download-cards stagger-children">
+      <div class="download-card">
+        <span class="dl-icon">&#128187;</span>
+        <h4>Windows</h4>
+        <p>安装程序 (.exe) 或免安装便携版</p>
+        <a class="btn btn-success" href="https://github.com/coder-kingyifan/king-remind/releases/latest" target="_blank">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          下载 Windows 版
+        </a>
+      </div>
+      <div class="download-card">
+        <span class="dl-icon">&#63743;</span>
+        <h4>macOS</h4>
+        <p>敬请期待，后续将提供 .dmg 安装包</p>
+        <a class="btn btn-secondary" href="javascript:void(0)" style="opacity:0.5;cursor:not-allowed;">
+          即将推出
+        </a>
+      </div>
+      <div class="download-card">
+        <span class="dl-icon">&#128039;</span>
+        <h4>Docker</h4>
+        <p>Linux 服务器 / NAS / 云主机</p>
+        <a class="btn btn-primary" href="https://github.com/coder-kingyifan/king-remind#docker-部署" target="_blank">
+          查看 README 自行安装
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== AI Providers ===== -->
+<section class="section">
+  <div class="container">
+    <h2 class="section-title fade-up">AI 服务商支持</h2>
+    <p class="section-desc fade-up">接入 16+ 主流 AI 服务商，也支持本地 Ollama 和自定义接口</p>
+    <div class="providers stagger-children">
+      <div class="provider-tag">OpenAI</div>
+      <div class="provider-tag">DeepSeek</div>
+      <div class="provider-tag">阿里百炼</div>
+      <div class="provider-tag">Kimi</div>
+      <div class="provider-tag">智谱 GLM</div>
+      <div class="provider-tag">Claude</div>
+      <div class="provider-tag">字节豆包</div>
+      <div class="provider-tag">腾讯混元</div>
+      <div class="provider-tag">百度文心</div>
+      <div class="provider-tag">讯飞星火</div>
+      <div class="provider-tag">零一万物</div>
+      <div class="provider-tag">SiliconFlow</div>
+      <div class="provider-tag">Groq</div>
+      <div class="provider-tag">小米 MiMo</div>
+      <div class="provider-tag">Ollama 本地</div>
+      <div class="provider-tag">自定义接口</div>
+    </div>
+    <h3 class="section-title fade-up" style="font-size:1.4rem; margin-top:48px; margin-bottom:24px;">联网搜索服务商</h3>
+    <div class="providers stagger-children">
+      <div class="provider-tag">Perplexity</div>
+      <div class="provider-tag">Tavily</div>
+      <div class="provider-tag">Jina</div>
+      <div class="provider-tag">博查 AI</div>
+      <div class="provider-tag">Exa</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Notification Channels ===== -->
+<section class="section">
+  <div class="container">
+    <h2 class="section-title fade-up">多渠道通知</h2>
+    <p class="section-desc fade-up">每个提醒可同时启用多个渠道，重要消息绝不遗漏</p>
+    <div class="channels-grid stagger-children">
+      <div class="channel-card">
+        <div class="icon">&#128187;</div>
+        <h4>桌面通知</h4>
+        <p>自定义浮窗，最多同时 3 条，支持提示音和进度条</p>
+      </div>
+      <div class="channel-card">
+        <div class="icon">&#9993;</div>
+        <h4>邮件</h4>
+        <p>SMTP 发送，支持 SSL/TLS，多收件人</p>
+      </div>
+      <div class="channel-card">
+        <div class="icon">&#9992;</div>
+        <h4>Telegram</h4>
+        <p>Bot API 推送，支持多 Chat ID 和 HTTP 代理</p>
+      </div>
+      <div class="channel-card">
+        <div class="icon">&#128188;</div>
+        <h4>企业微信</h4>
+        <p>应用消息推送，支持 @all 或指定用户</p>
+      </div>
+      <div class="channel-card">
+        <div class="icon">&#129302;</div>
+        <h4>企微群机器人</h4>
+        <p>Webhook 群消息推送</p>
+      </div>
+      <div class="channel-card">
+        <div class="icon">&#128279;</div>
+        <h4>Webhook</h4>
+        <p>自定义 HTTP 请求，支持模板变量</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Skills ===== -->
+<section class="section">
+  <div class="container">
+    <h2 class="section-title fade-up">内置技能</h2>
+    <p class="section-desc fade-up">提醒绑定技能，每次触发自动获取动态内容</p>
+    <div class="skills-grid stagger-children">
+      <div class="skill-tag"><span class="emoji">&#127780;</span> 天气查询</div>
+      <div class="skill-tag"><span class="emoji">&#128172;</span> 每日一言</div>
+      <div class="skill-tag"><span class="emoji">&#8987;</span> 倒计时</div>
+      <div class="skill-tag"><span class="emoji">&#128167;</span> 喝水提醒</div>
+      <div class="skill-tag"><span class="emoji">&#128220;</span> 诗词推荐</div>
+      <div class="skill-tag"><span class="emoji">&#127973;</span> 健康贴士</div>
+      <div class="skill-tag"><span class="emoji">&#127939;</span> 运动推荐</div>
+      <div class="skill-tag"><span class="emoji">&#128214;</span> 每日英语</div>
+      <div class="skill-tag"><span class="emoji">&#128516;</span> 每日一笑</div>
+      <div class="skill-tag"><span class="emoji">&#11088;</span> 星座运势</div>
+      <div class="skill-tag"><span class="emoji">&#127769;</span> 农历信息</div>
+      <div class="skill-tag"><span class="emoji">&#128203;</span> 工作汇报</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Stats ===== -->
+<section class="section">
+  <div class="container">
+    <div class="stats fade-up">
+      <div class="stat-item">
+        <div class="number" data-target="6">0</div>
+        <div class="label">通知渠道</div>
+      </div>
+      <div class="stat-item">
+        <div class="number" data-target="16">0</div>
+        <div class="label">AI 服务商</div>
+      </div>
+      <div class="stat-item">
+        <div class="number" data-target="12">0</div>
+        <div class="label">内置技能</div>
+      </div>
+      <div class="stat-item">
+        <div class="number" data-target="5">0</div>
+        <div class="label">搜索服务商</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Tech Stack ===== -->
+<section class="section" id="tech">
+  <div class="container">
+    <h2 class="section-title fade-up">技术栈</h2>
+    <p class="section-desc fade-up">基于现代化技术栈构建，性能与开发体验兼得</p>
+    <div class="tech-grid stagger-children">
+      <div class="tech-item"><div class="name">Electron 33</div><div class="version">桌面框架</div></div>
+      <div class="tech-item"><div class="name">Vue 3</div><div class="version">前端框架</div></div>
+      <div class="tech-item"><div class="name">TypeScript</div><div class="version">类型安全</div></div>
+      <div class="tech-item"><div class="name">Element Plus</div><div class="version">UI 组件</div></div>
+      <div class="tech-item"><div class="name">Pinia</div><div class="version">状态管理</div></div>
+      <div class="tech-item"><div class="name">sql.js</div><div class="version">SQLite 数据库</div></div>
+      <div class="tech-item"><div class="name">Vite</div><div class="version">构建工具</div></div>
+      <div class="tech-item"><div class="name">SCSS</div><div class="version">样式预处理</div></div>
+      <div class="tech-item"><div class="name">Axios</div><div class="version">HTTP 客户端</div></div>
+      <div class="tech-item"><div class="name">electron-builder</div><div class="version">打包分发</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Quick Start ===== -->
+<section class="section">
+  <div class="container">
+    <h2 class="section-title fade-up">快速开始</h2>
+    <p class="section-desc fade-up">三种方式，总有一种适合你</p>
+    <div class="quickstart stagger-children">
+      <div class="quickstart-card">
+        <h4>&#128187; 桌面开发</h4>
+        <pre>git clone https://github.com/coder-kingyifan/king-remind.git
+cd king-remind
+npm install
+npm run dev</pre>
+      </div>
+      <div class="quickstart-card">
+        <h4>&#128051; Docker 部署</h4>
+        <pre>git clone https://github.com/coder-kingyifan/king-remind.git
+cd king-remind
+docker compose run --rm king-remind</pre>
+      </div>
+      <div class="quickstart-card">
+        <h4>&#128295; Windows 打包</h4>
+        <pre>npm run build
+npm run pack
+
+# 产物:
+# king-remind-{ver}-setup.exe
+# king-remind-{ver}-portable.exe</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Footer ===== -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-links">
+      <a href="https://github.com/coder-kingyifan/king-remind" target="_blank">GitHub</a>
+      <a href="https://github.com/coder-kingyifan/king-remind/releases" target="_blank">下载</a>
+      <a href="https://github.com/coder-kingyifan/king-remind/issues" target="_blank">Issues</a>
+      <a href="https://github.com/coder-kingyifan" target="_blank">作者</a>
+    </div>
+    <p>CC BY-NC-SA 4.0 &copy; 2026 kingyifan &mdash; 仅限个人学习和学校使用，禁止商用</p>
+    <p style="margin-top:8px; opacity:0.6;">让科技有温度，让提醒有意义，让生活无遗憾</p>
+  </div>
+</footer>
+
+<script>
+(function() {
+  // ===== Particle Background =====
+  var canvas = document.getElementById('particles');
+  var ctx = canvas.getContext('2d');
+  var particles = [];
+  var PARTICLE_COUNT = 50;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  function Particle() {
+    this.x = Math.random() * canvas.width;
+    this.y = Math.random() * canvas.height;
+    this.vx = (Math.random() - 0.5) * 0.3;
+    this.vy = (Math.random() - 0.5) * 0.3;
+    this.radius = Math.random() * 1.5 + 0.5;
+    this.opacity = Math.random() * 0.3 + 0.1;
+  }
+
+  for (var i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push(new Particle());
+  }
+
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+      if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(64,158,255,' + p.opacity + ')';
+      ctx.fill();
+    }
+    // Draw connections
+    for (var i = 0; i < particles.length; i++) {
+      for (var j = i + 1; j < particles.length; j++) {
+        var dx = particles[i].x - particles[j].x;
+        var dy = particles[i].y - particles[j].y;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 150) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = 'rgba(64,158,255,' + (0.06 * (1 - dist / 150)) + ')';
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
+
+  // ===== Navbar scroll =====
+  var navbar = document.getElementById('navbar');
+  window.addEventListener('scroll', function() {
+    navbar.classList.toggle('scrolled', window.scrollY > 50);
+  });
+
+  // ===== Mobile menu =====
+  var mobileToggle = document.getElementById('mobileToggle');
+  var navLinks = document.getElementById('navLinks');
+  mobileToggle.addEventListener('click', function() {
+    navLinks.classList.toggle('open');
+  });
+  // Close on link click
+  navLinks.addEventListener('click', function(e) {
+    if (e.target.tagName === 'A') navLinks.classList.remove('open');
+  });
+
+  // ===== Scroll Animations =====
+  var animClasses = ['fade-up', 'fade-left', 'fade-right', 'scale-in', 'stagger-children'];
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  animClasses.forEach(function(cls) {
+    document.querySelectorAll('.' + cls).forEach(function(el) { observer.observe(el); });
+  });
+
+  // ===== Counter Animation =====
+  var counterObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        var el = entry.target;
+        var target = parseInt(el.getAttribute('data-target'));
+        if (!target) return;
+        var duration = 1500;
+        var start = 0;
+        var startTime = null;
+        function step(timestamp) {
+          if (!startTime) startTime = timestamp;
+          var progress = Math.min((timestamp - startTime) / duration, 1);
+          var eased = 1 - Math.pow(1 - progress, 3);
+          var current = Math.floor(eased * target);
+          el.textContent = current + (target >= 16 ? '+' : '');
+          if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+        counterObserver.unobserve(el);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  document.querySelectorAll('[data-target]').forEach(function(el) { counterObserver.observe(el); });
+})();
+</script>
+
+</body>
+</html>
