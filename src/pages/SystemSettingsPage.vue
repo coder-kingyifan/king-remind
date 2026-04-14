@@ -576,11 +576,6 @@ print(resp.json())</pre>
             <span class="about-value">  <a target="_blank" href="https://gitee.com/kingyifan/king-remind">https://gitee.com/kingyifan/king-remind</a>
               </span>
           </div>
-
-          <div class="about-row">
-            <span class="about-label">友链社区</span>
-            <span class="about-value"><a target="_blank" href="https://linux.do/">Linux.do</a></span>
-          </div>
         </div>
       </div>
     </div>

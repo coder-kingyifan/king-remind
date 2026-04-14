@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Element%20Plus-2.9-409EFF?logo=element&logoColor=white" alt="Element Plus" />
   <img src="https://img.shields.io/badge/Version-2.0.0-blue" alt="Version" />
-  <img src="https://img.shields.io/badge/License-MIT-green" alt="License" />
+  <img src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-orange" alt="License" />
 </p>
 
 <br />
@@ -273,7 +273,7 @@ npx electron-builder --mac --config
 - `.dmg` — macOS 磁盘镜像（标准分发格式）
 - `.zip` — 压缩包
 
-> **注意：** macOS 打包需要在 macOS 系统上操作。如需签名和公证，需配置 Apple Developer 证书。详见 [electron-builder macOS 文档](https://www.electron.build/configuration/mac)。
+> **注意：** macOS 打包需要在 macOS 系统上操作。如需签名和公证，需配置 Apple Developer 证书。详见 [electron-builder macOS 文档](https://www.electron.build/mac)。
 
 如需自定义 macOS 打包配置，在 `electron-builder.yml` 中添加：
 
@@ -590,7 +590,13 @@ king-remind/
 
 ## 许可证
 
-[MIT License](LICENSE)
+[CC BY-NC-SA 4.0](LICENSE) — 署名-非商业性使用-相同方式共享
+
+本项目采用 Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International 协议。你可以自由地分享和修改本作品，但必须遵守以下条件：
+
+- **署名** — 须注明原作者
+- **非商业性使用** — 不得用于商业目的，仅限个人学习和学校使用
+- **相同方式共享** — 基于本作品的演绎作品须采用相同的协议
 
 ## 联系
 

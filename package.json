@@ -4,7 +4,7 @@
   "description": "king-remind - Desktop reminder with multi-channel notifications",
   "main": "./out/main/index.js",
   "author": "kingyifan",
-  "license": "MIT",
+  "license": "CC-BY-NC-SA-4.0",
   "scripts": {
     "dev": "electron-vite dev",
     "dev:win": "chcp 65001 >nul && electron-vite dev",
