@@ -26,7 +26,7 @@ extraResources:
       - "**/*"
 
 win:
-  icon: resources/icon.png
+  icon: resources/favicon.ico
   executableName: king-remind
   target:
     - target: portable
