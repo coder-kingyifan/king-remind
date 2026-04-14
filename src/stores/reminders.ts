@@ -46,9 +46,9 @@ export const useRemindersStore = defineStore('reminders', () => {
         await fetchStats()
     }
 
-    async function toggleReminder(id: number) {
+    async function toggleReminder(id: number, filters?: { is_active?: number; search?: string }) {
         await window.electronAPI.reminders.toggle(id)
-        await fetchReminders()
+        await fetchReminders(filters ? plain(filters) : undefined)
         await fetchStats()
     }
 

@@ -94,7 +94,7 @@
           <el-switch
               :model-value="reminder.is_active === 1"
               size="small"
-              @change="() => remindersStore.toggleReminder(reminder.id)"
+              @change="() => handleToggle(reminder.id)"
           />
           <el-dropdown trigger="click" @command="(cmd: string) => handleCommand(cmd, reminder)">
             <el-button text circle>
@@ -188,6 +188,14 @@ function handleCommand(cmd: string, reminder: Reminder) {
     }).catch(() => {
     })
   }
+}
+
+function handleToggle(id: number) {
+  const filters: any = {}
+  if (searchText.value) filters.search = searchText.value
+  if (statusFilter.value === 'active') filters.is_active = 1
+  else if (statusFilter.value === 'paused') filters.is_active = 0
+  remindersStore.toggleReminder(id, filters)
 }
 
 function handleSaved() {
