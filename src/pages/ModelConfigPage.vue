@@ -235,7 +235,7 @@ const currentProviderPreset = computed(() =>
 // Filter providers based on model type
 const filteredProviders = computed(() => {
   if (form.value.model_type === 'web_search') {
-    return providers.value.filter(p => WEB_SEARCH_PROVIDERS.includes(p.id) || p.id.startsWith('custom'))
+    return providers.value.filter(p => WEB_SEARCH_PROVIDERS.includes(p.id))
   }
   return providers.value.filter(p => !WEB_SEARCH_PROVIDERS.includes(p.id))
 })
@@ -299,7 +299,7 @@ onMounted(() => {
 
 function onModelTypeChange(type: string) {
   const list = type === 'web_search'
-    ? providers.value.filter(p => WEB_SEARCH_PROVIDERS.includes(p.id) || p.id.startsWith('custom'))
+    ? providers.value.filter(p => WEB_SEARCH_PROVIDERS.includes(p.id))
     : providers.value.filter(p => !WEB_SEARCH_PROVIDERS.includes(p.id))
   if (!list.find(p => p.id === form.value.provider)) {
     form.value.provider = ''

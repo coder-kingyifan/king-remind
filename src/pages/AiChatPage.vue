@@ -162,7 +162,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, nextTick, onMounted, onUnmounted, reactive, ref} from 'vue'
+import {computed, nextTick, onActivated, onMounted, onUnmounted, reactive, ref, watch} from 'vue'
 import {Clock, Delete, Plus, Promotion} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import ChatAvatar from '@/components/chat/ChatAvatar.vue'
@@ -252,6 +252,31 @@ const currentModels = computed(() => {
   } catch { /* ignore */ }
   return cfg.model ? [cfg.model] : []
 })
+
+async function loadModelConfigs() {
+  try {
+    modelList.value = (await window.electronAPI.models.list()).filter((m: ModelItem) => m.model_type !== 'web_search')
+  } catch {
+    modelList.value = []
+  }
+
+  if (modelList.value.length === 0) {
+    selectedConfigId.value = undefined
+    selectedModel.value = ''
+    return
+  }
+
+  if (selectedConfigId.value && modelList.value.some(m => m.id === selectedConfigId.value)) {
+    const cfg = modelList.value.find(m => m.id === selectedConfigId.value)
+    if (cfg && !selectedModel.value) selectedModel.value = cfg.model
+    return
+  }
+
+  const defaultCfg = modelList.value.find(m => m.is_default)
+  const fallbackCfg = defaultCfg || modelList.value[0]
+  selectedConfigId.value = fallbackCfg.id
+  selectedModel.value = fallbackCfg.model
+}
 
 const defaultSuggestions = [
   '新增每日喝水提醒',
@@ -455,18 +480,13 @@ function onServiceSelect(id: number) {
 
 onMounted(async () => {
   window.electronAPI.ai.onStreamEvent(handleStreamEvent)
-  try { modelList.value = (await window.electronAPI.models.list()).filter((m: ModelItem) => m.model_type !== 'web_search') } catch { /* ignore */ }
-
-  const defaultCfg = modelList.value.find(m => m.is_default)
-  if (defaultCfg) {
-    selectedConfigId.value = defaultCfg.id
-    selectedModel.value = defaultCfg.model
-  } else if (modelList.value.length > 0) {
-    selectedConfigId.value = modelList.value[0].id
-    selectedModel.value = modelList.value[0].model
-  }
+  await loadModelConfigs()
 
   await Promise.all([loadNickname(), loadGreeting(), loadSessions()])
+})
+
+onActivated(async () => {
+  await loadModelConfigs()
 })
 
 onUnmounted(() => {
@@ -477,6 +497,18 @@ function onConfigChange(id: number) {
   const cfg = modelList.value.find(m => m.id === id)
   if (cfg) selectedModel.value = cfg.model
 }
+
+watch(currentModels, (models) => {
+  if (models.length === 0) {
+    selectedModel.value = currentConfig.value?.model || ''
+    return
+  }
+  if (!models.includes(selectedModel.value)) {
+    selectedModel.value = currentConfig.value?.model && models.includes(currentConfig.value.model)
+      ? currentConfig.value.model
+      : models[0]
+  }
+})
 
 async function loadSessions() {
   try { sessions.value = await window.electronAPI.ai.listSessions() } catch { /* ignore */ }
