@@ -329,14 +329,25 @@
                   <el-input v-model="wechatTestConfig.template_url" placeholder="https://..."/>
                 </el-form-item>
               </div>
-              <el-form-item label="模板数据（JSON，支持模板变量）">
-                <el-input
-                    v-model="wechatTestConfig.template_data"
-                    type="textarea"
-                    :rows="4"
-                    placeholder='{"first": {"value": "{{icon}} {{title}}"}, "keyword1": {"value": "{{body}}"}, "remark": {"value": "{{app_name}} · {{time}}"}}'
-                />
-              </el-form-item>
+              <div class="template-fields-section">
+                <div class="template-fields-header">
+                  <span class="template-header-title">模板字段</span>
+                  <span class="template-fields-tip">对应微信模板中的每个变量，如 first、keyword1、remark</span>
+                </div>
+                <div class="template-vars-tip" v-pre>
+                  值支持变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 ·
+                  <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名
+                </div>
+                <div v-for="(field, index) in wechatTestTemplateFields" :key="index" class="template-field-row">
+                  <el-input v-model="field.key" placeholder="字段名，如 keyword1" class="field-key"/>
+                  <el-input v-model="field.value" placeholder="字段值，如 {{title}}" class="field-value"/>
+                  <el-color-picker v-model="field.color" size="small" class="field-color"/>
+                  <el-button :icon="Delete" size="small" circle @click="wechatTestTemplateFields.splice(index, 1)"/>
+                </div>
+                <el-button size="small" @click="wechatTestTemplateFields.push({key: '', value: '', color: ''})">
+                  + 添加字段
+                </el-button>
+              </div>
             </template>
             <div class="template-section" v-if="wechatTestConfig.msg_type === 'text'">
               <div class="template-header" @click="templateExpanded.wechat_test = !templateExpanded.wechat_test">
@@ -357,7 +368,7 @@
               </div>
             </div>
             <div class="config-actions">
-              <el-button size="small" @click="saveConfig('wechat_test', wechatTestConfig)">保存配置</el-button>
+              <el-button size="small" @click="saveWechatTestConfig">保存配置</el-button>
               <el-button size="small" type="success" plain :loading="testing === 'wechat_test'"
                          @click="testChannel('wechat_test')">
                 发送测试
@@ -433,7 +444,7 @@ import {onMounted, reactive, ref, watch} from 'vue'
 import {useNotificationsStore} from '@/stores/notifications'
 import {CHANNELS} from '@/types/notification'
 import {ElMessage} from 'element-plus'
-import {ArrowDown, WarningFilled} from '@element-plus/icons-vue'
+import {ArrowDown, WarningFilled, Delete} from '@element-plus/icons-vue'
 import wechatWorkIcon from '@/../resources/wechat-work.png'
 
 const notificationsStore = useNotificationsStore()
@@ -481,9 +492,13 @@ const wechatTestConfig = ref({
   msg_type: 'text',
   template_id: '',
   template_url: '',
-  template_data: '',
   message_template: ''
 })
+const wechatTestTemplateFields = ref<Array<{key: string; value: string; color: string}>>([
+  {key: 'first', value: '{{icon}} {{title}}', color: ''},
+  {key: 'keyword1', value: '{{body}}', color: ''},
+  {key: 'remark', value: '{{app_name}} · {{time}}', color: ''}
+])
 
 watch(emailToStr, (val) => {
   emailConfig.value.to_addresses = val.split(',').map(s => s.trim()).filter(Boolean)
@@ -505,6 +520,9 @@ function loadConfigFromStore(channel: string) {
       Object.assign(wechatWebhookConfig.value, json)
     } else if (channel === 'wechat_test') {
       Object.assign(wechatTestConfig.value, json)
+      if (json.template_fields && Array.isArray(json.template_fields)) {
+        wechatTestTemplateFields.value = json.template_fields
+      }
     } else if (channel === 'webhook') {
       Object.assign(webhookConfig.value, json)
     }
@@ -551,6 +569,21 @@ async function saveConfig(channel: string, config: any) {
   }
 }
 
+async function saveWechatTestConfig() {
+  try {
+    const config = {
+      ...wechatTestConfig.value,
+      template_fields: wechatTestTemplateFields.value
+    }
+    await notificationsStore.updateConfig('wechat_test', {
+      config_json: JSON.stringify(config)
+    })
+    ElMessage.success('配置已保存')
+  } catch (err: any) {
+    ElMessage.error(err.message || '保存失败')
+  }
+}
+
 async function testChannel(channel: string) {
   testing.value = channel
   testResults.value[channel] = null
@@ -561,7 +594,7 @@ async function testChannel(channel: string) {
       telegram: telegramConfig.value,
       wechat_work: wechatConfig.value,
       wechat_work_webhook: wechatWebhookConfig.value,
-      wechat_test: wechatTestConfig.value,
+      wechat_test: {...wechatTestConfig.value, template_fields: wechatTestTemplateFields.value},
       webhook: webhookConfig.value
     }
     if (configs[channel]) {
@@ -828,5 +861,44 @@ onMounted(async () => {
   border-radius: 3px;
   font-size: 11px;
   color: var(--text-secondary);
+}
+
+.template-fields-section {
+  margin-top: 8px;
+  padding: 14px;
+  border: 1px solid var(--border-color-light);
+  border-radius: 8px;
+}
+
+.template-fields-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.template-fields-tip {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.template-field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.field-key {
+  width: 140px;
+  flex-shrink: 0;
+}
+
+.field-value {
+  flex: 1;
+}
+
+.field-color {
+  flex-shrink: 0;
 }
 </style>

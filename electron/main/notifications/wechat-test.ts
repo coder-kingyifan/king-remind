@@ -68,25 +68,20 @@ export class WeChatTestNotifier implements NotificationChannel {
         const openIds = this.parseOpenIds(config.to_openid)
 
         const templateData: Record<string, { value: string; color?: string }> = {}
-        if (config.template_data) {
-            try {
-                const parsed = JSON.parse(config.template_data)
-                for (const [key, val] of Object.entries(parsed)) {
-                    if (typeof val === 'object' && val !== null) {
-                        const rendered = renderTemplate(String((val as any).value || ''), vars)
-                        templateData[key] = {value: rendered, color: (val as any).color}
-                    } else {
-                        templateData[key] = {value: renderTemplate(String(val), vars)}
-                    }
-                }
-            } catch {
-                // 如果模板数据解析失败，使用默认字段
-                templateData['title'] = {value: vars.title}
-                templateData['body'] = {value: vars.body}
+        const fields: Array<{key: string; value: string; color?: string}> = config.template_fields || []
+
+        if (fields.length > 0) {
+            for (const field of fields) {
+                if (!field.key) continue
+                const rendered = renderTemplate(field.value || '', vars)
+                const entry: { value: string; color?: string } = {value: rendered}
+                if (field.color) entry.color = field.color
+                templateData[field.key] = entry
             }
         } else {
-            templateData['title'] = {value: vars.title}
-            templateData['body'] = {value: vars.body}
+            templateData['first'] = {value: `${vars.icon} ${vars.title}`}
+            templateData['keyword1'] = {value: vars.body}
+            templateData['remark'] = {value: `${vars.app_name} · ${vars.time}`}
         }
 
         const errors: string[] = []
