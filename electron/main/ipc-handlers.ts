@@ -3,6 +3,7 @@ import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'fs'
 import {extname, join} from 'path'
 import {remindersDb} from './db/reminders'
 import {notificationConfigsDb} from './db/notification-configs'
+import {selectNotificationSoundFile, previewNotificationSound} from './notifications/notification-window'
 import {settingsDb} from './db/settings'
 import {reminderLogsDb} from './db/reminder-logs'
 import {workdaysDb} from './db/workdays'
@@ -87,6 +88,14 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
 
     safeHandle('notifications:test', async (_event, channel: string) => {
         return await dispatcher.testChannel(channel)
+    })
+
+    safeHandle('notifications:select-sound-file', async () => {
+        return await selectNotificationSoundFile()
+    })
+
+    safeHandle('notifications:preview-sound', () => {
+        previewNotificationSound()
     })
 
     // ========== 设置 ==========

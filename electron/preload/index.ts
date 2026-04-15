@@ -45,6 +45,8 @@ const electronAPI = {
         updateConfig: (channel: string, data: any) =>
             safeInvoke('notifications:update-config', channel, data),
         test: (channel: string) => safeInvoke('notifications:test', channel),
+        selectSoundFile: () => safeInvoke('notifications:select-sound-file'),
+        previewSound: () => safeInvoke('notifications:preview-sound'),
         onShow: (callback: (data: any) => void) => {
             ipcRenderer.on('notification:show', (_event, data) => callback(data))
         }

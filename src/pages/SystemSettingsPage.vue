@@ -95,13 +95,50 @@
 
         <div class="setting-item">
           <div class="setting-info">
-            <div class="setting-label">通知提示音</div>
-            <div class="setting-desc">桌面通知时播放提示音</div>
+            <div class="setting-label">通知关闭时间</div>
+            <div class="setting-desc">桌面提醒弹窗的自动关闭时间</div>
           </div>
-          <el-switch
-              :model-value="settingsStore.settings.notification_sound !== 'false'"
-              @change="(val: boolean) => settingsStore.setSetting('notification_sound', String(val))"
-          />
+          <el-select
+              :model-value="settingsStore.settings.notification_duration || '5000'"
+              @change="(val: string) => settingsStore.setSetting('notification_duration', val)"
+              size="small"
+              style="width: 160px;"
+          >
+            <el-option label="5 秒" value="5000"/>
+            <el-option label="1 分钟" value="60000"/>
+            <el-option label="3 分钟" value="180000"/>
+            <el-option label="5 分钟" value="300000"/>
+            <el-option label="手动关闭" value="0"/>
+          </el-select>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">通知提示音</div>
+            <div class="setting-desc">桌面通知时播放的提示音类型</div>
+          </div>
+          <div class="setting-actions">
+            <el-select
+                :model-value="settingsStore.settings.notification_sound || 'on'"
+                @change="(val: string) => settingsStore.setSetting('notification_sound', val)"
+                size="small"
+                style="width: 130px;"
+            >
+              <el-option label="内置音效" value="on"/>
+              <el-option label="系统提示音" value="system"/>
+              <el-option label="自定义音乐" value="custom"/>
+              <el-option label="关闭" value="off"/>
+            </el-select>
+            <el-button size="small" plain @click="previewSound" :disabled="(settingsStore.settings.notification_sound || 'on') === 'off'">试听</el-button>
+          </div>
+        </div>
+
+        <div class="setting-item" v-if="(settingsStore.settings.notification_sound || 'on') === 'custom'">
+          <div class="setting-info">
+            <div class="setting-label">自定义提示音文件</div>
+            <div class="setting-desc">{{ settingsStore.settings.notification_sound_file || '未选择' }}</div>
+          </div>
+          <el-button size="small" plain @click="selectSoundFile">选择文件</el-button>
         </div>
 
         <div class="setting-item" v-if="behaviorNeedsRestart">
@@ -864,6 +901,26 @@ async function cleanupLogs() {
     ElMessage.success('日志清理完成')
   } catch {
     ElMessage.error('清理失败')
+  }
+}
+
+async function selectSoundFile() {
+  try {
+    const filePath = await window.electronAPI.notifications.selectSoundFile()
+    if (filePath) {
+      await settingsStore.setSetting('notification_sound_file', filePath)
+      ElMessage.success('提示音文件已设置')
+    }
+  } catch (e: any) {
+    ElMessage.error('选择文件失败: ' + (e.message || '未知错误'))
+  }
+}
+
+function previewSound() {
+  try {
+    window.electronAPI.notifications.previewSound()
+  } catch (e: any) {
+    ElMessage.error('试听失败: ' + (e.message || '未知错误'))
   }
 }
 </script>
