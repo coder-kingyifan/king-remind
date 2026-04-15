@@ -31,11 +31,12 @@ export interface StoreSkillWithStatus extends StoreSkill {
 }
 
 /**
- * 从 GitHub 获取商店清单
+ * 从 GitHub 获取商店清单（加随机参数绕过 CDN 缓存）
  */
 export async function fetchStoreManifest(): Promise<StoreManifest> {
     try {
-        const response = await axios.get<StoreManifest>(STORE_URL, {
+        const url = `${STORE_URL}?_t=${Date.now()}`
+        const response = await axios.get<StoreManifest>(url, {
             timeout: 15000,
             headers: {'Accept': 'application/json'}
         })
