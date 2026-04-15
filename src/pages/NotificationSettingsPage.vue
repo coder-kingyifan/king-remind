@@ -299,7 +299,7 @@
               <li>访问 <b>微信公众平台测试号</b>（mp.weixin.qq.com/debug/cgi-bin/sandbox?t=sandbox/login）扫码登录</li>
               <li>获取 <b>appID</b> 和 <b>appsecret</b>，填写到下方</li>
               <li>关注测试号二维码，获取 <b>用户 OpenID</b>（多个用逗号分隔）</li>
-              <li>如需模板消息，在测试号页面创建模板并填写 <b>模板ID</b></li>
+              <li>如需模板消息：在测试号页面点击"新增测试模板"，模板内容格式如 <code v-pre>{{first.DATA}}</code> <code v-pre>{{keyword1.DATA}}</code> <code v-pre>{{remark.DATA}}</code>，每个 <code v-pre>{{xxx.DATA}}</code> 对应下方一个字段名 <code>xxx</code></li>
             </ol>
           </div>
           <el-form :model="wechatTestConfig" label-position="top" size="small">
@@ -332,16 +332,18 @@
               <div class="template-fields-section">
                 <div class="template-fields-header">
                   <span class="template-header-title">模板字段</span>
-                  <span class="template-fields-tip">对应微信模板中的每个变量，如 first、keyword1、remark</span>
                 </div>
-                <div class="template-vars-tip" v-pre>
-                  值支持变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 ·
-                  <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名
+                <div class="template-vars-tip">
+                  对应微信模板中的变量：<code>字段名</code> 就是模板里 <code v-pre>{{xxx.DATA}}</code> 中的 <code>xxx</code>，<code>字段值</code> 支持变量
+                  <code v-pre>{{title}}</code> <code v-pre>{{body}}</code> <code v-pre>{{icon}}</code> <code v-pre>{{time}}</code> <code v-pre>{{app_name}}</code>，<code>颜色</code> 可点击色块选择（可留空）
+                </div>
+                <div class="template-example">
+                  例：微信模板内容为 <code v-pre>{{first.DATA}} 标题：{{keyword1.DATA}} {{remark.DATA}}</code>，则下方填 3 行：first / keyword1 / remark
                 </div>
                 <div v-for="(field, index) in wechatTestTemplateFields" :key="index" class="template-field-row">
                   <el-input v-model="field.key" placeholder="字段名，如 keyword1" class="field-key"/>
-                  <el-input v-model="field.value" placeholder="字段值，如 {{title}}" class="field-value"/>
-                  <el-color-picker v-model="field.color" size="small" class="field-color"/>
+                  <el-input v-model="field.value" placeholder="字段值，如 &#123;&#123;title&#125;&#125;" class="field-value"/>
+                  <el-color-picker v-model="field.color" size="small" class="field-color" show-alpha/>
                   <el-button :icon="Delete" size="small" circle @click="wechatTestTemplateFields.splice(index, 1)"/>
                 </div>
                 <el-button size="small" @click="wechatTestTemplateFields.push({key: '', value: '', color: ''})">
@@ -882,6 +884,21 @@ onMounted(async () => {
   color: var(--text-tertiary);
 }
 
+.template-example {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+
+.template-example code {
+  background: var(--bg-hover);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
 .template-field-row {
   display: flex;
   align-items: center;
@@ -899,6 +916,7 @@ onMounted(async () => {
 }
 
 .field-color {
+  width: 120px;
   flex-shrink: 0;
 }
 </style>
