@@ -637,8 +637,37 @@ print(resp.json())</pre>
               </span>
           </div>
         </div>
+
+        <div class="tip-section">
+          <div class="tip-title">觉得好用？请作者喝杯咖啡 ☕</div>
+          <div class="tip-desc">点击图片可放大查看</div>
+          <div class="tip-images">
+            <div class="tip-item" @click="openTipPreview(alipayImg)">
+              <img :src="alipayImg" class="tip-qr" alt="支付宝"/>
+              <span class="tip-label">支付宝</span>
+            </div>
+            <div class="tip-item" @click="openTipPreview(wechatpayImg)">
+              <img :src="wechatpayImg" class="tip-qr" alt="微信"/>
+              <span class="tip-label">微信</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+
+    <!-- 打赏码放大预览 -->
+    <el-dialog
+        v-model="showTipPreview"
+        width="auto"
+        :show-close="true"
+        class="tip-preview-dialog"
+        @close="closeTipPreview"
+        align-center
+    >
+      <div class="tip-preview-wrapper">
+        <img :src="tipPreviewSrc" class="tip-preview-img" alt="打赏码"/>
+      </div>
+    </el-dialog>
 
     <!-- 祝福弹窗 -->
     <el-dialog
@@ -727,6 +756,8 @@ import {useSettingsStore} from '@/stores/settings'
 import {ElMessage} from 'element-plus'
 import {ArrowDown} from '@element-plus/icons-vue'
 import {setCachedAppMode} from '@/router'
+import alipayImg from '@/../resources/alipay.jpg'
+import wechatpayImg from '@/../resources/wechatpay.jpg'
 
 const settingsStore = useSettingsStore()
 const showBlessing = ref(false)
@@ -738,6 +769,18 @@ const encNewPassword = ref('')
 const encConfirmPassword = ref('')
 const encError = ref('')
 const encLoading = ref(false)
+const tipPreviewSrc = ref('')
+const showTipPreview = ref(false)
+
+function openTipPreview(src: string) {
+  tipPreviewSrc.value = src
+  showTipPreview.value = true
+}
+
+function closeTipPreview() {
+  showTipPreview.value = false
+  tipPreviewSrc.value = ''
+}
 
 onMounted(async () => {
 })
@@ -1437,5 +1480,69 @@ function previewSound() {
   font-size: 12px;
   color: #F56C6C;
   padding-left: 4px;
+}
+
+/* 打赏 */
+.tip-section {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.tip-title {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.tip-desc {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+}
+
+.tip-images {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+}
+
+.tip-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.tip-item:hover .tip-qr {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.tip-qr {
+  width: 140px;
+  height: 140px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color-light);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.tip-label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.tip-preview-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px;
+}
+
+.tip-preview-img {
+  width: 280px;
+  height: 280px;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 </style>

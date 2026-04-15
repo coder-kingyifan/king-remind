@@ -187,6 +187,7 @@
 | **Telegram** | Bot API 推送，支持多 Chat ID，支持 HTTP 代理                  |
 | **企业微信**     | 应用消息推送，支持 `@all` 或指定用户，自动刷新 access_token           |
 | **企微群机器人**   | Webhook 群消息推送                                      |
+| **测试公众号**    | 微信公众平台测试号消息推送，支持客服文本消息和模板消息                         |
 | **Webhook**  | 自定义 HTTP 请求（GET/POST/PUT/PATCH），支持自定义 Header 和模板变量 |
 
 ### 数据安全
@@ -517,7 +518,7 @@ king-remind/
 │   │   │   ├── chat-history.ts   # AI 对话会话与消息
 │   │   │   ├── model-configs.ts  # 模型配置
 │   │   │   └── ...            # 其他数据表
-│   │   ├── notifications/     # 通知渠道（桌面 / 邮件 / TG / 企微 / Webhook）
+│   │   ├── notifications/     # 通知渠道（桌面 / 邮件 / TG / 企微 / 测试公众号 / Webhook）
 │   │   └── skills/            # 技能执行器
 │   └── preload/               # 预加载脚本（contextBridge）
 ├── src/
@@ -601,6 +602,30 @@ king-remind/
 
 </details>
 
+<details>
+<summary><b>测试公众号（微信公众平台测试号）</b></summary>
+<br />
+
+1. 访问 [微信公众平台测试号](https://mp.weixin.qq.com/debug/cgi-bin/sandbox?t=sandbox/login) 扫码登录
+2. 获取 **appID** 和 **appsecret**，填入应用配置
+3. 关注页面上的测试号二维码，获取用户的 **OpenID**（多个用逗号分隔）
+4. 选择消息格式：
+   - **客服消息（文本）**：直接发送文本内容，支持自定义消息模板
+   - **模板消息**：需先在测试号页面点击"新增测试模板"，模板标题填 `king提醒助手`，模板内容示例：
+
+```
+{{title.DATA}}
+提醒内容：{{content.DATA}}
+来源：{{app_name.DATA}}
+时间：{{time.DATA}}
+```
+
+5. 在应用「通知渠道 → 测试公众号」中填写模板 ID，并配置模板字段（字段名对应模板中的变量名，字段值支持 `{{title}}`、`{{body}}`、`{{app_name}}`、`{{time}}` 等模板变量）
+
+> **注意：** 测试号的模板消息仅对关注了测试号的用户生效。正式公众号需通过微信认证后才能使用模板消息。
+
+</details>
+
 <br />
 
 ## 许可证
@@ -620,6 +645,16 @@ king-remind/
 [GitHub](https://github.com/coder-kingyifan)
 &nbsp;&middot;&nbsp;
 [Issues](https://github.com/coder-kingyifan/king-remind/issues)
+
+## 打赏
+
+觉得好用？请作者喝杯咖啡 ☕
+
+<p align="center">
+  <img src="./resources/alipay.jpg" width="180" alt="支付宝" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="./resources/wechatpay.jpg" width="180" alt="微信" />
+</p>
 
 ---
 
