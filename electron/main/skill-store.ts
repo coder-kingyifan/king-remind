@@ -10,7 +10,7 @@ export interface StoreSkill {
     description: string
     icon: string
     category: string
-    action_type: 'builtin' | 'api_call' | 'ai_prompt' | 'search_and_summarize'
+    action_type: 'api_call' | 'ai_prompt' | 'search_and_summarize'
     action_config: string
     config_schema: string
     version: string
@@ -80,6 +80,7 @@ export function installStoreSkill(storeSkill: StoreSkill): any {
             description: storeSkill.description,
             icon: storeSkill.icon,
             category: storeSkill.category,
+            action_type: storeSkill.action_type,
             action_config: storeSkill.action_config,
             config_schema: storeSkill.config_schema,
             store_version: storeSkill.version,
@@ -88,7 +89,6 @@ export function installStoreSkill(storeSkill: StoreSkill): any {
     }
 
     // 新建技能
-    const isBuiltin = storeSkill.action_type === 'builtin' ? 1 : 0
     return skillsDb.createFromStore({
         skill_key: storeSkill.skill_key,
         name: storeSkill.name,
@@ -99,7 +99,6 @@ export function installStoreSkill(storeSkill: StoreSkill): any {
         action_config: storeSkill.action_config,
         config_schema: storeSkill.config_schema,
         user_config: '{}',
-        is_builtin: isBuiltin,
         store_version: storeSkill.version,
         store_source: STORE_URL
     })

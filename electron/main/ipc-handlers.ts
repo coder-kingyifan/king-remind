@@ -8,11 +8,11 @@ import {reminderLogsDb} from './db/reminder-logs'
 import {workdaysDb} from './db/workdays'
 import {NotificationDispatcher} from './notifications/dispatcher'
 import {getSolarDateFromLunar} from 'chinese-days'
-import {chatWithLLM, generateSessionTitle, PROVIDERS, testModelConnection, hasTextModelConfigured} from './llm'
+import {chatWithLLM, generateSessionTitle, PROVIDERS, testModelConnection, hasTextModelConfigured, hasSearchModelConfigured} from './llm'
 import {chatHistoryDb} from './db/chat-history'
 import {modelConfigsDb} from './db/model-configs'
 import {skillsDb} from './db/skills'
-import {skillContentDb, seedSkillContent} from './db/skill-content'
+import {skillContentDb} from './db/skill-content'
 import {startApiServer, stopApiServer} from './api-server'
 import {ReminderScheduler} from './scheduler'
 import {updateTrayAlwaysOnTop} from './tray'
@@ -22,6 +22,7 @@ import {
     removeEncryption as removeDbEncryption,
     saveDatabase
 } from './db/connection'
+import {weChatBot} from './wechat-bot/wechat-bot'
 
 // sql.js 返回的对象可能含有不可被 structured clone 序列化的属性（如 Uint8Array 等）
 // 在 IPC 返回前必须转为纯 JS 对象
@@ -528,13 +529,6 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
         return skillContentDb.count(skillKey, category)
     })
 
-    // 初始化技能内容数据
-    try {
-        seedSkillContent()
-    } catch (e: any) {
-        console.error('[IPC] 技能内容初始化失败:', e.message)
-    }
-
     // ========== 技能商店 ==========
     safeHandle('skill-store:fetch', async () => {
         const {fetchStoreManifest, getStoreSkillsWithStatus} = await import('./skill-store')
@@ -598,6 +592,10 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
         return hasTextModelConfigured()
     })
 
+    safeHandle('models:has-search-model', () => {
+        return hasSearchModelConfigured()
+    })
+
     // ========== 应用控制 ==========
     safeHandle('app:restart', () => {
         app.relaunch()
@@ -656,5 +654,30 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
         settingsDb.set('db_encrypted', 'false')
         saveDatabase()
         return true
+    })
+
+    // ========== 微信机器人 ==========
+    weChatBot.setScheduler(scheduler)
+
+    safeHandle('wechat-bot:get-qrcode', async () => {
+        return await weChatBot.getQRCode()
+    })
+
+    safeHandle('wechat-bot:check-status', async () => {
+        return await weChatBot.checkQRCodeStatus()
+    })
+
+    safeHandle('wechat-bot:login', async () => {
+        await weChatBot.login()
+        return weChatBot.getState()
+    })
+
+    safeHandle('wechat-bot:logout', async () => {
+        await weChatBot.logout()
+        return weChatBot.getState()
+    })
+
+    safeHandle('wechat-bot:get-state', () => {
+        return weChatBot.getState()
     })
 }

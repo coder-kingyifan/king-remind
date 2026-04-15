@@ -5,6 +5,7 @@ import {ReminderScheduler} from './scheduler'
 import {chatWithLLM} from './llm'
 import type {StreamEvent} from './llm'
 import {modelConfigsDb} from './db/model-configs'
+import {weChatBot} from './wechat-bot/wechat-bot'
 
 let server: Server | null = null
 
@@ -188,6 +189,45 @@ export function startApiServer(scheduler: ReminderScheduler): void {
                     model: m.model,
                     is_default: m.is_default
                 })))
+            }
+
+            // ========== 微信机器人 API ==========
+            // GET /api/wechat-bot/qrcode - 获取登录二维码
+            if (method === 'GET' && path === '/api/wechat-bot/qrcode') {
+                try {
+                    const result = await weChatBot.getQRCode()
+                    return ok(res, result)
+                } catch (e: any) {
+                    return err(res, 500, `获取二维码失败: ${e.message}`)
+                }
+            }
+
+            // GET /api/wechat-bot/status - 获取机器人状态
+            if (method === 'GET' && path === '/api/wechat-bot/status') {
+                return ok(res, weChatBot.getState())
+            }
+
+            // POST /api/wechat-bot/login - 登录
+            if (method === 'POST' && path === '/api/wechat-bot/login') {
+                try {
+                    await weChatBot.login()
+                    return ok(res, weChatBot.getState())
+                } catch (e: any) {
+                    return err(res, 400, e.message)
+                }
+            }
+
+            // POST /api/wechat-bot/logout - 登出
+            if (method === 'POST' && path === '/api/wechat-bot/logout') {
+                await weChatBot.logout()
+                return ok(res, weChatBot.getState())
+            }
+
+            // POST /api/wechat-bot/toggle - 启用/禁用
+            if (method === 'POST' && path === '/api/wechat-bot/toggle') {
+                const body = await readBody(req)
+                weChatBot.toggle(!!body.enabled)
+                return ok(res, weChatBot.getState())
             }
 
             err(res, 404, '接口不存在')

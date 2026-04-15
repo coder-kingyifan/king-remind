@@ -279,6 +279,13 @@ async function testSkill(skill: Skill) {
       return
     }
   }
+  if (skill.action_type === 'search_and_summarize') {
+    const hasSearch = await window.electronAPI.models.hasSearchModel()
+    if (!hasSearch) {
+      ElMessage.warning('您还没有配置联网搜索模型，请先前往「模型配置」页面添加')
+      return
+    }
+  }
   testingSkill.value = skill
   testResult.value = ''
   testing.value = true
@@ -299,6 +306,13 @@ async function runTest() {
     const hasModel = await window.electronAPI.models.hasTextModel()
     if (!hasModel) {
       ElMessage.warning('尚未配置文本模型，请先前往「模型配置」页面添加模型')
+      return
+    }
+  }
+  if (testingSkill.value.action_type === 'search_and_summarize') {
+    const hasSearch = await window.electronAPI.models.hasSearchModel()
+    if (!hasSearch) {
+      ElMessage.warning('您还没有配置联网搜索模型，请先前往「模型配置」页面添加')
       return
     }
   }

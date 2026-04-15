@@ -590,7 +590,7 @@ export function runMigrations(): void {
             version: 16,
             sql: `
                 INSERT OR IGNORE INTO settings (key, value) VALUES ('setup_done', 'false');
-                INSERT OR IGNORE INTO settings (key, value) VALUES ('api_enabled', 'true');
+                INSERT OR IGNORE INTO settings (key, value) VALUES ('api_enabled', 'false');
                 INSERT OR IGNORE INTO settings (key, value) VALUES ('api_host', '0.0.0.0');
             `
         },
@@ -621,6 +621,13 @@ export function runMigrations(): void {
             sql: `
                 ALTER TABLE skills ADD COLUMN store_version TEXT DEFAULT NULL;
                 ALTER TABLE skills ADD COLUMN store_source TEXT DEFAULT NULL;
+            `
+        },
+        {
+            version: 20,
+            sql: `
+                UPDATE skills SET is_enabled = 1 WHERE is_builtin = 1 AND is_enabled = 0;
+                UPDATE skills SET is_builtin = 0 WHERE is_builtin = 1;
             `
         }
     ]

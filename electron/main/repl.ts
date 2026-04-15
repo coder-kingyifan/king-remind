@@ -14,7 +14,6 @@ import {
     saveDatabase
 } from './db/connection'
 import {runMigrations} from './db/migrations'
-import {seedBuiltinSkills} from './db/skills'
 import {NotificationDispatcher} from './notifications/dispatcher'
 import {startApiServer} from './api-server'
 
@@ -74,31 +73,81 @@ function printBanner(): void {
 
 // ======================== 命令处理 ========================
 
-function handleHelp(): void {
-    log('')
-    log(`${C.bold}可用命令:${C.reset}`)
-    log('')
-    log(`  ${C.green}/help${C.reset}                显示帮助信息`)
-    log(`  ${C.green}/config${C.reset}              交互式配置 AI 模型`)
-    log(`  ${C.green}/config show${C.reset}          显示当前模型配置`)
-    log(`  ${C.green}/config test${C.reset}          测试模型连接`)
-    log(`  ${C.green}/chat${C.reset}                进入聊天模式`)
-    log(`  ${C.green}/chat <消息>${C.reset}          发送单条消息`)
-    log(`  ${C.green}/models${C.reset}              列出所有模型配置`)
-    log(`  ${C.green}/models default <id>${C.reset}  设置默认模型`)
-    log(`  ${C.green}/models test <id>${C.reset}     测试指定模型`)
-    log(`  ${C.green}/models delete <id>${C.reset}   删除模型配置`)
-    log(`  ${C.green}/reminders${C.reset}           列出提醒`)
-    log(`  ${C.green}/reminders toggle <id>${C.reset} 启用/禁用提醒`)
-    log(`  ${C.green}/reminders delete <id>${C.reset} 删除提醒`)
-    log(`  ${C.green}/status${C.reset}              系统状态`)
-    log(`  ${C.green}/setup${C.reset}               初始设置`)
-    log(`  ${C.green}/quit${C.reset}                退出应用`)
-    log('')
-    log(`  ${C.dim}直接输入文字（不带 / 前缀）将发送给 AI 对话${C.reset}`)
-    log('')
+function normalizeHelpTopic(raw?: string): string {
+    return (raw || '').trim().replace(/^\/+/, '').toLowerCase()
 }
 
+function handleHelp(args: string[] = []): void {
+    const topic = normalizeHelpTopic(args[0])
+
+    if (!topic) {
+        log('')
+        log(`${C.bold}可用命令:${C.reset}`)
+        log(`  ${C.green}/help${C.reset}          显示帮助`)
+        log(`  ${C.green}/config${C.reset}        配置 AI 模型`)
+        log(`  ${C.green}/chat${C.reset}          AI 对话模式`)
+        log(`  ${C.green}/reminders${C.reset}     管理提醒`)
+        log(`  ${C.green}/models${C.reset}        管理模型配置`)
+        log(`  ${C.green}/status${C.reset}        系统状态`)
+        log(`  ${C.green}/setup${C.reset}         初始设置`)
+        log(`  ${C.green}/quit${C.reset}          退出`)
+        log('')
+        log(`${C.dim}提示: 使用 /help /config 这种格式可查看某个命令详情${C.reset}`)
+        log('')
+        return
+    }
+
+    log('')
+    switch (topic) {
+        case 'help':
+            log(`${C.bold}/help${C.reset} - 显示帮助`)
+            log(`  用法: ${C.green}/help${C.reset}`)
+            log(`  用法: ${C.green}/help /<命令>${C.reset}`)
+            break
+        case 'config':
+            log(`${C.bold}/config${C.reset} - 配置 AI 模型`)
+            log(`  用法: ${C.green}/config${C.reset}`)
+            log(`  用法: ${C.green}/config show${C.reset}`)
+            log(`  用法: ${C.green}/config test${C.reset}`)
+            break
+        case 'chat':
+            log(`${C.bold}/chat${C.reset} - AI 对话模式`)
+            log(`  用法: ${C.green}/chat${C.reset}`)
+            log(`  用法: ${C.green}/chat <消息>${C.reset}`)
+            break
+        case 'reminders':
+            log(`${C.bold}/reminders${C.reset} - 管理提醒`)
+            log(`  用法: ${C.green}/reminders${C.reset}`)
+            log(`  用法: ${C.green}/reminders toggle <id>${C.reset}`)
+            log(`  用法: ${C.green}/reminders delete <id>${C.reset}`)
+            break
+        case 'models':
+            log(`${C.bold}/models${C.reset} - 管理模型配置`)
+            log(`  用法: ${C.green}/models${C.reset}`)
+            log(`  用法: ${C.green}/models default <id>${C.reset}`)
+            log(`  用法: ${C.green}/models test <id>${C.reset}`)
+            log(`  用法: ${C.green}/models delete <id>${C.reset}`)
+            break
+        case 'status':
+            log(`${C.bold}/status${C.reset} - 系统状态`)
+            log(`  用法: ${C.green}/status${C.reset}`)
+            break
+        case 'setup':
+            log(`${C.bold}/setup${C.reset} - 初始设置`)
+            log(`  用法: ${C.green}/setup${C.reset}`)
+            break
+        case 'quit':
+        case 'exit':
+            log(`${C.bold}/quit${C.reset} - 退出`)
+            log(`  用法: ${C.green}/quit${C.reset}`)
+            break
+        default:
+            log(`${C.yellow}未找到命令 /${topic} 的帮助${C.reset}`)
+            log(`可用命令: /help /config /chat /reminders /models /status /setup /quit`)
+            break
+    }
+    log('')
+}
 async function handleConfig(rl: readline.Interface, args: string[]): Promise<void> {
     const subCmd = args[0]
 
@@ -586,7 +635,7 @@ export async function startRepl(scheduler: ReminderScheduler | null): Promise<vo
                 case 'help':
                 case 'h':
                 case '?':
-                    handleHelp()
+                    handleHelp(args)
                     break
                 case 'config':
                     await handleConfig(rl, args)
@@ -646,10 +695,6 @@ export async function continueHeadlessInit(): Promise<void> {
     console.log('[Headless] 正在运行数据库迁移...')
     runMigrations()
     console.log('[Headless] 数据库迁移完成')
-
-    // 初始化内置技能
-    seedBuiltinSkills()
-    console.log('[Headless] 内置技能初始化完成')
 
     // 跳过引导设置
     const setupDone = settingsDb.get('setup_done')

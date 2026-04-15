@@ -252,6 +252,11 @@ export function hasTextModelConfigured(): boolean {
     return false
 }
 
+export function hasSearchModelConfigured(): boolean {
+    const allConfigs = modelConfigsDb.list()
+    return allConfigs.some(c => c.model_type === 'web_search')
+}
+
 function parseModelNotes(notesJson: string): Record<string, string> {
     if (!notesJson) return {}
     try {

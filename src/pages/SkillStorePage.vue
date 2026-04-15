@@ -6,6 +6,10 @@
         <p class="page-subtitle">浏览和安装社区技能，扩展你的提醒能力</p>
       </div>
       <div class="header-actions">
+        <el-button @click="router.push('/skills')">
+          <el-icon><ArrowLeft/></el-icon>
+          返回技能中心
+        </el-button>
         <el-button @click="loadStoreData" :loading="skillStoreStore.fetching">
           <el-icon><Refresh/></el-icon>
           刷新
@@ -105,13 +109,15 @@
 
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
+import {useRouter} from 'vue-router'
 import {useSkillStoreStore} from '@/stores/skill-store'
 import {useSkillsStore} from '@/stores/skills'
-import {Loading, Refresh} from '@element-plus/icons-vue'
+import {ArrowLeft, Loading, Refresh} from '@element-plus/icons-vue'
 import {SKILL_CATEGORIES} from '@/types/skill'
 import type {StoreSkillWithStatus} from '@/types/skill'
 import {ElMessage} from 'element-plus'
 
+const router = useRouter()
 const skillStoreStore = useSkillStoreStore()
 const skillsStore = useSkillsStore()
 const searchText = ref('')

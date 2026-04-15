@@ -7,6 +7,11 @@
           <p v-if="encouragement" class="page-encouragement">{{ encouragement }}</p>
         </div>
         <div class="page-header-actions">
+          <el-button size="small" plain @click="openWechatDialog">
+            <el-icon style="margin-right:4px"><ChatLineSquare/></el-icon>
+            微信
+            <span class="wechat-status-dot" :class="wechatConnected ? 'on' : 'off'"></span>
+          </el-button>
           <el-button size="small" plain @click="showHistory = true">
             <el-icon style="margin-right:4px"><Clock/></el-icon>
             历史
@@ -87,7 +92,6 @@
           <div class="model-selector-btn">
             <span class="model-selector-icon">{{ getProviderIcon(currentConfig?.provider) }}</span>
             <span class="model-selector-name">{{ currentConfig?.name || '选择' }}</span>
-            <span class="model-selector-model" v-if="selectedModel">{{ selectedModel }}</span>
           </div>
           <template #dropdown>
             <el-dropdown-menu>
@@ -158,12 +162,56 @@
         <div v-if="sessions.length === 0" class="history-empty">暂无历史对话</div>
       </div>
     </el-drawer>
+
+    <!-- 微信连接对话框 -->
+    <el-dialog v-model="showWechatDialog" title="微信连接" width="400px" :close-on-click-modal="false">
+      <div class="wechat-dialog-content">
+        <!-- 连接状态 -->
+        <div class="wechat-status-row">
+          <span class="wechat-status-indicator" :class="wechatStatusClass">
+            <span class="wechat-dot"></span>
+            <span class="wechat-status-label">{{ wechatStatusText }}</span>
+          </span>
+          <span v-if="wechatBotState.nickname" class="wechat-nickname">{{ wechatBotState.nickname }}</span>
+        </div>
+
+        <!-- 未连接：二维码区域 -->
+        <template v-if="wechatBotState.status === 'disconnected' || wechatBotState.status === 'waiting_qrcode'">
+          <div class="wechat-qrcode-area">
+            <div v-if="wechatQrcodeLoading" class="wechat-qrcode-loading">
+              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            </div>
+            <div v-else-if="wechatQrcodeUrl" class="wechat-qrcode-container">
+              <img :src="wechatQrcodeUrl" class="wechat-qrcode-image" alt="微信登录二维码"/>
+              <p class="wechat-qrcode-tip">请使用微信扫描二维码登录</p>
+              <p v-if="wechatBotState.status === 'waiting_qrcode'" class="wechat-qrcode-waiting">等待扫码中...</p>
+            </div>
+            <div v-else class="wechat-qrcode-placeholder">
+              <el-button type="primary" @click="fetchWechatQRCode" :loading="wechatQrcodeLoading">获取登录二维码</el-button>
+            </div>
+          </div>
+        </template>
+
+        <!-- 已连接：断开按钮 -->
+        <template v-if="wechatBotState.status === 'connected'">
+          <div class="wechat-connected-actions">
+            <el-button type="danger" plain size="small" @click="handleWechatLogout" :loading="wechatLogoutLoading">断开连接</el-button>
+          </div>
+        </template>
+
+        <!-- 使用说明 -->
+        <div class="wechat-guide">
+          <p v-if="wechatBotState.status !== 'connected'">扫码登录后，微信消息将自动由 AI 助手处理并回复。</p>
+          <p>对话记录保存在历史对话中，以 [微信] 标识。</p>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import {computed, nextTick, onActivated, onMounted, onUnmounted, reactive, ref, watch} from 'vue'
-import {Clock, Delete, Plus, Promotion} from '@element-plus/icons-vue'
+import {Clock, Delete, Plus, Promotion, ChatLineSquare} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import ChatAvatar from '@/components/chat/ChatAvatar.vue'
 import ChatMessage from '@/components/chat/ChatMessage.vue'
@@ -206,6 +254,135 @@ const selectedModel = ref<string>('')
 const currentSessionId = ref<number | null>(null)
 const sessions = ref<SessionItem[]>([])
 const showHistory = ref(false)
+
+// WeChat bot state
+interface WechatBotState {
+  status: 'disconnected' | 'waiting_qrcode' | 'connecting' | 'connected'
+  nickname?: string
+  headImgUrl?: string
+  recentContacts: Array<{uin: string; nickname: string}>
+}
+
+const showWechatDialog = ref(false)
+const wechatBotState = ref<WechatBotState>({
+  status: 'disconnected',
+  recentContacts: []
+})
+const wechatQrcodeUrl = ref('')
+const wechatQrcodeLoading = ref(false)
+const wechatLogoutLoading = ref(false)
+let wechatPollTimer: ReturnType<typeof setInterval> | null = null
+let wechatIsCheckingStatus = false
+
+const wechatConnected = computed(() => wechatBotState.value.status === 'connected')
+
+const wechatStatusClass = computed(() => {
+  const map: Record<string, string> = {
+    disconnected: 'off',
+    waiting_qrcode: 'waiting',
+    connecting: 'waiting',
+    connected: 'on'
+  }
+  return map[wechatBotState.value.status] || 'off'
+})
+
+const wechatStatusText = computed(() => {
+  const map: Record<string, string> = {
+    disconnected: '未连接',
+    waiting_qrcode: '等待扫码',
+    connecting: '连接中',
+    connected: '已连接'
+  }
+  return map[wechatBotState.value.status] || '未知'
+})
+
+async function loadWechatState() {
+  try {
+    const state = await window.electronAPI.wechatBot.getState()
+    if (state) Object.assign(wechatBotState.value, state)
+  } catch { /* ignore */ }
+}
+
+async function fetchWechatQRCode() {
+  if (wechatQrcodeLoading.value) return
+  wechatQrcodeLoading.value = true
+  try {
+    const result = await window.electronAPI.wechatBot.getQRCode()
+    if (result) {
+      if (result.qrcode && result.qrcode.startsWith('data:')) {
+        wechatQrcodeUrl.value = result.qrcode
+      } else if (result.qrcode) {
+        wechatQrcodeUrl.value = `data:image/png;base64,${result.qrcode}`
+      } else if (result.url) {
+        wechatQrcodeUrl.value = result.url
+      }
+    }
+    if (!wechatQrcodeUrl.value) {
+      ElMessage.warning('未获取到二维码数据')
+    }
+    startWechatPollingStatus()
+  } catch (e: any) {
+    ElMessage.error(`获取二维码失败: ${e?.message || '未知错误'}`)
+  } finally {
+    wechatQrcodeLoading.value = false
+  }
+}
+
+function startWechatPollingStatus() {
+  stopWechatPollingStatus()
+  wechatIsCheckingStatus = false
+  wechatPollTimer = setInterval(async () => {
+    if (wechatIsCheckingStatus) return
+    wechatIsCheckingStatus = true
+    try {
+      const result = await window.electronAPI.wechatBot.checkStatus()
+      if (result) {
+        if (result.status === 'confirmed') {
+          stopWechatPollingStatus()
+          await loadWechatState()
+          ElMessage.success('微信登录成功')
+        } else if (result.status === 'expired') {
+          stopWechatPollingStatus()
+          wechatQrcodeUrl.value = ''
+          ElMessage.warning('二维码已过期，请重新获取')
+        } else if (result.status === 'canceled') {
+          stopWechatPollingStatus()
+          wechatQrcodeUrl.value = ''
+          await loadWechatState()
+        }
+      }
+    } catch { /* ignore */ }
+    finally { wechatIsCheckingStatus = false }
+  }, 3000)
+}
+
+function stopWechatPollingStatus() {
+  wechatIsCheckingStatus = false
+  if (wechatPollTimer) {
+    clearInterval(wechatPollTimer)
+    wechatPollTimer = null
+  }
+}
+
+async function handleWechatLogout() {
+  if (wechatLogoutLoading.value) return
+  wechatLogoutLoading.value = true
+  try {
+    await window.electronAPI.wechatBot.logout()
+    await loadWechatState()
+    wechatQrcodeUrl.value = ''
+    ElMessage.success('已断开连接')
+  } catch (e: any) {
+    ElMessage.error(`断开失败: ${e?.message || '未知错误'}`)
+  } finally {
+    wechatLogoutLoading.value = false
+  }
+}
+
+function openWechatDialog() {
+  showWechatDialog.value = true
+  loadWechatState()
+}
 
 // Image handling
 const pendingImages = ref<string[]>([])
@@ -482,7 +659,7 @@ onMounted(async () => {
   window.electronAPI.ai.onStreamEvent(handleStreamEvent)
   await loadModelConfigs()
 
-  await Promise.all([loadNickname(), loadGreeting(), loadSessions()])
+  await Promise.all([loadNickname(), loadGreeting(), loadSessions(), loadWechatState()])
 })
 
 onActivated(async () => {
@@ -491,6 +668,7 @@ onActivated(async () => {
 
 onUnmounted(() => {
   window.electronAPI.ai.removeStreamListener()
+  stopWechatPollingStatus()
 })
 
 function onConfigChange(id: number) {
@@ -892,16 +1070,6 @@ async function send() {
 
 .model-selector-icon { font-size: 14px; flex-shrink: 0; }
 .model-selector-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.model-selector-model {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 80px;
-  padding-left: 4px;
-  border-left: 1px solid var(--border-color-light);
-}
 
 .model-inline-select {
   width: 120px;
@@ -1038,5 +1206,136 @@ async function send() {
   padding: 40px 0;
   color: var(--text-tertiary);
   font-size: 13px;
+}
+
+/* WeChat status dot on header button */
+.wechat-status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.wechat-status-dot.on {
+  background: #67C23A;
+  box-shadow: 0 0 4px rgba(103, 194, 58, 0.5);
+}
+
+.wechat-status-dot.off {
+  background: #909399;
+}
+
+/* WeChat dialog */
+.wechat-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.wechat-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+}
+
+.wechat-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wechat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.wechat-status-indicator.on .wechat-dot {
+  background: #67C23A;
+  box-shadow: 0 0 6px rgba(103, 194, 58, 0.5);
+}
+
+.wechat-status-indicator.off .wechat-dot {
+  background: #909399;
+}
+
+.wechat-status-indicator.waiting .wechat-dot {
+  background: #E6A23C;
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+.wechat-status-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.wechat-nickname {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.wechat-qrcode-area {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}
+
+.wechat-qrcode-loading {
+  display: flex;
+  gap: 6px;
+  padding: 30px;
+}
+
+.wechat-qrcode-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.wechat-qrcode-image {
+  width: 180px;
+  height: 180px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color-light);
+}
+
+.wechat-qrcode-tip {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.wechat-qrcode-waiting {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+.wechat-qrcode-placeholder {
+  padding: 30px;
+}
+
+.wechat-connected-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.wechat-guide {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  line-height: 1.6;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color-light);
+}
+
+.wechat-guide p {
+  margin: 0 0 4px;
 }
 </style>

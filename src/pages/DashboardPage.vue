@@ -6,7 +6,7 @@
     </div>
 
     <!-- 核心指标 -->
-    <div class="stats-row">
+    <div class="stats-row" :class="{ 'simple-mode': isSimpleMode }">
       <div class="stat-card" @click="router.push('/reminders')">
         <div class="stat-icon" style="background: rgba(64, 158, 255, 0.1); color: #409EFF;">
           <el-icon :size="22"><Bell/></el-icon>
@@ -20,7 +20,7 @@
         </div>
       </div>
 
-      <div class="stat-card" @click="router.push('/')">
+      <div v-if="!isSimpleMode" class="stat-card" @click="router.push('/')">
         <div class="stat-icon" style="background: rgba(144, 89, 246, 0.1); color: #9059F6;">
           <el-icon :size="22"><ChatDotRound/></el-icon>
         </div>
@@ -33,7 +33,7 @@
         </div>
       </div>
 
-      <div class="stat-card" @click="router.push('/model-config')">
+      <div v-if="!isSimpleMode" class="stat-card" @click="router.push('/model-config')">
         <div class="stat-icon" style="background: rgba(230, 162, 60, 0.1); color: #E6A23C;">
           <el-icon :size="22"><Cpu/></el-icon>
         </div>
@@ -58,8 +58,8 @@
     </div>
 
     <!-- 第二行指标 -->
-    <div class="stats-row secondary">
-      <div class="stat-card small" @click="router.push('/skills')">
+    <div class="stats-row secondary" :class="{ 'simple-secondary': isSimpleMode }">
+      <div v-if="!isSimpleMode" class="stat-card small" @click="router.push('/skills')">
         <div class="stat-icon" style="background: rgba(236, 105, 92, 0.1); color: #EC695C;">
           <el-icon :size="20"><MagicStick/></el-icon>
         </div>
@@ -206,6 +206,8 @@ const settingsStore = useSettingsStore()
 const recentLogs = ref<any[]>([])
 const expandedErrors = reactive<Record<number, boolean>>({})
 let refreshTimer: any = null
+
+const isSimpleMode = computed(() => settingsStore.settings.app_mode === 'simple')
 
 const dashStats = ref({
   totalReminders: 0,
@@ -359,6 +361,15 @@ onUnmounted(() => {
 
 .stats-row.secondary {
   grid-template-columns: repeat(3, 1fr);
+}
+
+/* 普通模式：核心指标2列，第二行2列 */
+.stats-row.simple-mode {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.stats-row.simple-secondary {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .stat-card {

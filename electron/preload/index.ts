@@ -138,7 +138,8 @@ const electronAPI = {
         setDefault: (id: number) => safeInvoke('models:set-default', id),
         test: (data: { provider: string; base_url: string; api_key: string; model: string }) =>
             safeInvoke('models:test', data),
-        hasTextModel: () => safeInvoke('models:has-text-model')
+        hasTextModel: () => safeInvoke('models:has-text-model'),
+        hasSearchModel: () => safeInvoke('models:has-search-model')
     },
 
     // 技能管理
@@ -187,6 +188,15 @@ const electronAPI = {
         removeListener: () => {
             ipcRenderer.removeAllListeners('network:event')
         }
+    },
+
+    // 微信机器人
+    wechatBot: {
+        getQRCode: () => safeInvoke('wechat-bot:get-qrcode'),
+        checkStatus: () => safeInvoke('wechat-bot:check-status'),
+        login: () => safeInvoke('wechat-bot:login'),
+        logout: () => safeInvoke('wechat-bot:logout'),
+        getState: () => safeInvoke('wechat-bot:get-state')
     }
 }
 

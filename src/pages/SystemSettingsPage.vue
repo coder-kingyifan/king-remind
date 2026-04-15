@@ -27,6 +27,29 @@
         </div>
       </div>
 
+      <!-- 使用模式 -->
+      <div class="setting-section">
+        <h3 class="section-title">使用模式</h3>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">应用模式</div>
+            <div class="setting-desc">切换提醒工具或 AI 提醒模式，切换后需刷新页面生效</div>
+          </div>
+          <div class="setting-actions">
+            <el-select
+              :model-value="settingsStore.settings.app_mode || 'simple'"
+              @change="onAppModeChange"
+              size="small"
+              style="width: 140px;"
+            >
+              <el-option label="AI 模式" value="ai"/>
+              <el-option label="普通模式" value="simple"/>
+            </el-select>
+          </div>
+        </div>
+      </div>
+
       <!-- 主题设置 -->
       <div class="setting-section">
         <h3 class="section-title">外观</h3>
@@ -666,6 +689,7 @@ import {onMounted, ref} from 'vue'
 import {useSettingsStore} from '@/stores/settings'
 import {ElMessage} from 'element-plus'
 import {ArrowDown} from '@element-plus/icons-vue'
+import {setCachedAppMode} from '@/router'
 
 const settingsStore = useSettingsStore()
 const showBlessing = ref(false)
@@ -680,6 +704,12 @@ const encLoading = ref(false)
 
 onMounted(async () => {
 })
+
+async function onAppModeChange(val: string) {
+  await settingsStore.setSetting('app_mode', val)
+  setCachedAppMode(val)
+  ElMessage.success('模式已切换，刷新页面后生效')
+}
 
 function starStyle(i: number) {
   const angle = (i / 12) * 360

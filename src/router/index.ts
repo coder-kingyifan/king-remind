@@ -54,4 +54,28 @@ const router = createRouter({
     ]
 })
 
+// 缓存 app_mode，避免每次导航都读取
+let cachedAppMode: string | null = null
+
+// 普通提醒模式下，/ 重定向到 /dashboard
+router.beforeEach(async (to, _from, next) => {
+    if (to.path === '/') {
+        try {
+            if (cachedAppMode === null) {
+                const settings = await window.electronAPI.settings.getAll()
+                cachedAppMode = settings.app_mode || 'ai'
+            }
+            if (cachedAppMode === 'simple') {
+                return next('/dashboard')
+            }
+        } catch { /* ignore */ }
+    }
+    next()
+})
+
+// 供外部调用以更新缓存
+export function setCachedAppMode(mode: string) {
+    cachedAppMode = mode
+}
+
 export default router

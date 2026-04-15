@@ -31,14 +31,70 @@
         </div>
       </div>
 
-      <!-- 步骤2: 数据库安全 -->
+      <!-- 步骤2: 选择使用模式 -->
       <div v-if="currentStep === 1" class="setup-content">
+        <div class="setup-icon">🎯</div>
+        <h2 class="setup-title">选择使用模式</h2>
+        <p class="setup-desc">根据你的需求选择合适的模式，后续可在设置中切换</p>
+        <div class="setup-form">
+          <div
+            class="role-card"
+            :class="{ active: appMode === 'simple' }"
+            @click="appMode = 'simple'"
+          >
+            <div class="role-card-icon">🔔</div>
+            <div class="role-card-body">
+              <div class="role-card-title">普通模式</div>
+              <div class="role-card-desc">简洁的提醒管理工具，手动创建和管理提醒</div>
+              <div class="role-card-pages">
+                <span class="role-page-tag">导览</span>
+                <span class="role-page-tag">创建提醒</span>
+                <span class="role-page-tag">消息渠道</span>
+                <span class="role-page-tag">设置</span>
+              </div>
+            </div>
+            <div v-if="appMode === 'simple'" class="role-card-check">✓</div>
+          </div>
+
+          <div
+            class="role-card"
+            :class="{ active: appMode === 'ai' }"
+            @click="appMode = 'ai'"
+          >
+            <div class="role-card-icon">🤖</div>
+            <div class="role-card-body">
+              <div class="role-card-title">AI 模式</div>
+              <div class="role-card-desc">全功能模式，通过 AI 对话智能创建提醒，支持技能扩展</div>
+              <div class="role-card-pages">
+                <span class="role-page-tag">AI 助手</span>
+                <span class="role-page-tag">提醒管理</span>
+                <span class="role-page-tag">模型配置</span>
+                <span class="role-page-tag">技能中心</span>
+                <span class="role-page-tag">更多</span>
+              </div>
+            </div>
+            <div v-if="appMode === 'ai'" class="role-card-check">✓</div>
+          </div>
+
+          <!-- AI 提醒模式的提示 -->
+          <div v-if="appMode === 'ai'" class="setup-tip tip-warning">
+            <span class="tip-icon">💡</span>
+            <div class="tip-content">
+              <div class="tip-title">使用 AI 模式需要准备大模型 API Key</div>
+              <div class="tip-desc">支持 OpenAI、DeepSeek、通义千问、Kimi 等主流大模型服务商。进入应用后请在「模型配置」中添加你的 API Key。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤3: 数据安全 -->
+      <div v-if="currentStep === 2" class="setup-content">
         <div class="setup-icon">🔐</div>
         <h2 class="setup-title">数据安全</h2>
-        <p class="setup-desc">设置数据库密码以加密你的提醒数据，防止他人查看</p>
+        <p class="setup-desc">为你的提醒数据设置加密密码，防止他人查看</p>
         <div class="setup-form">
           <div class="setup-field">
-            <label class="setup-label">数据库密码</label>
+            <label class="setup-label">数据库加密密码</label>
             <el-input
               v-model="dbPassword"
               type="password"
@@ -46,69 +102,28 @@
               size="large"
               show-password
             />
-            <div class="setup-sublabel">留空则不加密，建议设置以保护隐私</div>
+            <div class="setup-sublabel">留空则不加密。建议设置密码以保护你的隐私数据，密码将用于加密本地数据库文件</div>
           </div>
           <div v-if="dbPassword" class="setup-field">
             <label class="setup-label">确认密码</label>
             <el-input
               v-model="dbPasswordConfirm"
               type="password"
-              placeholder="再次输入密码"
+              placeholder="再次输入密码确认"
               size="large"
               show-password
             />
           </div>
           <div v-if="dbPassword && dbPasswordConfirm && dbPassword !== dbPasswordConfirm" class="setup-error">
-            两次输入的密码不一致
+            两次输入的密码不一致，请重新输入
           </div>
-        </div>
-      </div>
-
-      <!-- 步骤3: API 接口配置 -->
-      <div v-if="currentStep === 2" class="setup-content">
-        <div class="setup-icon">🌐</div>
-        <h2 class="setup-title">API 接口设置</h2>
-        <p class="setup-desc">启用后外部程序可通过 HTTP 接口或 AI 对话来创建和管理提醒</p>
-        <div class="setup-form">
-          <div class="setup-toggle-row">
-            <div>
-              <div class="setup-label">启用 API 接口</div>
-              <div class="setup-sublabel">允许外部程序通过 HTTP 接口管理提醒</div>
+          <div class="setup-tip tip-info">
+            <span class="tip-icon">ℹ️</span>
+            <div class="tip-content">
+              <div class="tip-title">关于数据库加密</div>
+              <div class="tip-desc">密码设置后，数据库文件将被加密存储。请务必牢记此密码，忘记密码将无法恢复数据。如需修改或移除加密，可在后续「系统设置」中操作。</div>
             </div>
-            <el-switch v-model="apiEnabled" />
           </div>
-
-          <template v-if="apiEnabled">
-            <div class="setup-field">
-              <label class="setup-label">监听端口</label>
-              <el-input-number
-                v-model="apiPort"
-                :min="1024"
-                :max="65535"
-                :step="1"
-                size="large"
-                controls-position="right"
-                style="width: 100%;"
-              />
-            </div>
-            <div class="setup-field">
-              <label class="setup-label">访问令牌（Token）</label>
-              <el-input
-                v-model="apiToken"
-                placeholder="留空则不校验，建议设置以保证安全"
-                size="large"
-                show-password
-              />
-            </div>
-            <div class="setup-field">
-              <label class="setup-label">监听地址</label>
-              <el-input
-                v-model="apiHost"
-                placeholder="0.0.0.0 表示允许外部访问"
-                size="large"
-              />
-            </div>
-          </template>
         </div>
       </div>
 
@@ -123,16 +138,20 @@
             <span class="summary-value">{{ nickname || '未设置' }}</span>
           </div>
           <div class="summary-item">
+            <span class="summary-label">使用模式</span>
+            <span class="summary-value enabled">{{ appMode === 'ai' ? 'AI 模式' : '普通模式' }}</span>
+          </div>
+          <div class="summary-item">
             <span class="summary-label">数据库加密</span>
             <span class="summary-value" :class="dbPassword ? 'enabled' : ''">
               {{ dbPassword ? '已设置密码' : '未加密' }}
             </span>
           </div>
-          <div class="summary-item">
-            <span class="summary-label">API 接口</span>
-            <span class="summary-value" :class="apiEnabled ? 'enabled' : 'disabled'">
-              {{ apiEnabled ? `已启用 (:${apiPort})` : '未启用' }}
-            </span>
+        </div>
+        <div v-if="appMode === 'ai'" class="setup-tip tip-warning" style="margin-top: 12px;">
+          <span class="tip-icon">💡</span>
+          <div class="tip-content">
+            <div class="tip-desc">进入应用后，请先在「模型配置」中添加大模型 API Key，才能使用 AI 对话功能。</div>
           </div>
         </div>
       </div>
@@ -159,10 +178,7 @@ const emit = defineEmits<{
   (e: 'finish', data: {
     nickname: string;
     dbPassword: string;
-    apiEnabled: boolean;
-    apiPort: number;
-    apiToken: string;
-    apiHost: string
+    appMode: string;
   }): void
 }>()
 
@@ -170,16 +186,14 @@ const steps = [0, 1, 2, 3]
 const currentStep = ref(0)
 
 const nickname = ref('')
+const appMode = ref('simple')
 const dbPassword = ref('')
 const dbPasswordConfirm = ref('')
-const apiEnabled = ref(false)
-const apiPort = ref(33333)
-const apiToken = ref('')
-const apiHost = ref('0.0.0.0')
 
 const canNext = computed(() => {
   if (currentStep.value === 0) return nickname.value.trim().length > 0
-  if (currentStep.value === 1) {
+  if (currentStep.value === 1) return appMode.value.length > 0
+  if (currentStep.value === 2) {
     if (dbPassword.value && dbPassword.value !== dbPasswordConfirm.value) return false
     return true
   }
@@ -204,10 +218,7 @@ function finish() {
   emit('finish', {
     nickname: nickname.value.trim(),
     dbPassword: dbPassword.value,
-    apiEnabled: apiEnabled.value,
-    apiPort: apiPort.value,
-    apiToken: apiToken.value,
-    apiHost: apiHost.value
+    appMode: appMode.value
   })
 }
 </script>
@@ -227,7 +238,7 @@ function finish() {
 }
 
 .setup-wizard {
-  width: 480px;
+  width: 520px;
   max-height: 90vh;
   overflow-y: auto;
   background: var(--bg-card);
@@ -310,6 +321,7 @@ function finish() {
   font-size: 12px;
   color: var(--text-tertiary);
   margin-top: 4px;
+  line-height: 1.5;
 }
 
 .setup-error {
@@ -318,20 +330,142 @@ function finish() {
   padding-left: 4px;
 }
 
-.setup-toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--bg-secondary, #f5f7fa);
-  border-radius: 10px;
-}
-
 .setup-field {
   display: flex;
   flex-direction: column;
 }
 
+/* 角色选择卡片 */
+.role-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  background: var(--bg-secondary, #f5f7fa);
+  border: 2px solid var(--border-color-light);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.role-card:hover {
+  border-color: var(--color-primary, #409EFF);
+  box-shadow: 0 2px 12px rgba(64, 158, 255, 0.1);
+}
+
+.role-card.active {
+  border-color: var(--color-primary, #409EFF);
+  background: var(--color-primary-bg, rgba(64, 158, 255, 0.06));
+}
+
+.role-card-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.role-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.role-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.role-card-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.role-card-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.role-page-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--bg-card, #fff);
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-color-light);
+}
+
+.role-card.active .role-page-tag {
+  color: var(--color-primary, #409EFF);
+  border-color: var(--color-primary, #409EFF);
+  background: var(--bg-card, #fff);
+}
+
+.role-card-check {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-primary, #409EFF);
+  color: #fff;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* 提示框 */
+.setup-tip {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  text-align: left;
+  line-height: 1.5;
+}
+
+.setup-tip.tip-warning {
+  background: rgba(230, 162, 60, 0.08);
+  border: 1px solid rgba(230, 162, 60, 0.2);
+}
+
+.setup-tip.tip-info {
+  background: rgba(64, 158, 255, 0.06);
+  border: 1px solid rgba(64, 158, 255, 0.15);
+}
+
+.tip-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.tip-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.tip-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.tip-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* 摘要 */
 .setup-summary {
   width: 100%;
   display: flex;

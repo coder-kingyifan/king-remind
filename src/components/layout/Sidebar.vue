@@ -6,10 +6,10 @@
 
     <div class="sidebar-nav">
       <div
-          v-for="item in navItems"
+          v-for="item in currentNavItems"
           :key="item.path"
           class="nav-item"
-          :class="{ active: route.path === item.path }"
+          :class="{ active: route.path === item.path || (item.path === '/' && route.path === '/') }"
           @click="router.push(item.path)"
       >
         <el-tooltip :content="item.title" placement="right" :show-after="400">
@@ -37,14 +37,15 @@
 import {computed} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {useSettingsStore} from '@/stores/settings'
-import {Bell, ChatDotRound, Cpu, MagicStick, Message, Moon, Odometer, Setting, Sunny} from '@element-plus/icons-vue'
+import {Bell, ChatDotRound, Cpu, MagicStick, Message, Moon, Odometer, Setting, Sunny, HomeFilled} from '@element-plus/icons-vue'
 import logoIcon from '../../../resources/icon.png'
 
 const route = useRoute()
 const router = useRouter()
 const settingsStore = useSettingsStore()
 
-const navItems = [
+// AI 提醒模式 - 全功能导航
+const aiNavItems = [
   {path: '/', title: 'AI 助手', icon: ChatDotRound},
   {path: '/dashboard', title: '数据概览', icon: Odometer},
   {path: '/reminders', title: '提醒管理', icon: Bell},
@@ -53,6 +54,19 @@ const navItems = [
   {path: '/skills', title: '技能中心', icon: MagicStick},
   {path: '/settings', title: '系统设置', icon: Setting}
 ]
+
+// 普通模式 - 简洁导航
+const simpleNavItems = [
+  {path: '/', title: '导览', icon: HomeFilled},
+  {path: '/reminders', title: '创建提醒', icon: Bell},
+  {path: '/notifications', title: '消息渠道', icon: Message},
+  {path: '/settings', title: '设置', icon: Setting}
+]
+
+const currentNavItems = computed(() => {
+  const mode = settingsStore.settings.app_mode
+  return mode === 'simple' ? simpleNavItems : aiNavItems
+})
 
 const themeTooltip = computed(() => {
   return settingsStore.currentTheme === 'dark' ? '切换亮色' : '切换暗色'

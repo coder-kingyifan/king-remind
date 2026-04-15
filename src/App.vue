@@ -30,11 +30,14 @@
 
 <script setup lang="ts">
 import {onMounted, ref} from 'vue'
+import {useRouter} from 'vue-router'
 import {useSettingsStore} from '@/stores/settings'
 import {useSkillsStore} from '@/stores/skills'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import SetupWizard from '@/components/setup/SetupWizard.vue'
+import {setCachedAppMode} from '@/router'
 
+const router = useRouter()
 const settingsStore = useSettingsStore()
 const skillsStore = useSkillsStore()
 const showNotification = ref(false)
@@ -47,10 +50,19 @@ onMounted(async () => {
   await settingsStore.fetchSettings()
   settingsStore.initThemeListener()
 
+  // 缓存 app_mode 供路由守卫使用
+  const appMode = settingsStore.settings.app_mode || 'ai'
+  setCachedAppMode(appMode)
+
   const setupDone = settingsStore.settings.setup_done
   if (setupDone !== 'true') {
     showSetup.value = true
     return
+  }
+
+  // 根据模式跳转到正确的首页
+  if (appMode === 'simple' && router.currentRoute.value.path === '/') {
+    router.replace('/dashboard')
   }
 
   initApp()
@@ -59,10 +71,7 @@ onMounted(async () => {
 async function onSetupFinish(data: {
   nickname: string;
   dbPassword: string;
-  apiEnabled: boolean;
-  apiPort: number;
-  apiToken: string;
-  apiHost: string
+  appMode: string;
 }) {
   if (data.nickname) {
     await settingsStore.setSetting('user_nickname', data.nickname)
@@ -74,22 +83,18 @@ async function onSetupFinish(data: {
     await settingsStore.setSetting('db_encrypted', 'true')
   }
 
-  // API config - start dynamically
-  await settingsStore.setSetting('api_enabled', data.apiEnabled ? 'true' : 'false')
-  await settingsStore.setSetting('api_port', String(data.apiPort))
-  await settingsStore.setSetting('api_token', data.apiToken)
-  await settingsStore.setSetting('api_host', data.apiHost)
+  // Save app mode
+  await settingsStore.setSetting('app_mode', data.appMode)
+  setCachedAppMode(data.appMode)
 
   // Mark setup done - no restart needed, everything works in current process
   await settingsStore.setSetting('setup_done', 'true')
 
   showSetup.value = false
 
-  // Start API dynamically if enabled
-  if (data.apiEnabled) {
-    try {
-      await window.electronAPI.api.restart()
-    } catch { /* ignore */ }
+  // 根据模式跳转到正确的首页
+  if (data.appMode === 'simple') {
+    await router.replace('/dashboard')
   }
 
   initApp()

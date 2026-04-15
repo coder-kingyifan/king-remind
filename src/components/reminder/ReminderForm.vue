@@ -198,8 +198,8 @@
           </template>
         </template>
 
-        <!-- 绑定技能（可选） -->
-        <el-form-item label="绑定技能（可选）">
+        <!-- 绑定技能（可选，仅AI模式显示） -->
+        <el-form-item v-if="!isSimpleMode" label="绑定技能（可选）">
           <el-select v-model="form.skill_id" placeholder="不绑定技能" clearable style="width: 100%;">
             <el-option :value="null" label="不绑定技能"/>
             <el-option-group v-for="cat in skillCategories" :key="cat.key" :label="cat.icon + ' ' + cat.label">
@@ -247,6 +247,7 @@ import {computed, onMounted, ref} from 'vue'
 import {useRemindersStore} from '@/stores/reminders'
 import {useNotificationsStore} from '@/stores/notifications'
 import {useSkillsStore} from '@/stores/skills'
+import {useSettingsStore} from '@/stores/settings'
 import {CHANNELS} from '@/types/notification'
 import type {Reminder} from '@/types/reminder'
 import {ElMessage} from 'element-plus'
@@ -266,6 +267,8 @@ const emit = defineEmits<{
 const remindersStore = useRemindersStore()
 const notificationsStore = useNotificationsStore()
 const skillsStore = useSkillsStore()
+const settingsStore = useSettingsStore()
+const isSimpleMode = computed(() => settingsStore.settings.app_mode === 'simple')
 const formRef = ref()
 const saving = ref(false)
 const activeStart = ref<string | null>(null)

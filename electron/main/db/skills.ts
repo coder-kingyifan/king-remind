@@ -11,7 +11,6 @@ export interface Skill {
     action_config: string
     config_schema: string
     user_config: string
-    is_builtin: number
     is_enabled: number
     store_version: string | null
     store_source: string | null
@@ -52,12 +51,7 @@ function getLastInsertId(): number {
     return result[0].values[0][0] as number
 }
 
-// 内置技能列表已清空，所有技能通过技能商店安装
-export const BUILTIN_SKILLS: any[] = []
-
-export function seedBuiltinSkills(): void {
-    // 不再自动种子内置技能，用户通过技能商店安装
-}
+// 所有技能通过技能商店安装或用户自定义创建
 
 export const skillsDb = {
     list(filters?: { category?: string; is_enabled?: number; search?: string }): Skill[] {
@@ -77,7 +71,7 @@ export const skillsDb = {
             params.push(`%${filters.search}%`, `%${filters.search}%`)
         }
 
-        sql += ' ORDER BY is_builtin DESC, category, name'
+        sql += ' ORDER BY category, name'
         return queryAll(sql, params) as Skill[]
     },
 
@@ -120,16 +114,15 @@ export const skillsDb = {
         action_config: string
         config_schema?: string
         user_config?: string
-        is_builtin?: number
         store_version?: string
         store_source?: string
     }): Skill {
         run(`INSERT INTO skills (skill_key, name, description, icon, category, action_type, action_config, config_schema, user_config, is_builtin, is_enabled, store_version, store_source)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`, [
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, ?, ?)`, [
             input.skill_key, input.name, input.description || '', input.icon || '⚡',
             input.category || 'custom', input.action_type, input.action_config,
             input.config_schema || '[]', input.user_config || '{}',
-            input.is_builtin ?? 0, input.store_version || null, input.store_source || null
+            input.store_version || null, input.store_source || null
         ])
         const id = getLastInsertId()
         return this.get(id)!
@@ -140,6 +133,7 @@ export const skillsDb = {
         description?: string
         icon?: string
         category?: string
+        action_type?: string
         action_config?: string
         config_schema?: string
         user_config?: string
@@ -152,7 +146,7 @@ export const skillsDb = {
 
         run(`UPDATE skills SET
             name = ?, description = ?, icon = ?, category = ?,
-            action_config = ?, config_schema = ?, user_config = ?, is_enabled = ?,
+            action_type = ?, action_config = ?, config_schema = ?, user_config = ?, is_enabled = ?,
             store_version = ?, store_source = ?,
             updated_at = datetime('now', 'localtime')
             WHERE id = ?`, [
@@ -160,6 +154,7 @@ export const skillsDb = {
             input.description ?? existing.description,
             input.icon ?? existing.icon,
             input.category ?? existing.category,
+            input.action_type ?? existing.action_type,
             input.action_config ?? existing.action_config,
             input.config_schema ?? existing.config_schema,
             input.user_config ?? existing.user_config,

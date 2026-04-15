@@ -15,10 +15,10 @@ import {ReminderScheduler} from './scheduler'
 import {settingsDb} from './db/settings'
 import {closeAllNotifications} from './notifications/notification-window'
 import {startApiServer, stopApiServer} from './api-server'
-import {seedBuiltinSkills} from './db/skills'
 import {continueHeadlessInit} from './repl'
 import {execSync} from 'child_process'
 import {initNetworkInterceptor} from './network-interceptor'
+import {weChatBot} from './wechat-bot/wechat-bot'
 
 // Windows 控制台中文乱码修复
 try {
@@ -96,10 +96,6 @@ async function continueAppInit(win: BrowserWindow | null): Promise<void> {
     runMigrations()
     console.log('[主进程] 数据库迁移完成')
 
-    // 初始化内置技能
-    seedBuiltinSkills()
-    console.log('[主进程] 内置技能初始化完成')
-
     // 创建系统托盘
     createTray(win)
 
@@ -133,6 +129,13 @@ async function continueAppInit(win: BrowserWindow | null): Promise<void> {
     if (launchAtStartup === 'true') {
         app.setLoginItemSettings({openAtLogin: true})
     }
+
+    // 自动恢复微信机器人连接（异步，不阻塞启动）
+    weChatBot.setScheduler(scheduler)
+    weChatBot.autoReconnect().catch((e: any) => {
+        console.error('[主进程] 微信机器人自动恢复失败:', e.message)
+    })
+
     console.log('[主进程] 启动完成')
 }
 

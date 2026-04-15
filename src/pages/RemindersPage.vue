@@ -55,7 +55,7 @@
           <div class="row-info">
             <div class="row-title">{{ reminder.title }}</div>
             <div class="row-meta">
-              <el-tag v-if="reminder.skill_id" size="small" effect="plain" type="success" style="margin-right: 6px;">
+              <el-tag v-if="!isSimpleMode && reminder.skill_id" size="small" effect="plain" type="success" style="margin-right: 6px;">
                 ⚡ {{ getSkillName(reminder.skill_id) }}
               </el-tag>
               <el-tag
@@ -133,9 +133,10 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, ref} from 'vue'
+import {computed, onMounted, ref} from 'vue'
 import {useRemindersStore} from '@/stores/reminders'
 import {useSkillsStore} from '@/stores/skills'
+import {useSettingsStore} from '@/stores/settings'
 import {Delete, Edit, Loading, MoreFilled, Plus} from '@element-plus/icons-vue'
 import {CHANNELS} from '@/types/notification'
 import type {Reminder} from '@/types/reminder'
@@ -145,6 +146,8 @@ import wechatWorkIcon from '@/../resources/wechat-work.png'
 
 const remindersStore = useRemindersStore()
 const skillsStore = useSkillsStore()
+const settingsStore = useSettingsStore()
+const isSimpleMode = computed(() => settingsStore.settings.app_mode === 'simple')
 const searchText = ref('')
 const statusFilter = ref('all')
 const formVisible = ref(false)
