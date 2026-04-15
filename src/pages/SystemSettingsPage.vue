@@ -639,8 +639,7 @@ print(resp.json())</pre>
         </div>
 
         <div class="tip-section">
-          <div class="tip-title">觉得好用？请作者喝杯咖啡 ☕</div>
-          <div class="tip-desc">点击图片可放大查看</div>
+          <div class="tip-title">觉得好用？请kingyifan喝杯咖啡 ☕</div>
           <div class="tip-images">
             <div class="tip-item" @click="openTipPreview(alipayImg)">
               <img :src="alipayImg" class="tip-qr" alt="支付宝"/>
