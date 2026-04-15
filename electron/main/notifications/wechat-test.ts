@@ -1,0 +1,148 @@
+import axios from 'axios'
+import {notificationConfigsDb} from '../db/notification-configs'
+import {NotificationChannel, NotificationMessage} from './types'
+import {buildTemplateVars, getTemplate, renderTemplate} from './template'
+
+export class WeChatTestNotifier implements NotificationChannel {
+    private accessToken: string | null = null
+    private tokenExpiry: number = 0
+
+    async send(message: NotificationMessage): Promise<void> {
+        const config = notificationConfigsDb.getChannelConfig('wechat_test')
+
+        if (!config.app_id || !config.app_secret) {
+            throw new Error('测试公众号配置不完整，请先配置 AppID 和 AppSecret')
+        }
+
+        const token = await this.getAccessToken(config)
+        const vars = buildTemplateVars(message)
+        const msgType = config.msg_type || 'text'
+
+        if (msgType === 'template' && config.template_id) {
+            await this.sendTemplateMessage(token, config, vars)
+        } else {
+            await this.sendCustomMessage(token, config, vars)
+        }
+    }
+
+    private async sendCustomMessage(
+        token: string,
+        config: Record<string, any>,
+        vars: ReturnType<typeof buildTemplateVars>
+    ): Promise<void> {
+        const template = getTemplate(config, 'wechat_test', 'message_template')
+        const content = renderTemplate(template, vars)
+
+        const openIds = this.parseOpenIds(config.to_openid)
+
+        const errors: string[] = []
+        for (const openId of openIds) {
+            try {
+                const response = await axios.post(
+                    `https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token=${token}`,
+                    {
+                        touser: openId,
+                        msgtype: 'text',
+                        text: {content}
+                    },
+                    {timeout: 10000}
+                )
+                if (response.data.errcode !== 0) {
+                    errors.push(`测试公众号[${openId}]: ${response.data.errmsg}`)
+                }
+            } catch (error: any) {
+                errors.push(error.message)
+            }
+        }
+
+        if (errors.length > 0 && errors.length === openIds.length) {
+            throw new Error(errors.join('; '))
+        }
+    }
+
+    private async sendTemplateMessage(
+        token: string,
+        config: Record<string, any>,
+        vars: ReturnType<typeof buildTemplateVars>
+    ): Promise<void> {
+        const openIds = this.parseOpenIds(config.to_openid)
+
+        const templateData: Record<string, { value: string; color?: string }> = {}
+        if (config.template_data) {
+            try {
+                const parsed = JSON.parse(config.template_data)
+                for (const [key, val] of Object.entries(parsed)) {
+                    if (typeof val === 'object' && val !== null) {
+                        const rendered = renderTemplate(String((val as any).value || ''), vars)
+                        templateData[key] = {value: rendered, color: (val as any).color}
+                    } else {
+                        templateData[key] = {value: renderTemplate(String(val), vars)}
+                    }
+                }
+            } catch {
+                // 如果模板数据解析失败，使用默认字段
+                templateData['title'] = {value: vars.title}
+                templateData['body'] = {value: vars.body}
+            }
+        } else {
+            templateData['title'] = {value: vars.title}
+            templateData['body'] = {value: vars.body}
+        }
+
+        const errors: string[] = []
+        for (const openId of openIds) {
+            try {
+                const response = await axios.post(
+                    `https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=${token}`,
+                    {
+                        touser: openId,
+                        template_id: config.template_id,
+                        url: config.template_url || '',
+                        data: templateData
+                    },
+                    {timeout: 10000}
+                )
+                if (response.data.errcode !== 0) {
+                    errors.push(`测试公众号[${openId}]: ${response.data.errmsg}`)
+                }
+            } catch (error: any) {
+                errors.push(error.message)
+            }
+        }
+
+        if (errors.length > 0 && errors.length === openIds.length) {
+            throw new Error(errors.join('; '))
+        }
+    }
+
+    private parseOpenIds(toOpenid: string): string[] {
+        if (!toOpenid) return []
+        return toOpenid.split(',').map((s: string) => s.trim()).filter(Boolean)
+    }
+
+    private async getAccessToken(config: Record<string, any>): Promise<string> {
+        if (this.accessToken && Date.now() < this.tokenExpiry) {
+            return this.accessToken
+        }
+
+        const response = await axios.get(
+            'https://api.weixin.qq.com/cgi-bin/token',
+            {
+                params: {
+                    grant_type: 'client_credential',
+                    appid: config.app_id,
+                    secret: config.app_secret
+                },
+                timeout: 10000
+            }
+        )
+
+        if (response.data.errcode) {
+            throw new Error(`获取测试公众号Token失败: ${response.data.errmsg}`)
+        }
+
+        this.accessToken = response.data.access_token
+        this.tokenExpiry = Date.now() + (response.data.expires_in - 300) * 1000
+        return this.accessToken!
+    }
+}

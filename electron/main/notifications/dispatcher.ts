@@ -7,6 +7,7 @@ import {EmailNotifier} from './email'
 import {TelegramNotifier} from './telegram'
 import {WeChatWorkNotifier} from './wechat-work'
 import {WeChatWorkWebhookNotifier} from './wechat-work-webhook'
+import {WeChatTestNotifier} from './wechat-test'
 import {WebhookNotifier} from './webhook'
 import {NotificationChannel, NotificationMessage} from './types'
 
@@ -20,6 +21,7 @@ export class NotificationDispatcher {
             ['telegram', new TelegramNotifier()],
             ['wechat_work', new WeChatWorkNotifier()],
             ['wechat_work_webhook', new WeChatWorkWebhookNotifier()],
+            ['wechat_test', new WeChatTestNotifier()],
             ['webhook', new WebhookNotifier()]
         ])
     }

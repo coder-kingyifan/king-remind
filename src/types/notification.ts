@@ -20,5 +20,6 @@ export const CHANNELS: ChannelInfo[] = [
     {key: 'telegram', name: 'Telegram', icon: '✈️', description: 'Telegram Bot消息'},
     {key: 'wechat_work', name: '企业微信', icon: '💬', description: '企业微信应用消息'},
     {key: 'wechat_work_webhook', name: '企微群消息推送', icon: '🤖', description: '企业微信群消息推送 Webhook'},
+    {key: 'wechat_test', name: '测试公众号', icon: '📱', description: '微信公众平台测试号消息推送'},
     {key: 'webhook', name: 'Webhook', icon: '🔗', description: '自定义 HTTP 回调请求'}
 ]

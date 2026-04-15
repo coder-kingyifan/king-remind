@@ -78,6 +78,13 @@ export const DEFAULT_TEMPLATES: Record<string, Record<string, string>> = {
 {{body}}
 
 > <font color="comment">{{app_name}} · {{time}}</font>`
+    },
+    wechat_test: {
+        message_template: `{{icon}} {{title}}
+
+{{body}}
+
+{{app_name}} · {{time}}`
     }
 }
 

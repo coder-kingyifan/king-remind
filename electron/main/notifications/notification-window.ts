@@ -7,11 +7,11 @@ import {settingsDb} from '../db/settings'
 interface FloatNotification {
     window: BrowserWindow
     timer: NodeJS.Timeout | null
+    height: number
 }
 
 const NOTIFICATION_WIDTH = 360
-const NOTIFICATION_HEIGHT = 140
-const NOTIFICATION_GAP = 0
+const NOTIFICATION_GAP = 8
 
 // 缓存提示音的 base64 数据
 let notificationSoundBase64: string | null = null
@@ -63,8 +63,16 @@ function playNotificationSound(): void {
     if (soundSetting === 'system') {
         try {
             const {Notification} = require('electron')
-            const sysNotif = new Notification({silent: false, title: '', body: ''})
-            sysNotif.close()
+            const sysNotif = new Notification({
+                silent: false,
+                title: 'king提醒助手',
+                body: ' '
+            })
+            sysNotif.show()
+            // 播放完系统提示音后关闭通知
+            sysNotif.on('show', () => {
+                setTimeout(() => sysNotif.close(), 500)
+            })
         } catch { /* fallback to built-in */
         }
         return
@@ -94,15 +102,37 @@ function playBase64Sound(base64: string, mimeType: string = 'audio/wav'): void {
         skipTaskbar: true,
         webPreferences: {
             contextIsolation: true,
-            nodeIntegration: false
+            nodeIntegration: false,
+            sandbox: false
         }
+    })
+
+    // 允许隐藏窗口自动播放音频（绕过 Chromium autoplay policy）
+    soundWin.webContents.session.setPermissionRequestHandler((_webContents, permission, callback) => {
+        if (permission === 'media') callback(true)
+        else callback(false)
     })
 
     const html = `<!DOCTYPE html><html><body>
 <audio autoplay onended="window.close()">
   <source src="data:${mimeType};base64,${base64}" type="${mimeType}">
 </audio>
-<script>setTimeout(()=>window.close(),5000)</script>
+<script>
+// 尝试通过 JS 播放，作为 autoplay 的后备方案
+const audio = document.querySelector('audio');
+if (audio) {
+    audio.play().catch(() => {
+        // autoplay 被阻止时，通过 AudioContext 播放
+        try {
+            const ctx = new AudioContext();
+            const source = ctx.createMediaElementSource(audio);
+            source.connect(ctx.destination);
+            audio.play().catch(() => {});
+        } catch(e) {}
+    });
+}
+setTimeout(()=>window.close(),5000)
+</script>
 </body></html>`
 
     soundWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
@@ -330,15 +360,17 @@ function cleanupClosed(): void {
 function repositionAll(): void {
     cleanupClosed()
     const display = screen.getPrimaryDisplay()
-    const {width: screenW, height: screenH} = display.workArea
+    const {x: areaX, y: areaY, width: areaW, height: areaH} = display.workArea
+    const workAreaBottom = areaY + areaH
+    const workAreaRight = areaX + areaW
 
-    let offsetY = NOTIFICATION_GAP
+    let offsetY = 0
     for (const notif of activeNotifications) {
         if (notif.window.isDestroyed()) continue
-        const x = screenW - NOTIFICATION_WIDTH - NOTIFICATION_GAP
-        const y = screenH - NOTIFICATION_HEIGHT - offsetY
-        notif.window.setPosition(Math.round(x), Math.round(y), false)
-        offsetY += NOTIFICATION_HEIGHT + NOTIFICATION_GAP
+        const x = workAreaRight - NOTIFICATION_WIDTH - NOTIFICATION_GAP
+        const y = workAreaBottom - notif.height - offsetY
+        notif.window.setBounds({ x: Math.round(x), y: Math.round(y), width: NOTIFICATION_WIDTH, height: notif.height })
+        offsetY += notif.height + NOTIFICATION_GAP
     }
 }
 
@@ -361,13 +393,16 @@ export function showFloatNotification(data: {
     }
 
     const display = screen.getPrimaryDisplay()
-    const {width: screenW, height: screenH} = display.workArea
+    const {x: areaX, y: areaY, width: areaW, height: areaH} = display.workArea
+    const workAreaBottom = areaY + areaH
+    const workAreaRight = areaX + areaW
 
+    // 先用较大高度创建窗口，加载后根据内容调整
     const win = new BrowserWindow({
         width: NOTIFICATION_WIDTH,
-        height: NOTIFICATION_HEIGHT,
-        x: screenW - NOTIFICATION_WIDTH - NOTIFICATION_GAP,
-        y: screenH - NOTIFICATION_HEIGHT - NOTIFICATION_GAP,
+        height: 200,
+        x: workAreaRight - NOTIFICATION_WIDTH - NOTIFICATION_GAP,
+        y: workAreaBottom - 200,
         frame: false,
         transparent: true,
         alwaysOnTop: true,
@@ -394,9 +429,23 @@ export function showFloatNotification(data: {
 
     win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
 
-    win.once('ready-to-show', () => {
-        win.showInactive()
-        playNotificationSound()
+    // 页面加载完成后，测量卡片实际高度，调整窗口大小并定位
+    win.webContents.on('did-finish-load', () => {
+        win.webContents.executeJavaScript('document.querySelector(".card")?.offsetHeight || 80').then((cardH: number) => {
+            const notifH = Math.min(cardH, 200)
+            // 更新已添加项的高度
+            const idx = activeNotifications.findIndex(n => n.window === win)
+            if (idx >= 0) activeNotifications[idx].height = notifH
+            repositionAll()
+            win.showInactive()
+            playNotificationSound()
+        }).catch(() => {
+            const idx = activeNotifications.findIndex(n => n.window === win)
+            if (idx >= 0) activeNotifications[idx].height = 80
+            repositionAll()
+            win.showInactive()
+            playNotificationSound()
+        })
     })
 
     // 点击通知 → 回调
@@ -422,9 +471,8 @@ export function showFloatNotification(data: {
         repositionAll()
     })
 
-    const notif: FloatNotification = {window: win, timer}
+    const notif: FloatNotification = {window: win, timer, height: 200}
     activeNotifications.push(notif)
-    repositionAll()
 }
 
 export function closeAllNotifications(): void {

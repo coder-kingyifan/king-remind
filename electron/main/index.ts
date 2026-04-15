@@ -141,6 +141,11 @@ async function continueAppInit(win: BrowserWindow | null): Promise<void> {
 
 // 确保单实例
 const gotTheLock = app.requestSingleInstanceLock()
+
+// 允许音频自动播放，解决通知提示音无法播放的问题
+// 必须在 app.whenReady() 之前设置
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
+
 if (!gotTheLock) {
     app.quit()
 } else {

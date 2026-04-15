@@ -289,6 +289,83 @@
           </el-form>
         </div>
 
+        <!-- 测试公众号配置 -->
+        <div
+            v-if="channel.key === 'wechat_test' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['wechat_test']"
+            class="channel-config">
+          <div class="config-guide">
+            <div class="guide-title">配置步骤</div>
+            <ol class="guide-steps">
+              <li>访问 <b>微信公众平台测试号</b>（mp.weixin.qq.com/debug/cgi-bin/sandbox?t=sandbox/login）扫码登录</li>
+              <li>获取 <b>appID</b> 和 <b>appsecret</b>，填写到下方</li>
+              <li>关注测试号二维码，获取 <b>用户 OpenID</b>（多个用逗号分隔）</li>
+              <li>如需模板消息，在测试号页面创建模板并填写 <b>模板ID</b></li>
+            </ol>
+          </div>
+          <el-form :model="wechatTestConfig" label-position="top" size="small">
+            <div class="config-row">
+              <el-form-item label="AppID">
+                <el-input v-model="wechatTestConfig.app_id" placeholder="wx..."/>
+              </el-form-item>
+              <el-form-item label="AppSecret">
+                <el-input v-model="wechatTestConfig.app_secret" type="password" show-password placeholder="应用密钥"/>
+              </el-form-item>
+            </div>
+            <el-form-item label="接收人 OpenID（多个用逗号分隔）">
+              <el-input v-model="wechatTestConfig.to_openid" placeholder="oXXXX1,oXXXX2"/>
+            </el-form-item>
+            <el-form-item label="消息格式">
+              <el-radio-group v-model="wechatTestConfig.msg_type">
+                <el-radio value="text">客服消息（文本）</el-radio>
+                <el-radio value="template">模板消息</el-radio>
+              </el-radio-group>
+            </el-form-item>
+            <template v-if="wechatTestConfig.msg_type === 'template'">
+              <div class="config-row">
+                <el-form-item label="模板 ID">
+                  <el-input v-model="wechatTestConfig.template_id" placeholder="模板消息ID"/>
+                </el-form-item>
+                <el-form-item label="模板跳转 URL（可选）">
+                  <el-input v-model="wechatTestConfig.template_url" placeholder="https://..."/>
+                </el-form-item>
+              </div>
+              <el-form-item label="模板数据（JSON，支持模板变量）">
+                <el-input
+                    v-model="wechatTestConfig.template_data"
+                    type="textarea"
+                    :rows="4"
+                    placeholder='{"first": {"value": "{{icon}} {{title}}"}, "keyword1": {"value": "{{body}}"}, "remark": {"value": "{{app_name}} · {{time}}"}}'
+                />
+              </el-form-item>
+            </template>
+            <div class="template-section" v-if="wechatTestConfig.msg_type === 'text'">
+              <div class="template-header" @click="templateExpanded.wechat_test = !templateExpanded.wechat_test">
+                <span class="template-header-title">消息模板</span>
+                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.wechat_test }">
+                  <ArrowDown/>
+                </el-icon>
+              </div>
+              <div v-if="templateExpanded.wechat_test" class="template-body">
+                <div class="template-vars-tip" v-pre>
+                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 ·
+                  <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名
+                </div>
+                <el-form-item label="文本消息模板">
+                  <el-input v-model="wechatTestConfig.message_template" type="textarea" :rows="3"
+                            placeholder="{{icon}} {{title}}&#10;&#10;{{body}}&#10;&#10;{{app_name}} · {{time}}"/>
+                </el-form-item>
+              </div>
+            </div>
+            <div class="config-actions">
+              <el-button size="small" @click="saveConfig('wechat_test', wechatTestConfig)">保存配置</el-button>
+              <el-button size="small" type="success" plain :loading="testing === 'wechat_test'"
+                         @click="testChannel('wechat_test')">
+                发送测试
+              </el-button>
+            </div>
+          </el-form>
+        </div>
+
         <!-- Webhook 配置 -->
         <div
             v-if="channel.key === 'webhook' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['webhook']"
@@ -397,6 +474,16 @@ const wechatWebhookConfig = ref({
   markdown_template: ''
 })
 const webhookConfig = ref({url: '', method: 'POST', headers: '{}', body_template: ''})
+const wechatTestConfig = ref({
+  app_id: '',
+  app_secret: '',
+  to_openid: '',
+  msg_type: 'text',
+  template_id: '',
+  template_url: '',
+  template_data: '',
+  message_template: ''
+})
 
 watch(emailToStr, (val) => {
   emailConfig.value.to_addresses = val.split(',').map(s => s.trim()).filter(Boolean)
@@ -416,6 +503,8 @@ function loadConfigFromStore(channel: string) {
       Object.assign(wechatConfig.value, json)
     } else if (channel === 'wechat_work_webhook') {
       Object.assign(wechatWebhookConfig.value, json)
+    } else if (channel === 'wechat_test') {
+      Object.assign(wechatTestConfig.value, json)
     } else if (channel === 'webhook') {
       Object.assign(webhookConfig.value, json)
     }
@@ -436,6 +525,9 @@ function isConfigured(channel: string): boolean {
   }
   if (channel === 'wechat_work_webhook') {
     return !!wechatWebhookConfig.value.webhook_url
+  }
+  if (channel === 'wechat_test') {
+    return !!(wechatTestConfig.value.app_id && wechatTestConfig.value.app_secret && wechatTestConfig.value.to_openid)
   }
   if (channel === 'webhook') {
     return !!webhookConfig.value.url
@@ -469,6 +561,7 @@ async function testChannel(channel: string) {
       telegram: telegramConfig.value,
       wechat_work: wechatConfig.value,
       wechat_work_webhook: wechatWebhookConfig.value,
+      wechat_test: wechatTestConfig.value,
       webhook: webhookConfig.value
     }
     if (configs[channel]) {

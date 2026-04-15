@@ -636,6 +636,13 @@ export function runMigrations(): void {
                 DELETE FROM skills;
                 DELETE FROM skill_content;
             `
+        },
+        {
+            version: 22,
+            sql: `
+                INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
+          ('wechat_test', 0, '{"app_id": "", "app_secret": "", "to_openid": "", "msg_type": "text", "template_id": "", "template_url": "", "template_data": ""}');
+            `
         }
     ]
 
