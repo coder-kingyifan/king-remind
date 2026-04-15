@@ -629,6 +629,13 @@ export function runMigrations(): void {
                 UPDATE skills SET is_enabled = 1 WHERE is_builtin = 1 AND is_enabled = 0;
                 UPDATE skills SET is_builtin = 0 WHERE is_builtin = 1;
             `
+        },
+        {
+            version: 21,
+            sql: `
+                DELETE FROM skills;
+                DELETE FROM skill_content;
+            `
         }
     ]
 

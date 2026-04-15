@@ -19,6 +19,7 @@ import {continueHeadlessInit} from './repl'
 import {execSync} from 'child_process'
 import {initNetworkInterceptor} from './network-interceptor'
 import {weChatBot} from './wechat-bot/wechat-bot'
+import {installDefaultSkills} from './skill-store'
 
 // Windows 控制台中文乱码修复
 try {
@@ -95,6 +96,9 @@ async function continueAppInit(win: BrowserWindow | null): Promise<void> {
     console.log('[主进程] 正在运行数据库迁移...')
     runMigrations()
     console.log('[主进程] 数据库迁移完成')
+
+    // 安装默认技能（仅在技能表为空时）
+    installDefaultSkills()
 
     // 创建系统托盘
     createTray(win)
