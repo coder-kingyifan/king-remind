@@ -16,7 +16,6 @@ import {
 import {runMigrations} from './db/migrations'
 import {NotificationDispatcher} from './notifications/dispatcher'
 import {startApiServer} from './api-server'
-import {installDefaultSkills} from './skill-store'
 
 // ======================== ANSI 颜色 ========================
 
@@ -696,9 +695,6 @@ export async function continueHeadlessInit(): Promise<void> {
     console.log('[Headless] 正在运行数据库迁移...')
     runMigrations()
     console.log('[Headless] 数据库迁移完成')
-
-    // 安装默认技能（仅在技能表为空时）
-    installDefaultSkills()
 
     // 跳过引导设置
     const setupDone = settingsDb.get('setup_done')
