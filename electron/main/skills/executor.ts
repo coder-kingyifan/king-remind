@@ -127,23 +127,34 @@ async function executeAiPrompt(actionConfig: Record<string, any>, userConfig: Re
     }
 }
 
-async function executeSearchAndSummarize(actionConfig: Record<string, any>): Promise<string> {
+async function executeSearchAndSummarize(actionConfig: Record<string, any>, userConfig: Record<string, any>): Promise<string> {
     const searchQuery = actionConfig.search_query || ''
-    const searchModelId = actionConfig.search_model_id
     if (!searchQuery) return '搜索问题未配置'
-    if (!searchModelId) return '您还没有配置联网搜索模型，请先前往「模型配置」页面添加'
 
     if (!hasTextModelConfigured()) {
         return '尚未配置文本模型，请先前往「模型配置」页面添加并配置一个文本模型。'
     }
 
-    const now = new Date()
+    // 解析搜索模型：优先使用 action_config 中指定的，否则自动选择第一个 web_search 模型
+    let searchModelId: number | undefined = actionConfig.search_model_id
+    if (!searchModelId || !modelConfigsDb.get(searchModelId)) {
+        const webSearchConfig = modelConfigsDb.list().find(c => c.model_type === 'web_search')
+        if (!webSearchConfig) {
+            return '您还没有配置联网搜索模型，请先前往「模型配置」页面添加'
+        }
+        searchModelId = webSearchConfig.id
+    }
+
+    // 替换 userConfig 变量
     let query = searchQuery
+    for (const [key, value] of Object.entries(userConfig)) {
+        query = query.replace(`{{${key}}}`, String(value))
+    }
+    const now = new Date()
     query = query.replace('{{date}}', now.toISOString().slice(0, 10))
     query = query.replace('{{time}}', now.toLocaleTimeString('zh-CN'))
 
-    const searchConfig = modelConfigsDb.get(searchModelId)
-    if (!searchConfig) return '联网搜索模型配置不存在，请检查技能设置'
+    const searchConfig = modelConfigsDb.get(searchModelId)!
 
     console.log(`[技能执行器] 联网搜索: "${query}"，使用模型: ${searchConfig.name}`)
     let searchResult: string
@@ -154,7 +165,10 @@ async function executeSearchAndSummarize(actionConfig: Record<string, any>): Pro
         return `联网搜索失败: ${e.message}`
     }
 
-    const summaryPrompt = actionConfig.summary_prompt || '请根据以下搜索结果，用简洁的中文进行总结，提炼关键信息'
+    let summaryPrompt = actionConfig.summary_prompt || '请根据以下搜索结果，用简洁的中文进行总结，提炼关键信息'
+    for (const [key, value] of Object.entries(userConfig)) {
+        summaryPrompt = summaryPrompt.replace(`{{${key}}}`, String(value))
+    }
     const fullPrompt = `${summaryPrompt}${STRUCTURED_FORMAT_INSTRUCTION}\n\n---\n搜索结果：\n${searchResult}`
 
     console.log('[技能执行器] AI 总结中...')
@@ -196,7 +210,7 @@ export async function executeSkill(skillId: number, options?: { skipEnabledCheck
         } else if (skill.action_type === 'ai_prompt') {
             return await executeAiPrompt(actionConfig, userConfig)
         } else if (skill.action_type === 'search_and_summarize') {
-            return await executeSearchAndSummarize(actionConfig)
+            return await executeSearchAndSummarize(actionConfig, userConfig)
         }
 
         return `未知技能类型: ${skill.action_type}`

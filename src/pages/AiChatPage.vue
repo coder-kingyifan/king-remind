@@ -692,6 +692,11 @@ async function loadSessions() {
   try { sessions.value = await window.electronAPI.ai.listSessions() } catch { /* ignore */ }
 }
 
+// 每次打开历史抽屉时自动刷新会话列表
+watch(showHistory, (val) => {
+  if (val) loadSessions()
+})
+
 function sendSuggestion(text: string) { inputText.value = text; send() }
 
 function newChat() {
