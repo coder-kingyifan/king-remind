@@ -616,7 +616,7 @@ print(resp.json())</pre>
           </div>
           <div class="about-row">
             <span class="about-label">版本</span>
-            <span class="about-value">V2.0.0</span>
+            <span class="about-value">V{{ appVersion }}</span>
           </div>
           <div class="about-row">
             <span class="about-label">作者</span>
@@ -636,6 +636,10 @@ print(resp.json())</pre>
             <span class="about-value">  <a target="_blank" href="https://gitee.com/kingyifan/king-remind">https://gitee.com/kingyifan/king-remind</a>
               </span>
           </div>
+        </div>
+
+        <div class="about-actions">
+          <el-button size="small" plain :loading="checkingUpdate" @click="checkUpdate">检查更新</el-button>
         </div>
 
         <div class="tip-section">
@@ -746,6 +750,27 @@ print(resp.json())</pre>
         <div v-if="encError" class="enc-error">{{ encError }}</div>
       </div>
     </el-dialog>
+
+    <!-- 更新提示弹窗 -->
+    <el-dialog
+        v-model="showUpdateDialog"
+        title="发现新版本"
+        width="420px"
+        :close-on-click-modal="true"
+    >
+      <div class="update-dialog-body">
+        <div class="update-version">V{{ updateInfo.latestVersion }}</div>
+        <div class="update-current">当前版本：V{{ updateInfo.currentVersion }}</div>
+        <div v-if="updateInfo.releaseNotes" class="update-notes">
+          <div class="update-notes-title">更新内容</div>
+          <div class="update-notes-content" v-html="renderMarkdown(updateInfo.releaseNotes)"></div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showUpdateDialog = false">稍后再说</el-button>
+        <el-button type="primary" @click="downloadUpdate">立即下载</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -771,6 +796,14 @@ const encLoading = ref(false)
 const tipPreviewSrc = ref('')
 const showTipPreview = ref(false)
 
+// 更新相关
+const appVersion = ref('')
+const checkingUpdate = ref(false)
+const showUpdateDialog = ref(false)
+const updateInfo = ref<{ hasUpdate: boolean; currentVersion: string; latestVersion: string; downloadUrl: string; releaseNotes: string }>({
+    hasUpdate: false, currentVersion: '', latestVersion: '', downloadUrl: '', releaseNotes: ''
+})
+
 function openTipPreview(src: string) {
   tipPreviewSrc.value = src
   showTipPreview.value = true
@@ -782,6 +815,17 @@ function closeTipPreview() {
 }
 
 onMounted(async () => {
+  // 获取应用版本
+  try {
+    appVersion.value = await window.electronAPI.app.getVersion()
+  } catch {
+    appVersion.value = '2.0.0'
+  }
+  // 监听启动时自动检查更新的通知
+  window.electronAPI.updater.onUpdateAvailable((info: any) => {
+    updateInfo.value = info
+    showUpdateDialog.value = true
+  })
 })
 
 async function onAppModeChange(val: string) {
@@ -964,6 +1008,42 @@ function previewSound() {
   } catch (e: any) {
     ElMessage.error('试听失败: ' + (e.message || '未知错误'))
   }
+}
+
+async function checkUpdate() {
+  checkingUpdate.value = true
+  try {
+    const info = await window.electronAPI.updater.check()
+    if (info.hasUpdate) {
+      updateInfo.value = info
+      showUpdateDialog.value = true
+    } else {
+      ElMessage.success('已是最新版本')
+    }
+  } catch (e: any) {
+    ElMessage.error('检查更新失败: ' + (e.message || '未知错误'))
+  } finally {
+    checkingUpdate.value = false
+  }
+}
+
+function downloadUpdate() {
+  if (updateInfo.value.downloadUrl) {
+    window.open(updateInfo.value.downloadUrl, '_blank')
+  }
+  showUpdateDialog.value = false
+}
+
+/** 简单的 Markdown 渲染（仅处理标题、列表、加粗） */
+function renderMarkdown(text: string): string {
+  return text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/\n/g, '<br/>')
 }
 </script>
 
@@ -1543,5 +1623,72 @@ function previewSound() {
   height: 280px;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* 更新相关 */
+.about-actions {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.update-dialog-body {
+  text-align: center;
+}
+
+.update-version {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-primary, #409EFF);
+  margin-bottom: 4px;
+}
+
+.update-current {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+}
+
+.update-notes {
+  text-align: left;
+  margin-top: 12px;
+}
+
+.update-notes-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.update-notes-content {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  background: var(--bg-secondary, #f5f7fa);
+  border-radius: 6px;
+}
+
+.update-notes-content :deep(h2) {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 8px 0 4px;
+}
+
+.update-notes-content :deep(h3) {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 6px 0 2px;
+}
+
+.update-notes-content :deep(li) {
+  margin-left: 16px;
+  list-style: disc;
+}
+
+.update-notes-content :deep(strong) {
+  font-weight: 600;
 }
 </style>

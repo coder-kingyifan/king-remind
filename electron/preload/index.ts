@@ -166,7 +166,16 @@ const electronAPI = {
     // 应用控制
     app: {
         restart: () => safeInvoke('app:restart'),
-        getApiStatus: () => safeInvoke('app:api-status')
+        getApiStatus: () => safeInvoke('app:api-status'),
+        getVersion: () => safeInvoke('app:version')
+    },
+
+    // 更新检查
+    updater: {
+        check: () => safeInvoke('updater:check'),
+        onUpdateAvailable: (callback: (info: any) => void) => {
+            ipcRenderer.on('updater:update-available', (_event, info) => callback(info))
+        }
     },
 
     // API 接口控制

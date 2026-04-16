@@ -24,6 +24,7 @@ import {
     saveDatabase
 } from './db/connection'
 import {weChatBot} from './wechat-bot/wechat-bot'
+import {checkForUpdate} from './updater'
 
 // sql.js 返回的对象可能含有不可被 structured clone 序列化的属性（如 Uint8Array 等）
 // 在 IPC 返回前必须转为纯 JS 对象
@@ -609,6 +610,14 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
     safeHandle('app:restart', () => {
         app.relaunch()
         app.exit(0)
+    })
+
+    safeHandle('app:version', () => {
+        return app.getVersion()
+    })
+
+    safeHandle('updater:check', async () => {
+        return await checkForUpdate()
     })
 
     safeHandle('app:api-status', () => {

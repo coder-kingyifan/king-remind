@@ -19,6 +19,7 @@ import {continueHeadlessInit} from './repl'
 import {execSync} from 'child_process'
 import {initNetworkInterceptor} from './network-interceptor'
 import {weChatBot} from './wechat-bot/wechat-bot'
+import {checkForUpdate} from './updater'
 
 // Windows 控制台中文乱码修复
 try {
@@ -135,6 +136,18 @@ async function continueAppInit(win: BrowserWindow | null): Promise<void> {
     weChatBot.autoReconnect().catch((e: any) => {
         console.error('[主进程] 微信机器人自动恢复失败:', e.message)
     })
+
+    // 启动后延迟 5 秒自动检查更新（异步，不阻塞）
+    setTimeout(async () => {
+        try {
+            const updateInfo = await checkForUpdate()
+            if (updateInfo.hasUpdate && win && !win.isDestroyed()) {
+                win.webContents.send('updater:update-available', updateInfo)
+            }
+        } catch (e: any) {
+            console.error('[主进程] 自动检查更新失败:', e.message)
+        }
+    }, 5000)
 
     console.log('[主进程] 启动完成')
 }
