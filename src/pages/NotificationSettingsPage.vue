@@ -718,7 +718,7 @@ const feishuConfig = ref({
   msg_type: 'text',
   message_template: ''
 })
-const barkConfig = ref({server_url: 'https://api.day.app', sound: 'alarm', group: 'king-remind', url: '', message_template: ''})
+const barkConfig = ref({server_url: '', sound: 'alarm', group: 'king-remind', url: '', message_template: ''})
 const discordConfig = ref({webhook_url: '', username: 'king提醒助手', avatar_url: '', message_template: ''})
 const wechatTestConfig = ref({
   app_id: '',

@@ -257,7 +257,7 @@ export function runMigrations(): void {
         INSERT
                 OR IGNORE INTO settings (key, value) VALUES ('minimize_to_tray', 'true');
         INSERT
-                OR IGNORE INTO settings (key, value) VALUES ('notification_sound', 'true');
+                OR IGNORE INTO settings (key, value) VALUES ('notification_sound', 'on');
         INSERT
                 OR IGNORE INTO settings (key, value) VALUES ('language', 'zh-CN');
         INSERT
@@ -652,9 +652,16 @@ export function runMigrations(): void {
                 INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
           ('feishu', 0, '{"webhook_url": "", "msg_type": "text"}');
                 INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
-          ('bark', 0, '{"server_url": "https://api.day.app", "sound": "alarm", "group": "king-remind"}');
+          ('bark', 0, '{"server_url": "", "sound": "alarm", "group": "king-remind"}');
                 INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
           ('discord', 0, '{"webhook_url": "", "username": "king提醒助手"}');
+            `
+        },
+        {
+            version: 24,
+            sql: `
+                UPDATE settings SET value = 'on' WHERE key = 'notification_sound' AND value = 'true';
+                UPDATE notification_configs SET config_json = '{"server_url": "", "sound": "alarm", "group": "king-remind"}' WHERE channel = 'bark' AND config_json LIKE '%api.day.app%';
             `
         }
     ]
