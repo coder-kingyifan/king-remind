@@ -216,6 +216,7 @@ import {ElMessage, ElMessageBox} from 'element-plus'
 import ChatAvatar from '@/components/chat/ChatAvatar.vue'
 import ChatMessage from '@/components/chat/ChatMessage.vue'
 import ChatEmptyState from '@/components/chat/ChatEmptyState.vue'
+import {useSkillsStore} from '@/stores/skills'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -244,6 +245,7 @@ interface SessionItem {
 }
 
 const messages = ref<ChatMessage[]>([])
+const skillsStore = useSkillsStore()
 const inputText = ref('')
 const loading = ref(false)
 const messageList = ref<HTMLElement | null>(null)
@@ -578,7 +580,11 @@ function handleStreamEvent(event: any) {
     case 'chunk': streamingContent.value += event.text; streamStatus.value = ''; scrollToBottom(); break
     case 'thinking': streamingThinking.value += event.text; streamStatus.value = ''; scrollToBottom(); break
     case 'tool_start': streamStatus.value = `正在${getToolDisplayName(event.name)}...`; scrollToBottom(); break
-    case 'tool_result': streamStatus.value = `${getToolDisplayName(event.name)}完成`; scrollToBottom(); break
+    case 'tool_result':
+      streamStatus.value = `${getToolDisplayName(event.name)}完成`
+      if (event.name === 'create_skill') skillsStore.refreshSkills()
+      scrollToBottom()
+      break
     case 'error': streamStatus.value = ''; break
   }
 }
@@ -587,7 +593,8 @@ function getToolDisplayName(name: string): string {
   const map: Record<string, string> = {
     create_reminder: '创建提醒', list_reminders: '查询提醒列表',
     delete_reminder: '删除提醒', toggle_reminder: '切换提醒状态',
-    list_skills: '查询技能列表', execute_skill: '执行技能'
+    list_skills: '查询技能列表', execute_skill: '执行技能',
+    create_skill: '创建技能'
   }
   return map[name] || name
 }

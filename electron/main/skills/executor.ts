@@ -1,7 +1,7 @@
 import axios from 'axios'
 import {skillsDb} from '../db/skills'
 import {modelConfigsDb} from '../db/model-configs'
-import {chatWithLLM, callSearchAPI, hasTextModelConfigured} from '../llm'
+import {callSearchAPI, hasTextModelConfigured, simpleLLMCall} from '../llm'
 
 // ======================== AI Mode Helper ========================
 
@@ -22,11 +22,8 @@ async function generateWithAI(prompt: string): Promise<string | null> {
         return '尚未配置文本模型，请先前往「模型配置」页面添加并配置一个文本模型。'
     }
     try {
-        const result = await chatWithLLM(
-            [{role: 'user', content: prompt}],
-            null, getTextModelConfigId(), undefined, undefined
-        )
-        return result.reply || null
+        const result = await simpleLLMCall(getTextModelConfigId(), prompt)
+        return result || null
     } catch {
         return null
     }
@@ -47,7 +44,7 @@ async function executeApiCall(actionConfig: Record<string, any>, userConfig: Rec
             finalUrl = finalUrl.replace(`{{${key}}}`, String(value))
         }
 
-        const res = await axios({ method, url: finalUrl, headers, timeout: 15000 })
+        const res = await axios({ method, url: finalUrl, headers, timeout: 10000 })
         const data = res.data
 
         let apiResult: string
@@ -81,11 +78,8 @@ async function executeApiCall(actionConfig: Record<string, any>, userConfig: Rec
             const summaryPrompt = actionConfig.summary_prompt || '请根据以下 API 返回的数据，提取关键信息并用简洁的中文总结'
             const fullPrompt = `${summaryPrompt}${STRUCTURED_FORMAT_INSTRUCTION}\n\n---\nAPI 返回数据：\n${apiResult}`
             try {
-                const result = await chatWithLLM(
-                    [{role: 'user', content: fullPrompt}],
-                    null, getTextModelConfigId(), undefined, undefined
-                )
-                if (result.reply) return result.reply
+                const result = await simpleLLMCall(getTextModelConfigId(), fullPrompt)
+                if (result) return result
             } catch (e: any) {
                 console.error('[技能执行器] API AI 总结失败:', e.message)
             }
@@ -114,14 +108,8 @@ async function executeAiPrompt(actionConfig: Record<string, any>, userConfig: Re
     prompt = prompt.replace('{{time}}', now.toLocaleTimeString('zh-CN'))
 
     try {
-        const result = await chatWithLLM(
-            [{ role: 'user', content: prompt }],
-            null,
-            getTextModelConfigId(),
-            undefined,
-            undefined
-        )
-        return result.reply || 'AI 未返回结果'
+        const result = await simpleLLMCall(getTextModelConfigId(), prompt)
+        return result || 'AI 未返回结果'
     } catch (e: any) {
         return `AI 生成失败: ${e.message}`
     }
@@ -173,14 +161,8 @@ async function executeSearchAndSummarize(actionConfig: Record<string, any>, user
 
     console.log('[技能执行器] AI 总结中...')
     try {
-        const result = await chatWithLLM(
-            [{role: 'user', content: fullPrompt}],
-            null,
-            getTextModelConfigId(),
-            undefined,
-            undefined
-        )
-        return result.reply || searchResult
+        const result = await simpleLLMCall(getTextModelConfigId(), fullPrompt)
+        return result || searchResult
     } catch (e: any) {
         console.error('[技能执行器] AI 总结失败，返回原始搜索结果:', e.message)
         return searchResult

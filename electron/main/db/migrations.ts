@@ -663,6 +663,13 @@ export function runMigrations(): void {
                 UPDATE settings SET value = 'on' WHERE key = 'notification_sound' AND value = 'true';
                 UPDATE notification_configs SET config_json = '{"server_url": "", "sound": "alarm", "group": "king-remind"}' WHERE channel = 'bark' AND config_json LIKE '%api.day.app%';
             `
+        },
+        {
+            version: 25,
+            sql: `
+                INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
+          ('wechat_bot', 0, '{"message_template": ""}');
+            `
         }
     ]
 

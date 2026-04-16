@@ -118,6 +118,13 @@ export const DEFAULT_TEMPLATES: Record<string, Record<string, string>> = {
 {{body}}
 
 _{{app_name}} · {{time}}_`
+    },
+    wechat_bot: {
+        message_template: `{{icon}} {{title}}
+
+{{body}}
+
+{{app_name}} · {{time}}`
     }
 }
 

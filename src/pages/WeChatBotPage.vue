@@ -45,15 +45,6 @@
         </template>
       </div>
 
-      <div v-if="botState.recentContacts && botState.recentContacts.length > 0" class="setting-section">
-        <h3 class="section-title">最近联系人</h3>
-        <div class="recent-list">
-          <div v-for="contact in botState.recentContacts" :key="contact.uin" class="recent-item">
-            <span class="recent-name">{{ contact.nickname }}</span>
-          </div>
-        </div>
-      </div>
-
       <div class="setting-section">
         <h3 class="section-title">使用说明</h3>
         <div class="guide-content">
@@ -62,6 +53,7 @@
             <li>登录成功后，机器人将自动开始处理微信消息。</li>
             <li>在微信中给机器人发消息即可与 AI 助手对话。</li>
             <li>微信对话记录会保存在 AI 对话页面，以 [微信] 标识。</li>
+            <li>启用「微信机器人」通知渠道后，提醒触发时会自动通过微信发送消息。</li>
           </ol>
         </div>
       </div>
@@ -373,25 +365,6 @@ onUnmounted(() => {
 
 .qrcode-placeholder {
   padding: 40px;
-}
-
-.recent-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.recent-item {
-  display: flex;
-  align-items: center;
-  padding: 6px 8px;
-  background: var(--bg-secondary);
-  border-radius: 6px;
-}
-
-.recent-name {
-  font-size: 13px;
-  color: var(--text-primary);
 }
 
 .guide-content {

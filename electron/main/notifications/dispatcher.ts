@@ -8,6 +8,7 @@ import {TelegramNotifier} from './telegram'
 import {WeChatWorkNotifier} from './wechat-work'
 import {WeChatWorkWebhookNotifier} from './wechat-work-webhook'
 import {WeChatTestNotifier} from './wechat-test'
+import {WeChatBotNotifier} from './wechat-bot'
 import {WebhookNotifier} from './webhook'
 import {DingTalkNotifier} from './dingtalk'
 import {FeishuNotifier} from './feishu'
@@ -26,6 +27,7 @@ export class NotificationDispatcher {
             ['wechat_work', new WeChatWorkNotifier()],
             ['wechat_work_webhook', new WeChatWorkWebhookNotifier()],
             ['wechat_test', new WeChatTestNotifier()],
+            ['wechat_bot', new WeChatBotNotifier()],
             ['webhook', new WebhookNotifier()],
             ['dingtalk', new DingTalkNotifier()],
             ['feishu', new FeishuNotifier()],

@@ -1,6 +1,7 @@
 import {ILinkAPI, WeixinMessage, QRCodeResult, QRCodeStatus} from './ilink-api'
 import {chatWithLLM} from '../llm'
 import {settingsDb} from '../db/settings'
+import {notificationConfigsDb} from '../db/notification-configs'
 import {chatHistoryDb} from '../db/chat-history'
 import {ReminderScheduler} from '../scheduler'
 
@@ -11,6 +12,7 @@ export interface WeChatBotState {
     nickname?: string
     headImgUrl?: string
     recentContacts: Array<{uin: string; nickname: string}>
+    isBound: boolean
 }
 
 class WeChatBot {
@@ -62,13 +64,15 @@ class WeChatBot {
 
     getState(): WeChatBotState {
         this.ensureInit()
+        const remindUserId = settingsDb.get('wechat_bot_remind_user_id') || ''
         return {
             status: this._status,
             nickname: this._nickname,
             headImgUrl: this._headImgUrl,
             recentContacts: Array.from(this._recentContacts.entries())
                 .slice(-10)
-                .map(([uin, nickname]) => ({uin, nickname}))
+                .map(([uin, nickname]) => ({uin, nickname})),
+            isBound: this._status === 'connected' && !!remindUserId
         }
     }
 
@@ -145,6 +149,10 @@ class WeChatBot {
         this._chatSessionIds.clear()
         this._recentContacts.clear()
         settingsDb.set('wechat_bot_token', '')
+        // 解绑时删除提醒接收人并关闭微信通知渠道
+        settingsDb.set('wechat_bot_remind_user_id', '')
+        settingsDb.set('wechat_bot_remind_nickname', '')
+        notificationConfigsDb.update('wechat_bot', {is_enabled: 0})
     }
 
     // ======================== 消息轮询 ========================
@@ -246,6 +254,14 @@ class WeChatBot {
         // 记录最近联系人
         this._recentContacts.set(fromUserId, nickname)
 
+        // 自动绑定提醒接收人：给机器人发消息的用户自动成为提醒接收人
+        const currentRemindUser = settingsDb.get('wechat_bot_remind_user_id') || ''
+        if (!currentRemindUser || currentRemindUser !== fromUserId) {
+            settingsDb.set('wechat_bot_remind_user_id', fromUserId)
+            settingsDb.set('wechat_bot_remind_nickname', nickname)
+            console.log(`[WeChatBot] 绑定提醒接收人: ${nickname}(${fromUserId})`)
+        }
+
         console.log(`[WeChatBot] 收到消息: ${nickname}(${fromUserId}): ${content.substring(0, 100)}`)
 
         try {
@@ -309,6 +325,22 @@ class WeChatBot {
                 // 发送失败也忽略
             }
         }
+    }
+
+    /** 发送提醒消息给绑定的接收人 */
+    async sendReminderMessage(content: string): Promise<void> {
+        this.ensureInit()
+
+        if (this._status !== 'connected') {
+            throw new Error('微信机器人未连接，无法发送提醒')
+        }
+
+        const remindUserId = settingsDb.get('wechat_bot_remind_user_id') || ''
+        if (!remindUserId) {
+            throw new Error('微信机器人尚未收到消息，无法发送提醒。请先在微信中给机器人发一条消息')
+        }
+
+        await this.api.sendMessage(remindUserId, content)
     }
 
     // ======================== 自动恢复 ========================

@@ -21,6 +21,9 @@
             <span v-else-if="channel.key === 'feishu'" class="channel-icon">
               <img :src="feishuIcon" class="channel-icon-img"/>
             </span>
+            <span v-else-if="channel.key === 'wechat_bot'" class="channel-icon">
+              <img :src="wechatTestIcon" class="channel-icon-img"/>
+            </span>
             <span v-else class="channel-icon">{{ channel.icon }}</span>
             <div>
               <div class="channel-name">{{ channel.name }}</div>
@@ -35,7 +38,7 @@
             />
             <el-tooltip
               v-if="channel.key !== 'desktop' && !isConfigured(channel.key)"
-              content="请先配置后再启用"
+              :content="channel.key === 'wechat_bot' ? '请先绑定微信后再启用' : '请先配置后再启用'"
               placement="top"
             >
               <el-icon :size="14" class="config-warn-icon"><WarningFilled/></el-icon>
@@ -388,6 +391,47 @@
           </el-form>
         </div>
 
+        <!-- 微信配置 -->
+        <div
+            v-if="channel.key === 'wechat_bot' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['wechat_bot']"
+            class="channel-config">
+          <div class="config-guide">
+            <div class="guide-title">配置说明</div>
+            <ol class="guide-steps">
+              <li>在「微信机器人」页面扫码登录并连接微信</li>
+              <li>在微信中给机器人发一条消息完成绑定</li>
+              <li>绑定完成后启用此渠道，提醒触发时会自动通过微信发送消息</li>
+            </ol>
+          </div>
+          <el-form :model="wechatBotConfig" label-position="top" size="small">
+            <div class="template-section">
+              <div class="template-header" @click="templateExpanded.wechat_bot = !templateExpanded.wechat_bot">
+                <span class="template-header-title">消息模板</span>
+                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.wechat_bot }">
+                  <ArrowDown/>
+                </el-icon>
+              </div>
+              <div v-if="templateExpanded.wechat_bot" class="template-body">
+                <div class="template-vars-tip" v-pre>
+                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 ·
+                  <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名
+                </div>
+                <el-form-item label="消息模板">
+                  <el-input v-model="wechatBotConfig.message_template" type="textarea" :rows="3"
+                            placeholder="{{icon}} {{title}}&#10;&#10;{{body}}&#10;&#10;{{app_name}} · {{time}}"/>
+                </el-form-item>
+              </div>
+            </div>
+            <div class="config-actions">
+              <el-button size="small" @click="saveConfig('wechat_bot', wechatBotConfig)">保存配置</el-button>
+              <el-button size="small" type="success" plain :loading="testing === 'wechat_bot'"
+                         @click="testChannel('wechat_bot')">
+                发送测试
+              </el-button>
+            </div>
+          </el-form>
+        </div>
+
         <!-- 钉钉群机器人配置 -->
         <div
             v-if="channel.key === 'dingtalk' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['dingtalk']"
@@ -734,6 +778,8 @@ const wechatTestTemplateFields = ref<Array<{key: string; value: string; color: s
   {key: 'keyword1', value: '{{body}}', color: ''},
   {key: 'remark', value: '{{app_name}} · {{time}}', color: ''}
 ])
+const wechatBotConfig = ref({message_template: ''})
+const wechatBotBound = ref(false)
 
 watch(emailToStr, (val) => {
   emailConfig.value.to_addresses = val.split(',').map(s => s.trim()).filter(Boolean)
@@ -758,6 +804,8 @@ function loadConfigFromStore(channel: string) {
       if (json.template_fields && Array.isArray(json.template_fields)) {
         wechatTestTemplateFields.value = json.template_fields
       }
+    } else if (channel === 'wechat_bot') {
+      Object.assign(wechatBotConfig.value, json)
     } else if (channel === 'webhook') {
       Object.assign(webhookConfig.value, json)
     } else if (channel === 'dingtalk') {
@@ -789,6 +837,9 @@ function isConfigured(channel: string): boolean {
   }
   if (channel === 'wechat_test') {
     return !!(wechatTestConfig.value.app_id && wechatTestConfig.value.app_secret && wechatTestConfig.value.to_openid)
+  }
+  if (channel === 'wechat_bot') {
+    return wechatBotBound.value
   }
   if (channel === 'webhook') {
     return !!webhookConfig.value.url
@@ -850,6 +901,7 @@ async function testChannel(channel: string) {
       wechat_work: wechatConfig.value,
       wechat_work_webhook: wechatWebhookConfig.value,
       wechat_test: {...wechatTestConfig.value, template_fields: wechatTestTemplateFields.value},
+      wechat_bot: wechatBotConfig.value,
       webhook: webhookConfig.value,
       dingtalk: dingtalkConfig.value,
       feishu: feishuConfig.value,
@@ -880,6 +932,15 @@ onMounted(async () => {
   await notificationsStore.fetchConfigs()
   for (const ch of CHANNELS) {
     loadConfigFromStore(ch.key)
+  }
+  // 查询微信绑定状态
+  try {
+    const state = await window.electronAPI.wechatBot.getState()
+    if (state) {
+      wechatBotBound.value = !!state.isBound
+    }
+  } catch {
+    // ignore
   }
 })
 </script>
