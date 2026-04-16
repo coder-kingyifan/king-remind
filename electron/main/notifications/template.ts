@@ -85,6 +85,39 @@ export const DEFAULT_TEMPLATES: Record<string, Record<string, string>> = {
 {{body}}
 
 {{app_name}} · {{time}}`
+    },
+    dingtalk: {
+        message_template: `{{icon}} {{title}}
+
+{{body}}
+
+{{app_name}} · {{time}}`,
+        markdown_template: `# {{icon}} {{title}}
+
+{{body}}
+
+> {{app_name}} · {{time}}`
+    },
+    feishu: {
+        message_template: `{{icon}} {{title}}
+
+{{body}}
+
+{{app_name}} · {{time}}`
+    },
+    bark: {
+        message_template: `{{icon}} {{title}}
+
+{{body}}
+
+{{app_name}} · {{time}}`
+    },
+    discord: {
+        message_template: `{{icon}} **{{title}}**
+
+{{body}}
+
+_{{app_name}} · {{time}}_`
     }
 }
 

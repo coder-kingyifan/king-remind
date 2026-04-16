@@ -12,6 +12,15 @@
             <span v-if="channel.key === 'wechat_work'" class="channel-icon">
               <img :src="wechatWorkIcon" class="channel-icon-img"/>
             </span>
+            <span v-else-if="channel.key === 'wechat_test'" class="channel-icon">
+              <img :src="wechatTestIcon" class="channel-icon-img"/>
+            </span>
+            <span v-else-if="channel.key === 'dingtalk'" class="channel-icon">
+              <img :src="dingtalkIcon" class="channel-icon-img"/>
+            </span>
+            <span v-else-if="channel.key === 'feishu'" class="channel-icon">
+              <img :src="feishuIcon" class="channel-icon-img"/>
+            </span>
             <span v-else class="channel-icon">{{ channel.icon }}</span>
             <div>
               <div class="channel-name">{{ channel.name }}</div>
@@ -379,6 +388,210 @@
           </el-form>
         </div>
 
+        <!-- 钉钉群机器人配置 -->
+        <div
+            v-if="channel.key === 'dingtalk' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['dingtalk']"
+            class="channel-config">
+          <div class="config-guide">
+            <div class="guide-title">配置步骤</div>
+            <ol class="guide-steps">
+              <li>在钉钉群聊中，点击右上角 <b>群设置</b> → <b>智能群助手</b> → <b>添加机器人</b> → <b>自定义</b></li>
+              <li>创建后复制 <b>Webhook 地址</b>，粘贴到下方</li>
+              <li>如需安全验证，勾选"加签"并复制 <b>签名密钥</b> 填入下方</li>
+            </ol>
+          </div>
+          <el-form :model="dingtalkConfig" label-position="top" size="small">
+            <el-form-item label="Webhook URL">
+              <el-input v-model="dingtalkConfig.webhook_url"
+                        placeholder="https://oapi.dingtalk.com/robot/send?access_token=xxx"/>
+            </el-form-item>
+            <el-form-item label="签名密钥（加签验证，可选）">
+              <el-input v-model="dingtalkConfig.secret" type="password" show-password placeholder="SEC..."/>
+            </el-form-item>
+            <el-form-item label="消息格式">
+              <el-radio-group v-model="dingtalkConfig.msg_type">
+                <el-radio value="text">文本消息</el-radio>
+                <el-radio value="markdown">Markdown</el-radio>
+              </el-radio-group>
+            </el-form-item>
+            <template v-if="dingtalkConfig.msg_type === 'text'">
+              <el-form-item label="@提醒">
+                <el-radio-group v-model="dingtalkConfig.mention_mode">
+                  <el-radio value="none">不提醒</el-radio>
+                  <el-radio value="all">@所有人</el-radio>
+                  <el-radio value="custom">指定成员</el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <div v-if="dingtalkConfig.mention_mode === 'custom'" class="config-row">
+                <el-form-item label="手机号（逗号分隔）">
+                  <el-input v-model="dingtalkConfig.mention_mobiles" placeholder="13800138000"/>
+                </el-form-item>
+                <el-form-item label="UserID（逗号分隔）">
+                  <el-input v-model="dingtalkConfig.mention_userids" placeholder="zhangsan"/>
+                </el-form-item>
+              </div>
+            </template>
+            <div class="template-section">
+              <div class="template-header" @click="templateExpanded.dingtalk = !templateExpanded.dingtalk">
+                <span class="template-header-title">消息模板</span>
+                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.dingtalk }">
+                  <ArrowDown/>
+                </el-icon>
+              </div>
+              <div v-if="templateExpanded.dingtalk" class="template-body">
+                <div class="template-vars-tip" v-pre>
+                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 ·
+                  <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名
+                </div>
+                <el-form-item v-if="dingtalkConfig.msg_type === 'text'" label="文本消息模板">
+                  <el-input v-model="dingtalkConfig.message_template" type="textarea" :rows="3"/>
+                </el-form-item>
+                <el-form-item v-else label="Markdown 消息模板">
+                  <el-input v-model="dingtalkConfig.markdown_template" type="textarea" :rows="4"/>
+                </el-form-item>
+              </div>
+            </div>
+            <div class="config-actions">
+              <el-button size="small" @click="saveConfig('dingtalk', dingtalkConfig)">保存配置</el-button>
+              <el-button size="small" type="success" plain :loading="testing === 'dingtalk'"
+                         @click="testChannel('dingtalk')">发送测试</el-button>
+            </div>
+          </el-form>
+        </div>
+
+        <!-- 飞书群机器人配置 -->
+        <div
+            v-if="channel.key === 'feishu' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['feishu']"
+            class="channel-config">
+          <div class="config-guide">
+            <div class="guide-title">配置步骤</div>
+            <ol class="guide-steps">
+              <li>在飞书群聊中，点击右上角 <b>设置</b> → <b>群机器人</b> → <b>添加机器人</b> → <b>自定义机器人</b></li>
+              <li>创建后复制 <b>Webhook 地址</b>，粘贴到下方</li>
+            </ol>
+          </div>
+          <el-form :model="feishuConfig" label-position="top" size="small">
+            <el-form-item label="Webhook URL">
+              <el-input v-model="feishuConfig.webhook_url"
+                        placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/xxx"/>
+            </el-form-item>
+            <el-form-item label="消息格式">
+              <el-radio-group v-model="feishuConfig.msg_type">
+                <el-radio value="text">文本消息</el-radio>
+                <el-radio value="interactive">富文本（Markdown）</el-radio>
+              </el-radio-group>
+            </el-form-item>
+            <div class="template-section">
+              <div class="template-header" @click="templateExpanded.feishu = !templateExpanded.feishu">
+                <span class="template-header-title">消息模板</span>
+                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.feishu }">
+                  <ArrowDown/>
+                </el-icon>
+              </div>
+              <div v-if="templateExpanded.feishu" class="template-body">
+                <div class="template-vars-tip" v-pre>
+                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 ·
+                  <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名
+                </div>
+                <el-form-item label="消息模板">
+                  <el-input v-model="feishuConfig.message_template" type="textarea" :rows="3"/>
+                </el-form-item>
+              </div>
+            </div>
+            <div class="config-actions">
+              <el-button size="small" @click="saveConfig('feishu', feishuConfig)">保存配置</el-button>
+              <el-button size="small" type="success" plain :loading="testing === 'feishu'"
+                         @click="testChannel('feishu')">发送测试</el-button>
+            </div>
+          </el-form>
+        </div>
+
+        <!-- Bark 配置 -->
+        <div
+            v-if="channel.key === 'bark' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['bark']"
+            class="channel-config">
+          <div class="config-guide">
+            <div class="guide-title">配置步骤</div>
+            <ol class="guide-steps">
+              <li>在 App Store 搜索 <b>Bark</b> 下载安装</li>
+              <li>打开 Bark App，复制显示的服务器地址（如 <code>https://api.day.app/你的Key</code>）</li>
+              <li>将服务器地址填入下方（格式：<code>https://api.day.app</code> 或自建地址）</li>
+              <li>如需自建服务端，参考 <b>github.com/Finb/Bark</b></li>
+            </ol>
+          </div>
+          <el-form :model="barkConfig" label-position="top" size="small">
+            <el-form-item label="服务器地址">
+              <el-input v-model="barkConfig.server_url" placeholder="https://api.day.app"/>
+            </el-form-item>
+            <div class="config-row">
+              <el-form-item label="提示音">
+                <el-input v-model="barkConfig.sound" placeholder="alarm"/>
+              </el-form-item>
+              <el-form-item label="消息分组">
+                <el-input v-model="barkConfig.group" placeholder="king-remind"/>
+              </el-form-item>
+            </div>
+            <el-form-item label="点击跳转 URL（可选）">
+              <el-input v-model="barkConfig.url" placeholder="https://..."/>
+            </el-form-item>
+            <div class="config-actions">
+              <el-button size="small" @click="saveConfig('bark', barkConfig)">保存配置</el-button>
+              <el-button size="small" type="success" plain :loading="testing === 'bark'"
+                         @click="testChannel('bark')">发送测试</el-button>
+            </div>
+          </el-form>
+        </div>
+
+        <!-- Discord 配置 -->
+        <div
+            v-if="channel.key === 'discord' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['discord']"
+            class="channel-config">
+          <div class="config-guide">
+            <div class="guide-title">配置步骤</div>
+            <ol class="guide-steps">
+              <li>在 Discord 频道设置中，点击 <b>整合</b> → <b>Webhook</b> → <b>新建 Webhook</b></li>
+              <li>复制 <b>Webhook URL</b>，粘贴到下方</li>
+            </ol>
+          </div>
+          <el-form :model="discordConfig" label-position="top" size="small">
+            <el-form-item label="Webhook URL">
+              <el-input v-model="discordConfig.webhook_url"
+                        placeholder="https://discord.com/api/webhooks/xxx/yyy"/>
+            </el-form-item>
+            <div class="config-row">
+              <el-form-item label="机器人名称">
+                <el-input v-model="discordConfig.username" placeholder="king提醒助手"/>
+              </el-form-item>
+              <el-form-item label="头像 URL（可选）">
+                <el-input v-model="discordConfig.avatar_url" placeholder="https://..."/>
+              </el-form-item>
+            </div>
+            <div class="template-section">
+              <div class="template-header" @click="templateExpanded.discord = !templateExpanded.discord">
+                <span class="template-header-title">消息模板</span>
+                <el-icon :size="14" class="template-arrow" :class="{ expanded: templateExpanded.discord }">
+                  <ArrowDown/>
+                </el-icon>
+              </div>
+              <div v-if="templateExpanded.discord" class="template-body">
+                <div class="template-vars-tip" v-pre>
+                  可用变量：<code>{{title}}</code> 标题 · <code>{{body}}</code> 内容 · <code>{{icon}}</code> 图标 ·
+                  <code>{{time}}</code> 时间 · <code>{{app_name}}</code> 应用名。支持 Markdown 如 <code>**粗体**</code>
+                  <code>_斜体_</code>
+                </div>
+                <el-form-item label="消息模板">
+                  <el-input v-model="discordConfig.message_template" type="textarea" :rows="3"/>
+                </el-form-item>
+              </div>
+            </div>
+            <div class="config-actions">
+              <el-button size="small" @click="saveConfig('discord', discordConfig)">保存配置</el-button>
+              <el-button size="small" type="success" plain :loading="testing === 'discord'"
+                         @click="testChannel('discord')">发送测试</el-button>
+            </div>
+          </el-form>
+        </div>
+
         <!-- Webhook 配置 -->
         <div
             v-if="channel.key === 'webhook' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['webhook']"
@@ -448,6 +661,9 @@ import {CHANNELS} from '@/types/notification'
 import {ElMessage} from 'element-plus'
 import {ArrowDown, WarningFilled, Delete} from '@element-plus/icons-vue'
 import wechatWorkIcon from '@/../resources/wechat-work.png'
+import wechatTestIcon from '@/../resources/wechat.png'
+import dingtalkIcon from '@/../resources/dingding.ico'
+import feishuIcon from '@/../resources/feishu.png'
 
 const notificationsStore = useNotificationsStore()
 const testing = ref('')
@@ -487,6 +703,23 @@ const wechatWebhookConfig = ref({
   markdown_template: ''
 })
 const webhookConfig = ref({url: '', method: 'POST', headers: '{}', body_template: ''})
+const dingtalkConfig = ref({
+  webhook_url: '',
+  msg_type: 'text',
+  secret: '',
+  mention_mode: 'none',
+  mention_mobiles: '',
+  mention_userids: '',
+  message_template: '',
+  markdown_template: ''
+})
+const feishuConfig = ref({
+  webhook_url: '',
+  msg_type: 'text',
+  message_template: ''
+})
+const barkConfig = ref({server_url: 'https://api.day.app', sound: 'alarm', group: 'king-remind', url: '', message_template: ''})
+const discordConfig = ref({webhook_url: '', username: 'king提醒助手', avatar_url: '', message_template: ''})
 const wechatTestConfig = ref({
   app_id: '',
   app_secret: '',
@@ -527,6 +760,14 @@ function loadConfigFromStore(channel: string) {
       }
     } else if (channel === 'webhook') {
       Object.assign(webhookConfig.value, json)
+    } else if (channel === 'dingtalk') {
+      Object.assign(dingtalkConfig.value, json)
+    } else if (channel === 'feishu') {
+      Object.assign(feishuConfig.value, json)
+    } else if (channel === 'bark') {
+      Object.assign(barkConfig.value, json)
+    } else if (channel === 'discord') {
+      Object.assign(discordConfig.value, json)
     }
   } catch {
   }
@@ -551,6 +792,18 @@ function isConfigured(channel: string): boolean {
   }
   if (channel === 'webhook') {
     return !!webhookConfig.value.url
+  }
+  if (channel === 'dingtalk') {
+    return !!dingtalkConfig.value.webhook_url
+  }
+  if (channel === 'feishu') {
+    return !!feishuConfig.value.webhook_url
+  }
+  if (channel === 'bark') {
+    return !!barkConfig.value.server_url
+  }
+  if (channel === 'discord') {
+    return !!discordConfig.value.webhook_url
   }
   return false
 }
@@ -597,7 +850,11 @@ async function testChannel(channel: string) {
       wechat_work: wechatConfig.value,
       wechat_work_webhook: wechatWebhookConfig.value,
       wechat_test: {...wechatTestConfig.value, template_fields: wechatTestTemplateFields.value},
-      webhook: webhookConfig.value
+      webhook: webhookConfig.value,
+      dingtalk: dingtalkConfig.value,
+      feishu: feishuConfig.value,
+      bark: barkConfig.value,
+      discord: discordConfig.value
     }
     if (configs[channel]) {
       await notificationsStore.updateConfig(channel, {

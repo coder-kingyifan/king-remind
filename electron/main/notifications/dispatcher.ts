@@ -9,6 +9,10 @@ import {WeChatWorkNotifier} from './wechat-work'
 import {WeChatWorkWebhookNotifier} from './wechat-work-webhook'
 import {WeChatTestNotifier} from './wechat-test'
 import {WebhookNotifier} from './webhook'
+import {DingTalkNotifier} from './dingtalk'
+import {FeishuNotifier} from './feishu'
+import {BarkNotifier} from './bark'
+import {DiscordNotifier} from './discord'
 import {NotificationChannel, NotificationMessage} from './types'
 
 export class NotificationDispatcher {
@@ -22,7 +26,11 @@ export class NotificationDispatcher {
             ['wechat_work', new WeChatWorkNotifier()],
             ['wechat_work_webhook', new WeChatWorkWebhookNotifier()],
             ['wechat_test', new WeChatTestNotifier()],
-            ['webhook', new WebhookNotifier()]
+            ['webhook', new WebhookNotifier()],
+            ['dingtalk', new DingTalkNotifier()],
+            ['feishu', new FeishuNotifier()],
+            ['bark', new BarkNotifier()],
+            ['discord', new DiscordNotifier()]
         ])
     }
 

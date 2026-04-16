@@ -643,6 +643,19 @@ export function runMigrations(): void {
                 INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
           ('wechat_test', 0, '{"app_id": "", "app_secret": "", "to_openid": "", "msg_type": "text", "template_id": "", "template_url": "", "template_fields": [{"key": "first", "value": "{{icon}} {{title}}", "color": ""}, {"key": "keyword1", "value": "{{body}}", "color": ""}, {"key": "remark", "value": "{{app_name}} · {{time}}", "color": ""}]}');
             `
+        },
+        {
+            version: 23,
+            sql: `
+                INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
+          ('dingtalk', 0, '{"webhook_url": "", "msg_type": "text", "secret": "", "mention_mode": "none", "mention_mobiles": "", "mention_userids": ""}');
+                INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
+          ('feishu', 0, '{"webhook_url": "", "msg_type": "text"}');
+                INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
+          ('bark', 0, '{"server_url": "https://api.day.app", "sound": "alarm", "group": "king-remind"}');
+                INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
+          ('discord', 0, '{"webhook_url": "", "username": "king提醒助手"}');
+            `
         }
     ]
 

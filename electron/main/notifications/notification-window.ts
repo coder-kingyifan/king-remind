@@ -1,6 +1,7 @@
-import {BrowserWindow, screen, dialog, BrowserWindowConstructorOptions} from 'electron'
+import {BrowserWindow, screen, dialog} from 'electron'
 import {join} from 'path'
-import {readFileSync, existsSync} from 'fs'
+import {existsSync} from 'fs'
+import {execFile} from 'child_process'
 import {is} from '@electron-toolkit/utils'
 import {settingsDb} from '../db/settings'
 
@@ -13,45 +14,16 @@ interface FloatNotification {
 const NOTIFICATION_WIDTH = 360
 const NOTIFICATION_GAP = 8
 
-// 缓存提示音的 base64 数据
-let notificationSoundBase64: string | null = null
-// 缓存自定义提示音路径对应的 base64
-let customSoundBase64: string | null = null
-let customSoundPath: string | null = null
-
-function getNotificationSoundBase64(): string {
-    if (notificationSoundBase64) return notificationSoundBase64
-    try {
-        const soundPath = is.dev
-            ? join(__dirname, '../../resources/notification.wav')
-            : join(process.resourcesPath, 'resources/notification.wav')
-        const buf = readFileSync(soundPath)
-        notificationSoundBase64 = buf.toString('base64')
-    } catch {
-        notificationSoundBase64 = ''
-    }
-    return notificationSoundBase64
+/** 获取内置提示音文件路径 */
+function getNotificationSoundPath(): string {
+    return is.dev
+        ? join(__dirname, '../../resources/notification.wav')
+        : join(process.resourcesPath, 'resources/notification.wav')
 }
 
-function getCustomSoundBase64(): string {
-    const filePath = settingsDb.get('notification_sound_file') || ''
-    if (!filePath) return ''
-    // 路径没变，用缓存
-    if (filePath === customSoundPath && customSoundBase64 !== null) return customSoundBase64
-    try {
-        if (!existsSync(filePath)) {
-            customSoundBase64 = ''
-            customSoundPath = filePath
-            return ''
-        }
-        const buf = readFileSync(filePath)
-        customSoundBase64 = buf.toString('base64')
-        customSoundPath = filePath
-    } catch {
-        customSoundBase64 = ''
-        customSoundPath = filePath
-    }
-    return customSoundBase64
+/** 获取自定义提示音文件路径 */
+function getCustomSoundPath(): string {
+    return settingsDb.get('notification_sound_file') || ''
 }
 
 function playNotificationSound(): void {
@@ -61,94 +33,62 @@ function playNotificationSound(): void {
 
     // system 模式使用系统通知声
     if (soundSetting === 'system') {
-        try {
-            const {Notification} = require('electron')
-            const sysNotif = new Notification({
-                silent: false,
-                title: 'king提醒助手',
-                body: ' '
-            })
-            sysNotif.show()
-            // 播放完系统提示音后关闭通知
-            sysNotif.on('show', () => {
-                setTimeout(() => sysNotif.close(), 500)
-            })
-        } catch { /* fallback to built-in */
-        }
+        playSystemSound()
         return
     }
 
     // custom 模式：播放用户自定义音效文件
     if (soundSetting === 'custom') {
-        const base64 = getCustomSoundBase64()
-        if (!base64) return
-        const filePath = settingsDb.get('notification_sound_file') || ''
-        const mimeType = getMimeType(filePath)
-        playBase64Sound(base64, mimeType)
+        const filePath = getCustomSoundPath()
+        if (!filePath || !existsSync(filePath)) return
+        playSoundFile(filePath)
         return
     }
 
     // on 模式：播放内置音效
-    const base64 = getNotificationSoundBase64()
-    if (!base64) return
-    playBase64Sound(base64)
+    const soundPath = getNotificationSoundPath()
+    if (!existsSync(soundPath)) return
+    playSoundFile(soundPath)
 }
 
-function playBase64Sound(base64: string, mimeType: string = 'audio/wav'): void {
-    const soundWin = new BrowserWindow({
-        width: 1,
-        height: 1,
-        show: false,
-        skipTaskbar: true,
-        webPreferences: {
-            contextIsolation: true,
-            nodeIntegration: false,
-            sandbox: false
-        }
-    })
-
-    // 允许隐藏窗口自动播放音频（绕过 Chromium autoplay policy）
-    soundWin.webContents.session.setPermissionRequestHandler((_webContents, permission, callback) => {
-        if (permission === 'media') callback(true)
-        else callback(false)
-    })
-
-    const html = `<!DOCTYPE html><html><body>
-<audio autoplay onended="window.close()">
-  <source src="data:${mimeType};base64,${base64}" type="${mimeType}">
-</audio>
-<script>
-// 尝试通过 JS 播放，作为 autoplay 的后备方案
-const audio = document.querySelector('audio');
-if (audio) {
-    audio.play().catch(() => {
-        // autoplay 被阻止时，通过 AudioContext 播放
-        try {
-            const ctx = new AudioContext();
-            const source = ctx.createMediaElementSource(audio);
-            source.connect(ctx.destination);
-            audio.play().catch(() => {});
-        } catch(e) {}
-    });
-}
-setTimeout(()=>window.close(),5000)
-</script>
-</body></html>`
-
-    soundWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
-    soundWin.on('closed', () => {
-    })
-}
-
-/** 根据文件扩展名推断 MIME 类型 */
-function getMimeType(filePath: string): string {
-    const ext = filePath.toLowerCase().split('.').pop()
-    switch (ext) {
-        case 'mp3': return 'audio/mpeg'
-        case 'ogg': return 'audio/ogg'
-        case 'flac': return 'audio/flac'
-        default: return 'audio/wav'
+/** 播放系统提示音（Windows 系统 Media 目录下的通知音效） */
+function playSystemSound(): void {
+    try {
+        const psCmd = `
+$mediaDir = [System.IO.Path]::Combine([System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::Windows), 'Media')
+$sounds = @('notify.wav', 'chimes.wav', 'chord.wav', 'ding.wav')
+foreach ($s in $sounds) {
+    $p = [System.IO.Path]::Combine($mediaDir, $s)
+    if (Test-Path $p) {
+        $player = New-Object System.Media.SoundPlayer $p
+        $player.PlaySync()
+        break
     }
+}
+`
+        execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', psCmd], {timeout: 5000, windowsHide: true}, () => {})
+    } catch {
+        const soundPath = getNotificationSoundPath()
+        if (existsSync(soundPath)) playSoundFile(soundPath)
+    }
+}
+
+/** 通过 PowerShell 播放音频文件（支持 wav/mp3/wma 等格式） */
+function playSoundFile(filePath: string): void {
+    try {
+        const safePath = filePath.replace(/'/g, "''")
+        const psCmd = `
+Add-Type -AssemblyName presentationCore
+$player = New-Object System.Windows.Media.MediaPlayer
+$player.Open([System.Uri]::new('${safePath}'))
+Start-Sleep -Milliseconds 100
+while ($player.NaturalDuration.HasTimeSpan -eq $false) { Start-Sleep -Milliseconds 50 }
+$player.Play()
+Start-Sleep -Milliseconds ($player.NaturalDuration.TimeSpan.TotalMilliseconds + 200)
+$player.Close()
+`
+        execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', psCmd], {timeout: 15000, windowsHide: true}, () => {})
+    } catch { /* ignore */ }
 }
 
 /** 打开文件选择对话框，选择自定义提示音文件 */
@@ -164,9 +104,6 @@ export async function selectNotificationSoundFile(): Promise<string | null> {
     if (result.canceled || result.filePaths.length === 0) return null
     const filePath = result.filePaths[0]
     settingsDb.set('notification_sound_file', filePath)
-    // 清除缓存，下次播放时重新读取
-    customSoundBase64 = null
-    customSoundPath = null
     return filePath
 }
 
