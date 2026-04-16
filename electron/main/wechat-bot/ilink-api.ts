@@ -369,10 +369,14 @@ export class ILinkAPI {
             {headers: buildHeaders(this.botToken, body), timeout: 15000}
         )
         const data = res.data
-        console.log('[ILinkAPI] sendMessage ret:', data.ret, 'errmsg:', data.errmsg)
+        const ret = data.ret ?? data.errcode ?? 0
+        const errmsg = data.errmsg || ''
+        if (ret !== 0) {
+            console.error('[ILinkAPI] sendMessage error:', ret, errmsg)
+        }
         return {
-            ret: data.ret ?? 0,
-            errmsg: data.errmsg
+            ret,
+            errmsg
         }
     }
 

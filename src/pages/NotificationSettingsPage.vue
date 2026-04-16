@@ -38,7 +38,7 @@
             />
             <el-tooltip
               v-if="channel.key !== 'desktop' && !isConfigured(channel.key)"
-              :content="channel.key === 'wechat_bot' ? '请先绑定微信后再启用' : '请先配置后再启用'"
+              :content="channel.key === 'wechat_bot' ? '请先连接微信后再启用' : '请先配置后再启用'"
               placement="top"
             >
               <el-icon :size="14" class="config-warn-icon"><WarningFilled/></el-icon>
@@ -916,11 +916,12 @@ async function testChannel(channel: string) {
 
     const result = await notificationsStore.testChannel(channel)
     testResults.value[channel] = result
-    if (result.success) {
-      ElMessage.success('测试通知发送成功')
-    } else {
-      ElMessage.error(`测试失败: ${result.error}`)
-    }
+    // 5秒后自动清除测试结果
+    setTimeout(() => {
+      if (testResults.value[channel] === result) {
+        testResults.value[channel] = null
+      }
+    }, 5000)
   } catch (err: any) {
     testResults.value[channel] = {success: false, error: err.message}
   } finally {
