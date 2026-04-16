@@ -25,6 +25,8 @@ class WeChatBot {
     private _scheduler: ReminderScheduler | null = null
     private _recentContacts: Map<string, string> = new Map()
     private _qrcodeKey: string = ''
+    private _lastContextToken: string = ''
+    private _lastSessionId: string = ''
     private _pollAbort: boolean = false
     private _initialized: boolean = false
 
@@ -259,6 +261,10 @@ class WeChatBot {
         // 记录最近联系人
         this._recentContacts.set(fromUserId, nickname)
 
+        // 保存 context_token 和 session_id，供主动发消息使用
+        if (msg.context_token) this._lastContextToken = msg.context_token
+        if (msg.session_id) this._lastSessionId = String(msg.session_id)
+
         // 自动绑定提醒接收人：给机器人发消息的用户自动成为提醒接收人
         const currentRemindUser = settingsDb.get('wechat_bot_remind_user_id') || ''
         if (!currentRemindUser || currentRemindUser !== fromUserId) {
@@ -350,7 +356,10 @@ class WeChatBot {
             throw new Error('微信机器人尚未收到消息，无法发送提醒。请先在微信中给机器人发一条消息')
         }
 
-        await this.api.sendMessage(remindUserId, content)
+        const result = await this.api.sendMessage(remindUserId, content, this._lastContextToken, this._lastSessionId)
+        if (result.ret !== 0) {
+            throw new Error(`微信消息发送失败 (错误码: ${result.ret})，请尝试在微信中给机器人发一条新消息后再试`)
+        }
     }
 
     // ======================== 自动恢复 ========================

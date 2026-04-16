@@ -688,11 +688,6 @@
           </el-form>
         </div>
 
-        <!-- 测试结果 -->
-        <div v-if="testResults[channel.key]" class="test-result"
-             :class="testResults[channel.key]?.success ? 'success' : 'error'">
-          {{ testResults[channel.key]?.success ? '✓ 测试成功！' : `✗ 测试失败: ${testResults[channel.key]?.error}` }}
-        </div>
       </div>
     </div>
   </div>
@@ -711,7 +706,6 @@ import feishuIcon from '@/../resources/feishu.png'
 
 const notificationsStore = useNotificationsStore()
 const testing = ref('')
-const testResults = ref<Record<string, { success: boolean; error?: string } | null>>({})
 const expandedChannels = reactive<Record<string, boolean>>({})
 const templateExpanded = reactive<Record<string, boolean>>({})
 
@@ -892,7 +886,6 @@ async function saveWechatTestConfig() {
 
 async function testChannel(channel: string) {
   testing.value = channel
-  testResults.value[channel] = null
   try {
     // 先保存最新配置
     const configs: Record<string, any> = {
@@ -915,15 +908,13 @@ async function testChannel(channel: string) {
     }
 
     const result = await notificationsStore.testChannel(channel)
-    testResults.value[channel] = result
-    // 5秒后自动清除测试结果
-    setTimeout(() => {
-      if (testResults.value[channel] === result) {
-        testResults.value[channel] = null
-      }
-    }, 5000)
+    if (result.success) {
+      ElMessage({message: '测试通知发送成功', type: 'success', duration: 5000})
+    } else {
+      ElMessage({message: `测试失败: ${result.error}`, type: 'error', duration: 5000})
+    }
   } catch (err: any) {
-    testResults.value[channel] = {success: false, error: err.message}
+    ElMessage({message: `测试失败: ${err.message}`, type: 'error', duration: 5000})
   } finally {
     testing.value = ''
   }
@@ -1118,23 +1109,6 @@ onActivated(async () => {
 
 .guide-steps b {
   color: var(--text-secondary);
-}
-
-.test-result {
-  margin-top: 12px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-}
-
-.test-result.success {
-  background: rgba(103, 194, 58, 0.1);
-  color: #67C23A;
-}
-
-.test-result.error {
-  background: rgba(245, 108, 108, 0.1);
-  color: #F56C6C;
 }
 
 .template-section {
