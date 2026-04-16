@@ -187,6 +187,7 @@
 | **Telegram** | Bot API 推送，支持多 Chat ID，支持 HTTP 代理                  |
 | **企业微信**     | 应用消息推送，支持 `@all` 或指定用户，自动刷新 access_token           |
 | **企微群机器人**   | Webhook 群消息推送                                      |
+| **微信**       | 通过微信机器人（ClawBot）主动发送提醒消息，扫码登录绑定后自动推送               |
 | **测试公众号**    | 微信公众平台测试号消息推送，支持客服文本消息和模板消息                         |
 | **Webhook**  | 自定义 HTTP 请求（GET/POST/PUT/PATCH），支持自定义 Header 和模板变量 |
 
@@ -518,7 +519,7 @@ king-remind/
 │   │   │   ├── chat-history.ts   # AI 对话会话与消息
 │   │   │   ├── model-configs.ts  # 模型配置
 │   │   │   └── ...            # 其他数据表
-│   │   ├── notifications/     # 通知渠道（桌面 / 邮件 / TG / 企微 / 测试公众号 / Webhook）
+│   │   ├── notifications/     # 通知渠道（桌面 / 邮件 / TG / 企微 / 微信 / 测试公众号 / Webhook）
 │   │   └── skills/            # 技能执行器
 │   └── preload/               # 预加载脚本（contextBridge）
 ├── src/
@@ -599,6 +600,19 @@ king-remind/
 ```
 
 也可自定义模板，使用 `{{title}}`、`{{body}}`、`{{reminder_id}}` 变量。
+
+</details>
+
+<details>
+<summary><b>微信（ClawBot 机器人）</b></summary>
+<br />
+
+1. 在应用「微信机器人」页面点击获取二维码，使用微信扫码登录
+2. 登录成功后，在微信中给机器人发一条消息完成绑定
+3. 绑定完成后，在「通知渠道 → 微信」中启用该渠道
+4. 提醒触发时会自动通过微信机器人发送消息给绑定的用户
+
+> **注意：** 需先完成绑定才能启用微信通知渠道。断开微信连接后，通知渠道会自动关闭，需重新绑定后再次启用。
 
 </details>
 

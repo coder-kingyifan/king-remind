@@ -274,6 +274,7 @@ const wechatQrcodeUrl = ref('')
 const wechatQrcodeLoading = ref(false)
 const wechatLogoutLoading = ref(false)
 let wechatPollTimer: ReturnType<typeof setInterval> | null = null
+let wechatStatePollTimer: ReturnType<typeof setInterval> | null = null
 let wechatIsCheckingStatus = false
 
 const wechatConnected = computed(() => wechatBotState.value.status === 'connected')
@@ -366,6 +367,23 @@ function stopWechatPollingStatus() {
   }
 }
 
+function startWechatStatePolling() {
+  stopWechatStatePolling()
+  wechatStatePollTimer = setInterval(async () => {
+    await loadWechatState()
+    if (wechatBotState.value.status !== 'connecting') {
+      stopWechatStatePolling()
+    }
+  }, 2000)
+}
+
+function stopWechatStatePolling() {
+  if (wechatStatePollTimer) {
+    clearInterval(wechatStatePollTimer)
+    wechatStatePollTimer = null
+  }
+}
+
 async function handleWechatLogout() {
   if (wechatLogoutLoading.value) return
   wechatLogoutLoading.value = true
@@ -381,9 +399,12 @@ async function handleWechatLogout() {
   }
 }
 
-function openWechatDialog() {
+async function openWechatDialog() {
   showWechatDialog.value = true
-  loadWechatState()
+  await loadWechatState()
+  if (wechatBotState.value.status === 'connecting') {
+    startWechatStatePolling()
+  }
 }
 
 // Image handling
@@ -676,6 +697,7 @@ onActivated(async () => {
 onUnmounted(() => {
   window.electronAPI.ai.removeStreamListener()
   stopWechatPollingStatus()
+  stopWechatStatePolling()
 })
 
 function onConfigChange(id: number) {
@@ -702,6 +724,10 @@ async function loadSessions() {
 // 每次打开历史抽屉时自动刷新会话列表
 watch(showHistory, (val) => {
   if (val) loadSessions()
+})
+
+watch(showWechatDialog, (val) => {
+  if (!val) stopWechatStatePolling()
 })
 
 function sendSuggestion(text: string) { inputText.value = text; send() }

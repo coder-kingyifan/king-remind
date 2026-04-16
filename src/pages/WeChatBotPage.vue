@@ -62,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, onUnmounted, ref} from 'vue'
+import {computed, onActivated, onMounted, onUnmounted, ref} from 'vue'
 import {ElMessage} from 'element-plus'
 
 interface BotState {
@@ -82,6 +82,7 @@ const qrcodeLoading = ref(false)
 const logoutLoading = ref(false)
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
+let statePollTimer: ReturnType<typeof setInterval> | null = null
 let isCheckingStatus = false
 
 const statusClass = computed(() => {
@@ -177,6 +178,23 @@ function stopPollingStatus() {
   }
 }
 
+function startStatePolling() {
+  stopStatePolling()
+  statePollTimer = setInterval(async () => {
+    await loadState()
+    if (botState.value.status !== 'connecting') {
+      stopStatePolling()
+    }
+  }, 2000)
+}
+
+function stopStatePolling() {
+  if (statePollTimer) {
+    clearInterval(statePollTimer)
+    statePollTimer = null
+  }
+}
+
 async function handleLogout() {
   if (logoutLoading.value) return
   logoutLoading.value = true
@@ -196,11 +214,23 @@ onMounted(async () => {
   await loadState()
   if (botState.value.status === 'waiting_qrcode') {
     startPollingStatus()
+  } else if (botState.value.status === 'connecting') {
+    startStatePolling()
+  }
+})
+
+onActivated(async () => {
+  await loadState()
+  if (botState.value.status === 'waiting_qrcode') {
+    startPollingStatus()
+  } else if (botState.value.status === 'connecting') {
+    startStatePolling()
   }
 })
 
 onUnmounted(() => {
   stopPollingStatus()
+  stopStatePolling()
 })
 </script>
 

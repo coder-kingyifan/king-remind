@@ -64,7 +64,12 @@ class WeChatBot {
 
     getState(): WeChatBotState {
         this.ensureInit()
-        const remindUserId = settingsDb.get('wechat_bot_remind_user_id') || ''
+        let remindUserId = ''
+        try {
+            remindUserId = settingsDb.get('wechat_bot_remind_user_id') || ''
+        } catch {
+            // 数据库未就绪
+        }
         return {
             status: this._status,
             nickname: this._nickname,
@@ -335,7 +340,12 @@ class WeChatBot {
             throw new Error('微信机器人未连接，无法发送提醒')
         }
 
-        const remindUserId = settingsDb.get('wechat_bot_remind_user_id') || ''
+        let remindUserId = ''
+        try {
+            remindUserId = settingsDb.get('wechat_bot_remind_user_id') || ''
+        } catch {
+            // 数据库未就绪
+        }
         if (!remindUserId) {
             throw new Error('微信机器人尚未收到消息，无法发送提醒。请先在微信中给机器人发一条消息')
         }

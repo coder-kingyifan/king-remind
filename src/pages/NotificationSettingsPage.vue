@@ -44,7 +44,7 @@
               <el-icon :size="14" class="config-warn-icon"><WarningFilled/></el-icon>
             </el-tooltip>
             <span
-                v-if="(notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && channel.key !== 'desktop'"
+                v-if="(notificationsStore.isEnabled(channel.key) || (!isConfigured(channel.key) && channel.key !== 'wechat_bot')) && channel.key !== 'desktop'"
                 class="expand-arrow"
                 :class="{ expanded: expandedChannels[channel.key] }"
                 @click="toggleExpand(channel.key)"
@@ -699,7 +699,7 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, reactive, ref, watch} from 'vue'
+import {onActivated, onMounted, reactive, ref, watch} from 'vue'
 import {useNotificationsStore} from '@/stores/notifications'
 import {CHANNELS} from '@/types/notification'
 import {ElMessage} from 'element-plus'
@@ -928,12 +928,7 @@ async function testChannel(channel: string) {
   }
 }
 
-onMounted(async () => {
-  await notificationsStore.fetchConfigs()
-  for (const ch of CHANNELS) {
-    loadConfigFromStore(ch.key)
-  }
-  // 查询微信绑定状态
+async function refreshWechatBotBound() {
   try {
     const state = await window.electronAPI.wechatBot.getState()
     if (state) {
@@ -942,6 +937,19 @@ onMounted(async () => {
   } catch {
     // ignore
   }
+}
+
+onMounted(async () => {
+  await notificationsStore.fetchConfigs()
+  for (const ch of CHANNELS) {
+    loadConfigFromStore(ch.key)
+  }
+  await refreshWechatBotBound()
+})
+
+onActivated(async () => {
+  await notificationsStore.fetchConfigs()
+  await refreshWechatBotBound()
 })
 </script>
 
