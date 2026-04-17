@@ -4,6 +4,7 @@ services:
   king-remind:
     build:
       context: .
+    image: king-remind:latest
     container_name: king-remind
     restart: unless-stopped
     # 开启伪终端和标准输入，支持交互式 REPL
