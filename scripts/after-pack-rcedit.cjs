@@ -21,7 +21,7 @@ function findRcedit() {
 
   const dirs = fs
     .readdirSync(cacheRoot, { withFileTypes: true })
-    .filter((d) => d.isDirectory() && d.name.startsWith("winCodeSign-"))
+    .filter((d) => d.isDirectory())
     .map((d) => d.name)
     .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
 
