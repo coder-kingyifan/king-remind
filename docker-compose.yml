@@ -1,16 +1,20 @@
 services:
   king-remind:
-    build: .
+    build:
+      context: .
     container_name: king-remind
     restart: unless-stopped
     stdin_open: true
     tty: true
+    # 解决 Electron 内存溢出导致的卡顿
+    shm_size: '2gb'
     ports:
       - "${API_PORT:-33333}:33333"
     volumes:
       - remind-data:/app/data
     environment:
       - API_HOST=0.0.0.0
+      - NODE_ENV=production
 
 volumes:
   remind-data:
