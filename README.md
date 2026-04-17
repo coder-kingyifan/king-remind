@@ -398,7 +398,7 @@ curl http://localhost:33333/api/ping
 docker compose logs -f          # 查看实时日志
 docker compose restart          # 重启服务
 docker compose down             # 停止并移除容器
-docker compose up -d --build    # 重新构建并启动
+docker compose up -d --build    # 重新构建并启动（适用于更新了代码）
 ```
 
 ### 自定义端口

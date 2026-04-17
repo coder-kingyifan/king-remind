@@ -1,12 +1,15 @@
+version: '3.8'
+
 services:
   king-remind:
     build:
       context: .
     container_name: king-remind
     restart: unless-stopped
+    # 保持标准输入打开，分配伪终端，支持 REPL 交互
     stdin_open: true
     tty: true
-    # 解决 Electron 内存溢出导致的卡顿
+    # 核心优化：提升容器共享内存，解决 Electron 渲染进程卡死问题
     shm_size: '2gb'
     ports:
       - "${API_PORT:-33333}:33333"

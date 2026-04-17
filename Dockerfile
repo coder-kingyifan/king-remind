@@ -1,22 +1,29 @@
-# ---- build stage ----
+# ---- build stage (构建阶段) ----
 FROM node:22-bookworm AS builder
 WORKDIR /app
 
 COPY package.json ./
-# 移除冗余的镜像站设置，建议通过构建参数传递或保留当前配置
+
+# 【加速技巧 1 & 2】：配置 NPM 淘宝源，并强制 Electron 二进制文件走国内镜像
 ARG NPM_REGISTRY=https://registry.npmmirror.com
+ENV ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"
+ENV ELECTRON_BUILDER_BINARIES_MIRROR="https://npmmirror.com/mirrors/electron-builder-binaries/"
+
 RUN npm config set registry ${NPM_REGISTRY} && \
     npm install
 
 COPY . .
 RUN npm run build
 
-# ---- runtime stage ----
+
+# ---- runtime stage (运行阶段) ----
 FROM node:22-bookworm-slim
 WORKDIR /app
 
-# 基础依赖：增加 libglib2.0-0 和 libnss3 等，确保 Electron 核心库完整
-RUN apt-get update && \
+# 【加速技巧 3】：替换 Debian Bookworm 默认的 apt 源为清华大学开源软件镜像站
+# 注意：Debian 12 (Bookworm) 默认使用 debian.sources 格式
+RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list.d/debian.sources && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
        xvfb xauth dbus-x11 libatk1.0-0 libgtk-3-0 \
        libgbm1 libnss3 libxss1 libasound2 libx11-xcb1 \
@@ -36,9 +43,8 @@ ENV ELECTRON_DISABLE_GPU=1
 
 VOLUME /app/data
 
-# 优化入口：使用 -e /dev/stdout 捕获 xvfb 错误，避免静默挂起
+# 优化入口：捕获 xvfb 错误
 ENTRYPOINT ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1024x768x24 -ac -nolisten tcp"]
 
-# 关键改动：必须添加 --no-sandbox 和 --disable-dev-shm-usage
-# 否则在 Docker 默认权限下，Electron 进程会因为无法初始化沙盒而永久挂起
+# 启动核心：注入 --no-sandbox 解决无头环境下的沙盒权限死锁问题
 CMD ["node", "node_modules/electron/dist/electron", "out/main/index.js", "--headless", "--no-sandbox", "--disable-dev-shm-usage"]
