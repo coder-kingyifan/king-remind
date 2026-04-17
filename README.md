@@ -21,33 +21,111 @@
 
 ## 界面预览
 
-<table>
-    <tr>
-        <td><img src="./docs/readme/1.jpg" width="280" alt="欢迎页"/></td>
-        <td><img src="./docs/readme/2.jpg" width="280" alt="数据库密码设置"/></td>
-        <td><img src="./docs/readme/3.jpg" width="280" alt="Api接口设置"/></td>
-    </tr>
-    <tr>
-        <td><img src="./docs/readme/4.jpg" width="280" alt="欢迎页"/></td>
-        <td><img src="./docs/readme/5.jpg" width="280" alt="ai对话页（黑）"/></td>
-        <td><img src="./docs/readme/6.jpg" width="280" alt="ai对话页（白）"/></td>
-    </tr>
-    <tr>
-        <td><img src="./docs/readme/7.jpg" width="280" alt="数据概览"/></td>
-        <td><img src="./docs/readme/8.jpg" width="280" alt="提醒管理"/></td>
-        <td><img src="./docs/readme/9.jpg" width="280" alt="通知渠道"/></td>
-    </tr>
-    <tr>
-        <td><img src="./docs/readme/10.jpg" width="280" alt="模型配置"/></td>
-        <td><img src="./docs/readme/11.jpg" width="280" alt="技能中心"/></td>
-        <td><img src="./docs/readme/12.jpg" width="280" alt="技能商店"/></td>
-    </tr>
-    <tr>
-        <td><img src="./docs/readme/13.jpg" width="280" alt="系统设置"/></td>
-        <td><img src="./docs/readme/14.jpg" width="280" alt="系统设置"/></td>
-        <td><img src="./docs/readme/15.jpg" width="280" alt="对话示例"/></td>
-    </tr>
-</table>
+<details>
+<summary><b>🖥️ 引导页</b></summary>
+<br/>
+<p align="center">
+  <img src="./docs/readme/引导页-设置昵称.jpg" width="600" alt="设置昵称"/>
+</p>
+<p align="center">
+  <img src="./docs/readme/引导页-设置数据库密码.jpg" width="600" alt="设置数据库密码"/>
+</p>
+<p align="center">
+  <img src="./docs/readme/引导页-配置模式.jpg" width="600" alt="配置模式"/>
+</p>
+<p align="center">
+  <img src="./docs/readme/引导页-完成引导.jpg" width="600" alt="完成引导"/>
+</p>
+</details>
+
+<details>
+<summary><b>🏠 首页</b></summary>
+<br/>
+<p align="center">
+  <img src="./docs/readme/首页-黑.jpg" width="600" alt="首页（暗色）"/>
+</p>
+<p align="center">
+  <img src="./docs/readme/首页-白.jpg" width="600" alt="首页（亮色）"/>
+</p>
+</details>
+
+<details>
+<summary><b>🤖 AI 对话</b></summary>
+<br/>
+<p align="center">
+  <img src="./docs/readme/ai对话.jpg" width="600" alt="AI 对话"/>
+</p>
+<p align="center">
+  <img src="./docs/readme/普通模式.jpg" width="600" alt="普通模式"/>
+</p>
+</details>
+
+<details>
+<summary><b>📊 数据概览 & 提醒管理</b></summary>
+<br/>
+<p align="center">
+  <img src="./docs/readme/数据概览.jpg" width="600" alt="数据概览"/>
+</p>
+<p align="center">
+  <img src="./docs/readme/提醒管理.jpg" width="600" alt="提醒管理"/>
+</p>
+</details>
+
+<details>
+<summary><b>⚡ 技能系统</b></summary>
+<br/>
+<p align="center">
+  <img src="./docs/readme/技能管理.jpg" width="600" alt="技能管理"/>
+</p>
+<p align="center">
+  <img src="./docs/readme/技能商店.jpg" width="600" alt="技能商店"/>
+</p>
+<p align="center">
+  <img src="./docs/readme/技能测试.jpg" width="600" alt="技能测试"/>
+</p>
+</details>
+
+<details>
+<summary><b>💬 微信通知</b></summary>
+<br/>
+<p align="center">
+  <img src="./docs/readme/微信-创建提醒.jpg" width="600" alt="微信创建提醒"/>
+</p>
+<p align="center">
+  <img src="./docs/readme/微信-创建技能.jpg" width="600" alt="微信创建技能"/>
+</p>
+</details>
+
+<details>
+<summary><b>⚙️ 系统配置</b></summary>
+<br/>
+<p align="center">
+  <img src="./docs/readme/渠道配置.jpg" width="600" alt="渠道配置"/>
+</p>
+<p align="center">
+  <img src="./docs/readme/模型配置.jpg" width="600" alt="模型配置"/>
+</p>
+<p align="center">
+  <img src="./docs/readme/系统设置.jpg" width="600" alt="系统设置"/>
+</p>
+<p align="center">
+  <img src="./docs/readme/系统设置2.jpg" width="600" alt="系统设置"/>
+</p>
+<p align="center">
+  <img src="./docs/readme/系统设置-后端接口配置.jpg" width="600" alt="后端接口配置"/>
+</p>
+</details>
+
+<details>
+<summary><b>🐳 Docker 部署</b></summary>
+<br/>
+<p align="center">
+  <img src="./docs/readme/docker-引导页面.jpg" width="600" alt="Docker 引导页面"/>
+</p>
+<p align="center">
+  <img src="./docs/readme/docker-对话页面.jpg" width="600" alt="Docker 对话页面"/>
+</p>
+</details>
 
 <br />
 
