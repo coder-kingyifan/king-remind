@@ -48,4 +48,4 @@ VOLUME /app/data
 ENV DISPLAY=:99
 
 # 使用原生 Xvfb 挂后台，并通过 exec 直接拉起 node 进程，完美透传 REPL 交互界面
-CMD ["sh", "-c", "Xvfb :99 -screen 0 1024x768x24 -ac -nolisten tcp & exec node node_modules/electron/dist/electron out/main/index.js --headless --no-sandbox --disable-dev-shm-usage"]
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1024x768x24 -ac -nolisten tcp & exec node_modules/electron/dist/electron out/main/index.js --headless --no-sandbox --disable-dev-shm-usage"]
