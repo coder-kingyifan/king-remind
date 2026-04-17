@@ -11,12 +11,73 @@ services:
     # 核心调优：防止 Electron 渲染进程因共享内存不足而崩溃
     shm_size: '2gb'
     ports:
-      - "${API_PORT:-33333}:33333"
+      - "${KING_API_PORT:-33333}:33333"
     volumes:
       - remind-data:/app/data
+    env_file:
+      - path: .env
+        required: false
     environment:
       - API_HOST=0.0.0.0
       - NODE_ENV=production
+      # 通用设置
+      - KING_API_ENABLED=${KING_API_ENABLED:-true}
+      - KING_API_PORT=${KING_API_PORT:-33333}
+      - KING_API_TOKEN=${KING_API_TOKEN:-}
+      - KING_CONFIG_OVERRIDE=${KING_CONFIG_OVERRIDE:-false}
+      # 邮件通知
+      - KING_EMAIL_ENABLED=${KING_EMAIL_ENABLED:-false}
+      - KING_EMAIL_SMTP_HOST=${KING_EMAIL_SMTP_HOST:-}
+      - KING_EMAIL_SMTP_PORT=${KING_EMAIL_SMTP_PORT:-587}
+      - KING_EMAIL_SMTP_SECURE=${KING_EMAIL_SMTP_SECURE:-false}
+      - KING_EMAIL_SMTP_USER=${KING_EMAIL_SMTP_USER:-}
+      - KING_EMAIL_SMTP_PASS=${KING_EMAIL_SMTP_PASS:-}
+      - KING_EMAIL_FROM=${KING_EMAIL_FROM:-}
+      - KING_EMAIL_TO=${KING_EMAIL_TO:-}
+      # Telegram 通知
+      - KING_TELEGRAM_ENABLED=${KING_TELEGRAM_ENABLED:-false}
+      - KING_TELEGRAM_BOT_TOKEN=${KING_TELEGRAM_BOT_TOKEN:-}
+      - KING_TELEGRAM_CHAT_ID=${KING_TELEGRAM_CHAT_ID:-}
+      - KING_TELEGRAM_PROXY_URL=${KING_TELEGRAM_PROXY_URL:-}
+      # 企业微信通知
+      - KING_WECHAT_WORK_ENABLED=${KING_WECHAT_WORK_ENABLED:-false}
+      - KING_WECHAT_WORK_CORP_ID=${KING_WECHAT_WORK_CORP_ID:-}
+      - KING_WECHAT_WORK_CORP_SECRET=${KING_WECHAT_WORK_CORP_SECRET:-}
+      - KING_WECHAT_WORK_AGENT_ID=${KING_WECHAT_WORK_AGENT_ID:-}
+      - KING_WECHAT_WORK_TO_USER=${KING_WECHAT_WORK_TO_USER:-@all}
+      # 企微群消息推送 Webhook
+      - KING_WECHAT_WORK_WEBHOOK_ENABLED=${KING_WECHAT_WORK_WEBHOOK_ENABLED:-false}
+      - KING_WECHAT_WORK_WEBHOOK_URL=${KING_WECHAT_WORK_WEBHOOK_URL:-}
+      # 微信测试公众号
+      - KING_WECHAT_TEST_ENABLED=${KING_WECHAT_TEST_ENABLED:-false}
+      - KING_WECHAT_TEST_APP_ID=${KING_WECHAT_TEST_APP_ID:-}
+      - KING_WECHAT_TEST_APP_SECRET=${KING_WECHAT_TEST_APP_SECRET:-}
+      - KING_WECHAT_TEST_TO_OPENID=${KING_WECHAT_TEST_TO_OPENID:-}
+      # 微信机器人
+      - KING_WECHAT_BOT_ENABLED=${KING_WECHAT_BOT_ENABLED:-false}
+      # 钉钉群机器人
+      - KING_DINGTALK_ENABLED=${KING_DINGTALK_ENABLED:-false}
+      - KING_DINGTALK_WEBHOOK_URL=${KING_DINGTALK_WEBHOOK_URL:-}
+      - KING_DINGTALK_SECRET=${KING_DINGTALK_SECRET:-}
+      # 飞书群机器人
+      - KING_FEISHU_ENABLED=${KING_FEISHU_ENABLED:-false}
+      - KING_FEISHU_WEBHOOK_URL=${KING_FEISHU_WEBHOOK_URL:-}
+      # Bark (iOS 推送)
+      - KING_BARK_ENABLED=${KING_BARK_ENABLED:-false}
+      - KING_BARK_SERVER_URL=${KING_BARK_SERVER_URL:-}
+      - KING_BARK_KEY=${KING_BARK_KEY:-}
+      # Discord Webhook
+      - KING_DISCORD_ENABLED=${KING_DISCORD_ENABLED:-false}
+      - KING_DISCORD_WEBHOOK_URL=${KING_DISCORD_WEBHOOK_URL:-}
+      # 自定义 Webhook
+      - KING_WEBHOOK_ENABLED=${KING_WEBHOOK_ENABLED:-false}
+      - KING_WEBHOOK_URL=${KING_WEBHOOK_URL:-}
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:33333/api/ping"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
 
 volumes:
   remind-data:

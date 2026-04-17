@@ -5,9 +5,12 @@ import {ReminderScheduler} from './scheduler'
 import {chatWithLLM} from './llm'
 import type {StreamEvent} from './llm'
 import {modelConfigsDb} from './db/model-configs'
+import {notificationConfigsDb} from './db/notification-configs'
 import {weChatBot} from './wechat-bot/wechat-bot'
+import {NotificationDispatcher} from './notifications/dispatcher'
 
 let server: Server | null = null
+let dispatcherRef: NotificationDispatcher | null = null
 
 function readBody(req: IncomingMessage): Promise<any> {
     return new Promise((resolve, reject) => {
@@ -54,9 +57,10 @@ function checkAuth(req: IncomingMessage, res: ServerResponse, token: string): bo
     return true
 }
 
-export function startApiServer(scheduler: ReminderScheduler): void {
+export function startApiServer(scheduler: ReminderScheduler, dispatcher?: NotificationDispatcher): void {
     const port = parseInt(settingsDb.get('api_port') || '33333')
     const token = settingsDb.get('api_token') || ''
+    if (dispatcher) dispatcherRef = dispatcher
 
     server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
         // CORS
@@ -189,6 +193,54 @@ export function startApiServer(scheduler: ReminderScheduler): void {
                     model: m.model,
                     is_default: m.is_default
                 })))
+            }
+
+            // ========== 通知渠道配置 API ==========
+            // GET /api/notifications/configs - 获取所有通知渠道配置
+            if (method === 'GET' && path === '/api/notifications/configs') {
+                return ok(res, notificationConfigsDb.getAll())
+            }
+
+            // PUT /api/notifications/configs/:channel - 更新通知渠道配置
+            const matchNotifChannel = path.match(/^\/api\/notifications\/configs\/([a-z_]+)$/)
+            if (method === 'PUT' && matchNotifChannel) {
+                const channel = matchNotifChannel[1]
+                const body = await readBody(req)
+                const data: { is_enabled?: number; config_json?: string } = {}
+                if (body.is_enabled !== undefined) data.is_enabled = body.is_enabled ? 1 : 0
+                if (body.config_json !== undefined) data.config_json = typeof body.config_json === 'string' ? body.config_json : JSON.stringify(body.config_json)
+                const result = notificationConfigsDb.update(channel, data)
+                if (!result) return err(res, 404, `通知渠道 ${channel} 不存在`)
+                return ok(res, result)
+            }
+
+            // POST /api/notifications/test/:channel - 测试通知渠道
+            const matchTestChannel = path.match(/^\/api\/notifications\/test\/([a-z_]+)$/)
+            if (method === 'POST' && matchTestChannel) {
+                const channel = matchTestChannel[1]
+                if (!dispatcherRef) return err(res, 500, '通知分发器未初始化')
+                const result = await dispatcherRef.testChannel(channel)
+                return ok(res, result)
+            }
+
+            // ========== 系统设置 API ==========
+            // GET /api/settings - 获取所有设置
+            if (method === 'GET' && path === '/api/settings') {
+                return ok(res, settingsDb.getAll())
+            }
+
+            // PUT /api/settings - 更新设置
+            if (method === 'PUT' && path === '/api/settings') {
+                const body = await readBody(req)
+                if (!body || typeof body !== 'object') return err(res, 400, '请求体必须是 JSON 对象')
+                for (const [key, value] of Object.entries(body)) {
+                    if (typeof value === 'string') {
+                        settingsDb.set(key, value)
+                    } else {
+                        settingsDb.set(key, JSON.stringify(value))
+                    }
+                }
+                return ok(res, settingsDb.getAll())
             }
 
             // ========== 微信机器人 API ==========

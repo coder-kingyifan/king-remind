@@ -51,7 +51,7 @@ function printBanner(): void {
     const host = settingsDb.get('api_host') || '0.0.0.0'
     log('')
     log(`${C.cyan}${C.bold}===============================================${C.reset}`)
-    log(`${C.cyan}${C.bold}  King 提醒助手 - 终端模式${C.reset}`)
+    log(`${C.cyan}${C.bold}  欢迎使用 King 提醒工具!${C.reset}`)
     log(`${C.cyan}${C.bold}===============================================${C.reset}`)
     log('')
     log(`  ${C.yellow}可用命令:${C.reset}`)
@@ -65,6 +65,7 @@ function printBanner(): void {
     log(`    ${C.green}/quit${C.reset}          退出`)
     log('')
     log(`  ${C.dim}API 服务: http://${host}:${port}${C.reset}`)
+    log(`  ${C.dim}通知配置: http://${host}:${port}/api/notifications/configs${C.reset}`)
     log(`  ${C.dim}提示: 直接输入文字即可与 AI 对话${C.reset}`)
     log('')
     log(`${C.cyan}${C.bold}===============================================${C.reset}`)
@@ -712,7 +713,26 @@ export async function continueHeadlessInit(): Promise<void> {
 
     // 强制启用并启动 API 服务
     settingsDb.set('api_enabled', 'true')
-    startApiServer(scheduler)
+    startApiServer(scheduler, dispatcher)
+
+    // 打印 Docker 启动欢迎信息
+    const port = settingsDb.get('api_port') || '33333'
+    const host = settingsDb.get('api_host') || '0.0.0.0'
+    console.log('')
+    console.log('===============================================')
+    console.log('  欢迎使用 King 提醒工具!')
+    console.log('===============================================')
+    console.log('')
+    console.log(`  API 服务已启动: http://${host}:${port}`)
+    console.log(`  健康检查:       http://${host}:${port}/api/ping`)
+    console.log('')
+    console.log('  进入容器交互:   docker compose exec king-remind node -e "process.stdin.isTTY=true;require(\'./out/main/index.js\')"')
+    console.log('  查看实时日志:   docker compose logs -f')
+    console.log('  查看通知配置:   curl http://localhost:' + port + '/api/notifications/configs')
+    console.log('  查看系统设置:   curl http://localhost:' + port + '/api/settings')
+    console.log('')
+    console.log('===============================================')
+    console.log('')
 
     // 启动 REPL
     await startRepl(scheduler)

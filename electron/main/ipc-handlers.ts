@@ -46,9 +46,11 @@ function safeHandle(channel: string, handler: (...args: any[]) => any): void {
 }
 
 let schedulerRef: any = null
+let dispatcherRef: any = null
 
 export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: NotificationDispatcher, scheduler: any): void {
     schedulerRef = scheduler
+    dispatcherRef = dispatcher
     // ========== 提醒 ==========
     safeHandle('reminders:list', (_event, filters?) => {
         return remindersDb.list(filters)
@@ -635,7 +637,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
             const scheduler = schedulerRef
             if (scheduler) {
                 stopApiServer()
-                startApiServer(scheduler)
+                startApiServer(scheduler, dispatcherRef)
             }
         } else {
             stopApiServer()
@@ -649,7 +651,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
         if (apiEnabled === 'true') {
             const scheduler = schedulerRef
             if (scheduler) {
-                startApiServer(scheduler)
+                startApiServer(scheduler, dispatcherRef)
             }
         }
         return true

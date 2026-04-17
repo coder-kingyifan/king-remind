@@ -20,6 +20,7 @@ import {execSync} from 'child_process'
 import {initNetworkInterceptor} from './network-interceptor'
 import {weChatBot} from './wechat-bot/wechat-bot'
 import {checkForUpdate} from './updater'
+import {loadEnvConfig} from './env-config'
 
 // Windows 控制台中文乱码修复
 try {
@@ -120,7 +121,7 @@ async function continueAppInit(win: BrowserWindow | null): Promise<void> {
     // 启动本地 API Server
     const apiEnabled = settingsDb.get('api_enabled')
     if (apiEnabled === 'true') {
-        startApiServer(scheduler)
+        startApiServer(scheduler, dispatcher)
     } else {
         console.log('[主进程] API 接口未启用，跳过启动')
     }
@@ -190,6 +191,9 @@ if (!gotTheLock) {
             console.log('[主进程] 正在初始化数据库...')
             await initDatabase()
             console.log('[主进程] 数据库初始化成功')
+
+            // 从环境变量加载配置（Docker 部署时通过 KING_* 环境变量预配置通知渠道等）
+            loadEnvConfig()
 
             if (isHeadless) {
                 console.log('[主进程] headless 模式，启动 REPL...')

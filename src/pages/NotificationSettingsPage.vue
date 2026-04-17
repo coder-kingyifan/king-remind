@@ -44,7 +44,7 @@
               <el-icon :size="14" class="config-warn-icon"><WarningFilled/></el-icon>
             </el-tooltip>
             <span
-                v-if="(notificationsStore.isEnabled(channel.key) || (!isConfigured(channel.key) && channel.key !== 'wechat_bot')) && channel.key !== 'desktop'"
+                v-if="(notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key) || channel.key === 'wechat_bot') && channel.key !== 'desktop'"
                 class="expand-arrow"
                 :class="{ expanded: expandedChannels[channel.key] }"
                 @click="toggleExpand(channel.key)"
@@ -393,7 +393,7 @@
 
         <!-- 微信配置 -->
         <div
-            v-if="channel.key === 'wechat_bot' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['wechat_bot']"
+            v-if="channel.key === 'wechat_bot' && expandedChannels['wechat_bot']"
             class="channel-config">
           <div class="config-guide">
             <div class="guide-title">配置说明</div>
