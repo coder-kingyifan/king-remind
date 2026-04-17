@@ -375,20 +375,48 @@ docker compose logs -f
 
 ### 进入容器交互
 
-容器启动后，可以通过 `docker compose exec` 进入容器执行命令：
+容器后台启动后，使用 `docker compose exec` 配合 `king-repl` 命令进入交互模式：
 
 ```bash
-# 进入容器的 Node.js 交互环境
-docker compose exec king-remind node
+# 进入交互 REPL（最常用，支持所有命令）
+docker compose exec king-remind king-repl
 
-# 在容器内执行单条命令
-docker compose exec king-remind curl http://localhost:33333/api/ping
+# 单条命令执行
+docker compose exec king-remind king-repl /status
+docker compose exec king-remind king-repl /reminders
+docker compose exec king-remind king-repl /help
+docker compose exec king-remind king-repl "明天下午3点提醒我开会"
 
-# 进入容器的 Shell
+# 进入容器 Shell
 docker compose exec king-remind sh
 
 # 查看容器内的数据库文件
 docker compose exec king-remind ls -la /app/data/
+```
+
+交互模式界面：
+
+```
+===============================================
+  欢迎使用 King 提醒工具!
+===============================================
+
+  可用命令:
+    /help              显示帮助
+    /status            系统状态
+    /reminders         管理提醒
+    /models            管理模型配置
+    /notifications     通知渠道配置
+    /settings          系统设置
+    /chat <消息>        AI 对话
+    /ping              健康检查
+    /quit              退出
+
+  API: http://localhost:33333
+  提示: 直接输入文字即可与 AI 对话
+===============================================
+
+king-remind> /status
 ```
 
 ### 终端 REPL 交互
@@ -617,11 +645,11 @@ King提醒助手.exe --headless
 # Docker 后台模式（仅 API，推荐生产使用）
 docker compose up -d
 
-# Docker 交互模式（进入终端 REPL）
-docker compose run --rm king-remind
+# 进入容器交互 REPL（后台启动后使用）
+docker compose exec king-remind king-repl
 
-# 进入已运行的容器执行命令
-docker compose exec king-remind sh
+# Docker 交互模式（前台启动，直接进入 REPL）
+docker compose run --rm king-remind
 ```
 
 <br />

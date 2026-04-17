@@ -1,0 +1,344 @@
+#!/bin/sh
+# ============================================================
+# king-remind REPL 客户端
+# 通过 HTTP API 连接主进程，提供与终端 REPL 相同的交互体验
+#
+# 用法:
+#   docker compose exec king-remind king-repl
+#   docker compose exec king-remind king-repl /status
+# ============================================================
+
+# ANSI 颜色
+C_RESET='\033[0m'
+C_BOLD='\033[1m'
+C_DIM='\033[2m'
+C_RED='\033[31m'
+C_GREEN='\033[32m'
+C_YELLOW='\033[33m'
+C_CYAN='\033[36m'
+
+# API 地址
+API_HOST="${KING_API_HOST:-localhost}"
+API_PORT="${KING_API_PORT:-33333}"
+API_TOKEN="${KING_API_TOKEN:-}"
+BASE_URL="http://${API_HOST}:${API_PORT}"
+
+# 构造 curl 命令
+if [ -n "$API_TOKEN" ]; then
+    CURL_CMD="curl -s -H 'Authorization: Bearer ${API_TOKEN}'"
+else
+    CURL_CMD="curl -s"
+fi
+
+# ======================== 辅助函数 ========================
+
+api_get() {
+    if [ -n "$API_TOKEN" ]; then
+        curl -sf -H "Authorization: Bearer ${API_TOKEN}" "${BASE_URL}$1"
+    else
+        curl -sf "${BASE_URL}$1"
+    fi
+}
+
+api_post() {
+    if [ -n "$API_TOKEN" ]; then
+        curl -sf -X POST -H "Authorization: Bearer ${API_TOKEN}" -H "Content-Type: application/json" "${BASE_URL}$1" -d "$2"
+    else
+        curl -sf -X POST -H "Content-Type: application/json" "${BASE_URL}$1" -d "$2"
+    fi
+}
+
+api_put() {
+    if [ -n "$API_TOKEN" ]; then
+        curl -sf -X PUT -H "Authorization: Bearer ${API_TOKEN}" -H "Content-Type: application/json" "${BASE_URL}$1" -d "$2"
+    else
+        curl -sf -X PUT -H "Content-Type: application/json" "${BASE_URL}$1" -d "$2"
+    fi
+}
+
+api_delete() {
+    if [ -n "$API_TOKEN" ]; then
+        curl -sf -X DELETE -H "Authorization: Bearer ${API_TOKEN}" "${BASE_URL}$1"
+    else
+        curl -sf -X DELETE "${BASE_URL}$1"
+    fi
+}
+
+# 检查 API 是否可用
+check_api() {
+    if ! api_get "/api/ping" > /dev/null 2>&1; then
+        printf "${C_RED}错误: 无法连接 API 服务 (${BASE_URL})${C_RESET}\n"
+        printf "${C_DIM}请确认容器已启动: docker compose ps${C_RESET}\n"
+        exit 1
+    fi
+}
+
+# ======================== 命令处理 ========================
+
+cmd_help() {
+    printf "\n"
+    printf "${C_BOLD}可用命令:${C_RESET}\n"
+    printf "  ${C_GREEN}/help${C_RESET}              显示帮助\n"
+    printf "  ${C_GREEN}/status${C_RESET}            系统状态\n"
+    printf "  ${C_GREEN}/reminders${C_RESET}         管理提醒\n"
+    printf "  ${C_GREEN}/models${C_RESET}            管理模型配置\n"
+    printf "  ${C_GREEN}/notifications${C_RESET}     通知渠道配置\n"
+    printf "  ${C_GREEN}/settings${C_RESET}          系统设置\n"
+    printf "  ${C_GREEN}/chat <消息>${C_RESET}        AI 对话\n"
+    printf "  ${C_GREEN}/ping${C_RESET}              健康检查\n"
+    printf "  ${C_GREEN}/quit${C_RESET}              退出\n"
+    printf "\n"
+    printf "${C_DIM}提示: 直接输入文字即可与 AI 对话${C_RESET}\n"
+    printf "\n"
+}
+
+cmd_ping() {
+    local result
+    result=$(api_get "/api/ping")
+    if [ $? -eq 0 ]; then
+        printf "${C_GREEN}API 正常${C_RESET} %s\n" "$(echo "$result" | sed 's/.*"data"://;s/}$//' 2>/dev/null || echo "$result")"
+    else
+        printf "${C_RED}API 不可用${C_RESET}\n"
+    fi
+}
+
+cmd_status() {
+    local reminders models settings
+    reminders=$(api_get "/api/reminders?is_active=1")
+    models=$(api_get "/api/models")
+    settings=$(api_get "/api/settings")
+
+    local reminder_count=0 model_count=0
+    if [ -n "$reminders" ]; then
+        reminder_count=$(echo "$reminders" | grep -o '"id"' | wc -l)
+    fi
+    if [ -n "$models" ]; then
+        model_count=$(echo "$models" | grep -o '"id"' | wc -l)
+    fi
+
+    printf "\n"
+    printf "${C_BOLD}系统状态:${C_RESET}\n"
+    printf "  API 服务:  ${C_GREEN}${BASE_URL}${C_RESET}\n"
+    printf "  活跃提醒:  ${C_CYAN}%s${C_RESET}\n" "$reminder_count"
+    printf "  模型配置:  ${C_CYAN}%s${C_RESET}\n" "$model_count"
+    printf "\n"
+}
+
+cmd_reminders() {
+    local result
+    result=$(api_get "/api/reminders")
+    if [ $? -ne 0 ] || [ -z "$result" ]; then
+        printf "${C_RED}获取提醒列表失败${C_RESET}\n"
+        return
+    fi
+
+    # 简单格式化输出
+    printf "\n"
+    printf "${C_BOLD}提醒列表:${C_RESET}\n"
+    echo "$result" | grep -o '"id":[0-9]*' | sed 's/"id"://' | while read id; do
+        local title active
+        title=$(echo "$result" | grep -o "\"id\":${id},\"title\":\"[^\"]*\"" | sed 's/.*"title":"//;s/"$//')
+        active=$(echo "$result" | grep -o "\"id\":${id},\"is_active\":[0-9]" | sed 's/.*"is_active"://')
+        if [ "$active" = "1" ]; then
+            printf "  ${C_GREEN}●${C_RESET} ${C_CYAN}#${id}${C_RESET} %s\n" "$title"
+        else
+            printf "  ${C_RED}○${C_RESET} ${C_CYAN}#${id}${C_RESET} %s\n" "$title"
+        fi
+    done
+    printf "\n"
+}
+
+cmd_models() {
+    local result
+    result=$(api_get "/api/models")
+    if [ $? -ne 0 ] || [ -z "$result" ]; then
+        printf "${C_RED}获取模型列表失败${C_RESET}\n"
+        return
+    fi
+
+    printf "\n"
+    printf "${C_BOLD}模型配置列表:${C_RESET}\n"
+    echo "$result" | grep -o '"id":[0-9]*' | sed 's/"id"://' | while read id; do
+        local name model provider is_default
+        name=$(echo "$result" | python3 -c "import sys,json; data=json.load(sys.stdin); m=[x for x in data.get('data',data) if x['id']==$id]; print(m[0]['name'] if m else '')" 2>/dev/null || echo "")
+        model=$(echo "$result" | python3 -c "import sys,json; data=json.load(sys.stdin); m=[x for x in data.get('data',data) if x['id']==$id]; print(m[0]['model'] if m else '')" 2>/dev/null || echo "")
+        provider=$(echo "$result" | python3 -c "import sys,json; data=json.load(sys.stdin); m=[x for x in data.get('data',data) if x['id']==$id]; print(m[0]['provider'] if m else '')" 2>/dev/null || echo "")
+        is_default=$(echo "$result" | python3 -c "import sys,json; data=json.load(sys.stdin); m=[x for x in data.get('data',data) if x['id']==$id]; print(m[0].get('is_default',0) if m else 0)" 2>/dev/null || echo "0")
+        local default_tag=""
+        if [ "$is_default" = "1" ]; then
+            default_tag=" ${C_GREEN}[默认]${C_RESET}"
+        fi
+        printf "  ${C_CYAN}#${id}${C_RESET} %s - %s / %s%s\n" "$name" "$provider" "$model" "$default_tag"
+    done
+    printf "\n"
+}
+
+cmd_notifications() {
+    local result
+    result=$(api_get "/api/notifications/configs")
+    if [ $? -ne 0 ] || [ -z "$result" ]; then
+        printf "${C_RED}获取通知渠道配置失败${C_RESET}\n"
+        return
+    fi
+
+    printf "\n"
+    printf "${C_BOLD}通知渠道配置:${C_RESET}\n"
+    printf "%s\n" "$result" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    configs = data.get('data', data) if isinstance(data, dict) else data
+    for c in configs:
+        channel = c.get('channel', '')
+        enabled = c.get('is_enabled', 0) or c.get('enabled', 0)
+        status = '\033[32m● 启用\033[0m' if enabled else '\033[31m○ 禁用\033[0m'
+        print(f'  {status}  {channel}')
+except: print('  (解析失败)')
+" 2>/dev/null || printf "  %s\n" "$result"
+    printf "\n"
+}
+
+cmd_settings() {
+    local result
+    result=$(api_get "/api/settings")
+    if [ $? -ne 0 ] || [ -z "$result" ]; then
+        printf "${C_RED}获取系统设置失败${C_RESET}\n"
+        return
+    fi
+
+    printf "\n"
+    printf "${C_BOLD}系统设置:${C_RESET}\n"
+    echo "$result" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    settings = data.get('data', data) if isinstance(data, dict) else data
+    if isinstance(settings, dict):
+        for k, v in settings.items():
+            # 隐藏敏感值
+            if 'token' in k.lower() or 'key' in k.lower() or 'secret' in k.lower() or 'pass' in k.lower():
+                v = '****' if v else '(空)'
+            print(f'  {k}: {v}')
+except: print('  (解析失败)')
+" 2>/dev/null || printf "  %s\n" "$result"
+    printf "\n"
+}
+
+cmd_chat() {
+    local message="$1"
+    if [ -z "$message" ]; then
+        printf "${C_YELLOW}用法: /chat <消息>${C_RESET}\n"
+        return
+    fi
+
+    local result
+    result=$(api_post "/api/chat" "{\"message\":\"${message}\"}")
+    if [ $? -ne 0 ] || [ -z "$result" ]; then
+        printf "${C_RED}AI 对话失败${C_RESET}\n"
+        return
+    fi
+
+    # 提取 reply
+    echo "$result" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    reply = data.get('data', data).get('reply', '')
+    if reply:
+        print(reply)
+    else:
+        print('(无回复)')
+except: print('(解析失败)')
+" 2>/dev/null || printf "%s\n" "$result"
+}
+
+# ======================== 欢迎横幅 ========================
+
+print_banner() {
+    printf "\n"
+    printf "${C_CYAN}${C_BOLD}===============================================${C_RESET}\n"
+    printf "${C_CYAN}${C_BOLD}  欢迎使用 King 提醒工具!${C_RESET}\n"
+    printf "${C_CYAN}${C_BOLD}===============================================${C_RESET}\n"
+    printf "\n"
+    printf "  ${C_YELLOW}可用命令:${C_RESET}\n"
+    printf "    ${C_GREEN}/help${C_RESET}              显示帮助\n"
+    printf "    ${C_GREEN}/status${C_RESET}            系统状态\n"
+    printf "    ${C_GREEN}/reminders${C_RESET}         管理提醒\n"
+    printf "    ${C_GREEN}/models${C_RESET}            管理模型配置\n"
+    printf "    ${C_GREEN}/notifications${C_RESET}     通知渠道配置\n"
+    printf "    ${C_GREEN}/settings${C_RESET}          系统设置\n"
+    printf "    ${C_GREEN}/chat <消息>${C_RESET}        AI 对话\n"
+    printf "    ${C_GREEN}/ping${C_RESET}              健康检查\n"
+    printf "    ${C_GREEN}/quit${C_RESET}              退出\n"
+    printf "\n"
+    printf "  ${C_DIM}API: ${BASE_URL}${C_RESET}\n"
+    printf "  ${C_DIM}提示: 直接输入文字即可与 AI 对话${C_RESET}\n"
+    printf "\n"
+    printf "${C_CYAN}${C_BOLD}===============================================${C_RESET}\n"
+    printf "\n"
+}
+
+# ======================== 主入口 ========================
+
+# 检查 API
+check_api
+
+# 如果带了参数，直接执行命令后退出
+if [ $# -gt 0 ]; then
+    input="$*"
+    if [ "${input#/}" != "$input" ]; then
+        # 以 / 开头的命令
+        cmd=$(echo "$input" | sed 's/^\/\([^ ]*\).*/\1/')
+        rest=$(echo "$input" | sed 's/^\/[^ ]* //')
+        case "$cmd" in
+            help|h|?)     cmd_help ;;
+            status)       cmd_status ;;
+            reminders)    cmd_reminders ;;
+            models)       cmd_models ;;
+            notifications) cmd_notifications ;;
+            settings)     cmd_settings ;;
+            chat)         cmd_chat "$rest" ;;
+            ping)         cmd_ping ;;
+            *)            printf "${C_YELLOW}未知命令: /%s${C_RESET}\n" "$cmd"; cmd_help ;;
+        esac
+    else
+        # 直接输入文字 → AI 对话
+        cmd_chat "$input"
+    fi
+    exit 0
+fi
+
+# 交互模式
+print_banner
+
+while true; do
+    printf "${C_CYAN}king-remind> ${C_RESET}"
+    read -r input
+
+    # 空行跳过
+    [ -z "$input" ] && continue
+
+    if [ "${input#/}" != "$input" ]; then
+        # 以 / 开头的命令
+        cmd=$(echo "$input" | sed 's/^\/\([^ ]*\).*/\1/')
+        rest=$(echo "$input" | sed 's/^\/[^ ]* //')
+        case "$cmd" in
+            help|h|?)     cmd_help ;;
+            status)       cmd_status ;;
+            reminders)    cmd_reminders ;;
+            models)       cmd_models ;;
+            notifications) cmd_notifications ;;
+            settings)     cmd_settings ;;
+            chat)         cmd_chat "$rest" ;;
+            ping)         cmd_ping ;;
+            quit|exit|q)
+                printf "${C_DIM}再见!${C_RESET}\n"
+                exit 0
+                ;;
+            *)            printf "${C_YELLOW}未知命令: /%s，输入 /help 查看帮助${C_RESET}\n" "$cmd" ;;
+        esac
+    else
+        # 直接输入文字 → AI 对话
+        cmd_chat "$input"
+    fi
+done

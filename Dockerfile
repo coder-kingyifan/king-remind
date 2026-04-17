@@ -27,7 +27,7 @@ RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.li
     apt-get install -y --no-install-recommends \
        xvfb xauth dbus-x11 libatk1.0-0 libgtk-3-0 \
        libgbm1 libnss3 libxss1 libasound2 libx11-xcb1 \
-       libglib2.0-0 curl && \
+       libglib2.0-0 curl python3 && \
     rm -rf /var/lib/apt/lists/*
 
 # 拷贝构建产物
@@ -35,6 +35,10 @@ COPY --from=builder /app/out ./out
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json .
 COPY --from=builder /app/resources ./resources
+
+# 拷贝 REPL 客户端脚本
+COPY king-repl /usr/local/bin/king-repl
+RUN chmod +x /usr/local/bin/king-repl
 
 # ========== 基础环境变量 ==========
 ENV API_HOST=0.0.0.0
