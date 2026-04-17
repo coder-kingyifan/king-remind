@@ -44,8 +44,8 @@ ENV ELECTRON_DISABLE_GPU=1
 
 VOLUME /app/data
 
-# 虚拟显示配置：-ac -nolisten tcp 提升启动速度与兼容性
-ENTRYPOINT ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1024x768x24 -ac -nolisten tcp"]
+# 设置虚拟显示器环境变量
+ENV DISPLAY=:99
 
-# 启动命令：必须包含 --no-sandbox 以适配 Docker 环境
-CMD ["node", "node_modules/electron/dist/electron", "out/main/index.js", "--headless", "--no-sandbox", "--disable-dev-shm-usage"]
+# 使用原生 Xvfb 挂后台，并通过 exec 直接拉起 node 进程，完美透传 REPL 交互界面
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1024x768x24 -ac -nolisten tcp & exec node node_modules/electron/dist/electron out/main/index.js --headless --no-sandbox --disable-dev-shm-usage"]
