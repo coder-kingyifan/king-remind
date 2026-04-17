@@ -150,7 +150,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, reactive, ref} from 'vue'
+import {computed, onActivated, onMounted, reactive, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {useSkillsStore} from '@/stores/skills'
 import {Delete, Edit, Loading, Plus, Setting, ShoppingBag, VideoPlay} from '@element-plus/icons-vue'
@@ -329,6 +329,10 @@ async function runTest() {
 
 onMounted(() => {
   skillsStore.fetchSkills()
+})
+
+onActivated(() => {
+  skillsStore.refreshSkills()
 })
 </script>
 
