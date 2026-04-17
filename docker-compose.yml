@@ -13,7 +13,7 @@ services:
     ports:
       - "${KING_API_PORT:-33333}:33333"
     volumes:
-      - remind-data:/app/data
+      - ./remind-data:/app/data
     env_file:
       - path: .env
         required: false
