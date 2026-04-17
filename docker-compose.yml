@@ -6,10 +6,10 @@ services:
       context: .
     container_name: king-remind
     restart: unless-stopped
-    # 保持标准输入打开，分配伪终端，支持 REPL 交互
+    # 开启伪终端和标准输入，支持交互式 REPL
     stdin_open: true
     tty: true
-    # 核心优化：提升容器共享内存，解决 Electron 渲染进程卡死问题
+    # 核心调优：防止 Electron 渲染进程因共享内存不足而崩溃
     shm_size: '2gb'
     ports:
       - "${API_PORT:-33333}:33333"

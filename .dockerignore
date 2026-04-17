@@ -9,3 +9,5 @@ resources/readme
 nul
 package-lock.json
 npm-debug.log
+.vscode
+build

@@ -319,7 +319,12 @@ npx electron-builder --linux --config
 
 ## 🐳 Docker 部署
 
-本项目支持在 Linux 服务器、NAS 等无图形界面环境下以 Headless 模式运行，提供终端 REPL 交互和 HTTP API 服务。
+本项目支持在无图形界面的服务器环境下以 Headless 模式运行。
+
+### 核心特性
+- **国内加速**：内置清华大学及阿里镜像源，秒级构建。
+- **持久化**：数据存储于 `remind-data` 卷中，重启不丢失。
+- **交互支持**：支持 Docker 交互模式，直接进行命令行对话。
 
 ### 环境要求
 
@@ -333,11 +338,14 @@ npx electron-builder --linux --config
 git clone [https://github.com/coder-kingyifan/king-remind.git](https://github.com/coder-kingyifan/king-remind.git)
 cd king-remind
 
-# 2. 交互模式（进入终端 REPL，可直接对话）
+# 2. 强制重新构建（建议首次部署或更新代码后执行）
+docker compose build --no-cache
+
+# 3. 交互模式（进入终端 REPL，可直接对话）
 # 注意：第一次构建较慢，请耐心等待
 docker compose run --rm king-remind
 
-# 3. 后台模式（仅作为 API 服务运行）
+# 4. 后台模式（仅作为 API 服务运行）
 docker compose up -d
 ```
 
