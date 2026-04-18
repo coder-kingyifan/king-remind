@@ -965,9 +965,11 @@ king-remind/
 
 ---
 
-## 特别鸣谢
+## 特别鸣谢以下网站
 
-[Linux.do](https://linux.do/)
+[Linux.do](https://linux.do/t/topic/1830841)、
+[奶昔论坛](https://forum.naixi.net/thread-11364-1-1.html)
+
 
 <p align="center">
   如果这个项目对你有帮助，欢迎给一个 Star
