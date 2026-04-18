@@ -969,6 +969,8 @@ king-remind/
 
 [Linux.do](https://linux.do/t/topic/1830841)、
 [奶昔论坛](https://forum.naixi.net/thread-11364-1-1.html)
+[NodeSeek](https://www.nodeseek.com/post-692113-1)
+
 
 
 <p align="center">
