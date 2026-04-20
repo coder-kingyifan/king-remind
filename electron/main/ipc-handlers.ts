@@ -25,6 +25,7 @@ import {
 } from './db/connection'
 import {weChatBot} from './wechat-bot/wechat-bot'
 import {checkForUpdate} from './updater'
+import {todosDb} from './db/todos'
 
 // sql.js 返回的对象可能含有不可被 structured clone 序列化的属性（如 Uint8Array 等）
 // 在 IPC 返回前必须转为纯 JS 对象
@@ -195,6 +196,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
         const enabledSkillCount = skillsDb.list({is_enabled: 1}).length
         const notifConfigs = notificationConfigsDb.getAll()
         const enabledChannels = notifConfigs.filter((c: any) => c.enabled).length
+        const todoStats = todosDb.stats()
 
         return {
             totalReminders: reminderStats.total,
@@ -206,7 +208,11 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
             skillCount,
             enabledSkillCount,
             enabledChannels,
-            totalChannels: notifConfigs.length
+            totalChannels: notifConfigs.length,
+            todoTotal: todoStats.total,
+            todoCompleted: todoStats.completed,
+            todoPending: todoStats.pending,
+            todoOverdue: todoStats.overdue
         }
     })
 
@@ -699,5 +705,56 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
 
     safeHandle('wechat-bot:get-state', () => {
         return weChatBot.getState()
+    })
+
+    // ========== 待办 ==========
+    safeHandle('todos:list', (_event, filters?) => {
+        return todosDb.list(filters)
+    })
+
+    safeHandle('todos:get', (_event, id: number) => {
+        return todosDb.get(id)
+    })
+
+    safeHandle('todos:create', (_event, data) => {
+        return todosDb.create(data)
+    })
+
+    safeHandle('todos:update', (_event, id: number, data) => {
+        return todosDb.update(id, data)
+    })
+
+    safeHandle('todos:delete', (_event, id: number) => {
+        return todosDb.delete(id)
+    })
+
+    safeHandle('todos:toggle', (_event, id: number) => {
+        return todosDb.toggle(id)
+    })
+
+    safeHandle('todos:stats', () => {
+        return todosDb.stats()
+    })
+
+    // 将图片相对路径解析为 data URL
+    safeHandle('todos:resolve-images', (_event, paths: string[]) => {
+        const userDataPath = app.getPath('userData')
+        return paths.map(p => {
+            const fullPath = join(userDataPath, p)
+            if (!existsSync(fullPath)) return null
+            try {
+                const buf = readFileSync(fullPath)
+                const base64 = buf.toString('base64')
+                const ext = extname(p).slice(1)
+                const mimeMap: Record<string, string> = {
+                    'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+                    'gif': 'image/gif', 'webp': 'image/webp', 'bmp': 'image/bmp'
+                }
+                const mime = mimeMap[ext] || 'image/png'
+                return `data:${mime};base64,${base64}`
+            } catch {
+                return null
+            }
+        })
     })
 }

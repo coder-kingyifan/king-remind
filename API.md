@@ -192,6 +192,148 @@ DELETE http://127.0.0.1:33333/api/reminders/42
 
 ---
 
+### POST /api/todo
+
+创建一条待办事项。AI 对话接口也可通过自然语言创建待办。
+
+**请求体** `application/json`
+
+| 字段            | 类型       | 必填 | 说明                                                    |
+|---------------|----------|----|-------------------------------------------------------|
+| `title`       | string   | ✅  | 待办标题                                                  |
+| `description` | string   |    | 描述                                                    |
+| `priority`    | string   |    | 优先级：`normal` / `high` / `urgent` / `low`，默认 `normal` |
+| `due_date`    | string   |    | 截止日期，格式 `YYYY-MM-DD`，如 `2025-03-20`                  |
+| `category`    | string   |    | 分类，如 `工作`、`学习`、`生活`                                  |
+| `images`      | string[] |    | 图片路径列表                                                |
+
+**示例：创建待办**
+
+```json
+POST http://127.0.0.1:33333/api/todo
+Content-Type: application/json
+
+{
+  "title": "完成项目报告",
+  "priority": "high",
+  "due_date": "2025-03-20",
+  "category": "工作"
+}
+```
+
+**成功响应** `200`
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "完成项目报告",
+    "description": "",
+    "completed": 0,
+    "priority": "high",
+    "due_date": "2025-03-20",
+    "category": "工作",
+    "images": "[]",
+    "sort_order": 1,
+    "created_at": "2025-03-20 09:00:00",
+    "updated_at": "2025-03-20 09:00:00"
+  }
+}
+```
+
+---
+
+### GET /api/todo
+
+获取待办列表。
+
+**Query 参数**
+
+| 参数          | 类型     | 说明            |
+|-------------|--------|---------------|
+| `completed` | 0 或 1  | 按完成状态筛选       |
+| `category`  | string | 按分类筛选         |
+| `search`    | string | 按标题模糊搜索       |
+
+**示例**
+
+```
+GET http://127.0.0.1:33333/api/todo?completed=0&category=工作
+```
+
+---
+
+### GET /api/todo/stats
+
+获取待办统计。
+
+**响应示例**
+
+```json
+{
+  "success": true,
+  "data": {
+    "total": 10,
+    "completed": 3,
+    "pending": 7,
+    "overdue": 2
+  }
+}
+```
+
+---
+
+### GET /api/todo/:id
+
+获取单个待办详情。
+
+---
+
+### PUT /api/todo/:id
+
+更新待办。请求体字段同创建接口，所有字段可选。
+
+**示例**
+
+```json
+PUT http://127.0.0.1:33333/api/todo/1
+Content-Type: application/json
+
+{
+  "completed": 1
+}
+```
+
+---
+
+### DELETE /api/todo/:id
+
+删除待办。
+
+**成功响应**
+
+```json
+{ "success": true, "data": { "deleted": true } }
+```
+
+---
+
+### POST /api/todo/:id/toggle
+
+切换待办完成状态（完成 ↔ 未完成）。
+
+**成功响应**
+
+```json
+{
+  "success": true,
+  "data": { "id": 1, "completed": 1, ... }
+}
+```
+
+---
+
 ### POST /api/chat
 
 AI 对话接口。通过自然语言与 AI 助手对话，AI 会自动识别意图并创建提醒、查询提醒等。适合集成到外部 AI Agent 或自动化流程中。
@@ -361,6 +503,15 @@ resp = requests.post(f"{BASE}/api/reminders", headers=headers, json={
 })
 print(resp.json())
 
+# 方式3: 创建待办事项
+resp = requests.post(f"{BASE}/api/todo", headers=headers, json={
+    "title": "完成项目报告",
+    "priority": "high",
+    "due_date": "2025-03-20",
+    "category": "工作"
+})
+print(resp.json())
+
 # 查询提醒列表
 resp = requests.get(f"{BASE}/api/reminders?is_active=1", headers=headers)
 print(resp.json())
@@ -409,6 +560,23 @@ const res2 = await fetch(`${BASE}/api/reminders`, {
 });
 const data2 = await res2.json();
 console.log(data2);
+
+// 创建待办事项
+const res3 = await fetch(`${BASE}/api/todo`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${TOKEN}`
+  },
+  body: JSON.stringify({
+    title: "完成项目报告",
+    priority: "high",
+    due_date: "2025-03-20",
+    category: "工作"
+  })
+});
+const data3 = await res3.json();
+console.log(data3);
 ```
 
 ### curl
@@ -436,5 +604,16 @@ curl -X POST http://127.0.0.1:33333/api/reminders \
     "active_hours_start": "09:00",
     "active_hours_end": "18:00",
     "channels": ["desktop"]
+  }'
+
+# 创建待办事项
+curl -X POST http://127.0.0.1:33333/api/todo \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_token" \
+  -d '{
+    "title": "完成项目报告",
+    "priority": "high",
+    "due_date": "2025-03-20",
+    "category": "工作"
   }'
 ```

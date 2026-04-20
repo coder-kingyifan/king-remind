@@ -670,6 +670,32 @@ export function runMigrations(): void {
                 INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
           ('wechat_bot', 0, '{"message_template": ""}');
             `
+        },
+        {
+            version: 26,
+            sql: `
+                CREATE TABLE IF NOT EXISTS todos
+                (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    description TEXT DEFAULT '',
+                    completed INTEGER NOT NULL DEFAULT 0,
+                    priority TEXT NOT NULL DEFAULT 'normal',
+                    due_date TEXT DEFAULT NULL,
+                    category TEXT DEFAULT '',
+                    sort_order INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+                );
+                CREATE INDEX IF NOT EXISTS idx_todos_completed ON todos(completed);
+                CREATE INDEX IF NOT EXISTS idx_todos_due_date ON todos(due_date);
+            `
+        },
+        {
+            version: 27,
+            sql: `
+                ALTER TABLE todos ADD COLUMN images TEXT NOT NULL DEFAULT '[]';
+            `
         }
     ]
 

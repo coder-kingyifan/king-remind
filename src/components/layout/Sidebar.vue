@@ -37,7 +37,7 @@
 import {computed} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {useSettingsStore} from '@/stores/settings'
-import {Bell, ChatDotRound, Cpu, MagicStick, Message, Moon, Odometer, Setting, Sunny, HomeFilled} from '@element-plus/icons-vue'
+import {Bell, ChatDotRound, Cpu, MagicStick, Message, Moon, Odometer, Setting, Sunny, HomeFilled, List} from '@element-plus/icons-vue'
 import logoIcon from '../../../resources/icon.png'
 
 const route = useRoute()
@@ -49,6 +49,7 @@ const aiNavItems = [
   {path: '/', title: 'AI 助手', icon: ChatDotRound},
   {path: '/dashboard', title: '数据概览', icon: Odometer},
   {path: '/reminders', title: '提醒管理', icon: Bell},
+  {path: '/todos', title: '待办事项', icon: List},
   {path: '/notifications', title: '通知渠道', icon: Message},
   {path: '/model-config', title: '模型配置', icon: Cpu},
   {path: '/skills', title: '技能中心', icon: MagicStick},
@@ -59,6 +60,7 @@ const aiNavItems = [
 const simpleNavItems = [
   {path: '/', title: '导览', icon: HomeFilled},
   {path: '/reminders', title: '创建提醒', icon: Bell},
+  {path: '/todos', title: '待办事项', icon: List},
   {path: '/notifications', title: '消息渠道', icon: Message},
   {path: '/settings', title: '设置', icon: Setting}
 ]

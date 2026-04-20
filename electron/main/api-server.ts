@@ -8,6 +8,7 @@ import {modelConfigsDb} from './db/model-configs'
 import {notificationConfigsDb} from './db/notification-configs'
 import {weChatBot} from './wechat-bot/wechat-bot'
 import {NotificationDispatcher} from './notifications/dispatcher'
+import {todosDb} from './db/todos'
 
 let server: Server | null = null
 let dispatcherRef: NotificationDispatcher | null = null
@@ -241,6 +242,88 @@ export function startApiServer(scheduler: ReminderScheduler, dispatcher?: Notifi
                     }
                 }
                 return ok(res, settingsDb.getAll())
+            }
+
+            // ========== 待办事项 API ==========
+            // POST /api/todos - 创建待办
+            if (method === 'POST' && path === '/api/todo') {
+                const body = await readBody(req)
+                if (!body.title) return err(res, 400, '缺少必填字段: title')
+
+                const input = {
+                    title: String(body.title),
+                    description: body.description ? String(body.description) : undefined,
+                    priority: body.priority ? String(body.priority) : undefined,
+                    due_date: body.due_date ? String(body.due_date) : null,
+                    category: body.category ? String(body.category) : undefined,
+                    images: Array.isArray(body.images) ? body.images : undefined
+                }
+
+                const todo = todosDb.create(input)
+                return ok(res, todo)
+            }
+
+            // GET /api/todo - 获取待办列表
+            if (method === 'GET' && path === '/api/todo') {
+                const completed = url.searchParams.get('completed')
+                const category = url.searchParams.get('category') || undefined
+                const search = url.searchParams.get('search') || undefined
+                const filters: any = {}
+                if (completed !== null) filters.completed = parseInt(completed)
+                if (category) filters.category = category
+                if (search) filters.search = search
+                return ok(res, todosDb.list(filters))
+            }
+
+            // GET /api/todo/stats - 获取待办统计
+            if (method === 'GET' && path === '/api/todo/stats') {
+                return ok(res, todosDb.stats())
+            }
+
+            // GET /api/todo/:id - 获取单个待办
+            const matchTodoGet = path.match(/^\/api\/todo\/(\d+)$/)
+            if (method === 'GET' && matchTodoGet) {
+                const todo = todosDb.get(parseInt(matchTodoGet[1]))
+                if (!todo) return err(res, 404, '待办不存在')
+                return ok(res, todo)
+            }
+
+            // PUT /api/todo/:id - 更新待办
+            const matchTodoPut = path.match(/^\/api\/todo\/(\d+)$/)
+            if (method === 'PUT' && matchTodoPut) {
+                const id = parseInt(matchTodoPut[1])
+                const todo = todosDb.get(id)
+                if (!todo) return err(res, 404, '待办不存在')
+                const body = await readBody(req)
+                const data: any = {}
+                if (body.title !== undefined) data.title = String(body.title)
+                if (body.description !== undefined) data.description = String(body.description)
+                if (body.completed !== undefined) data.completed = body.completed ? 1 : 0
+                if (body.priority !== undefined) data.priority = String(body.priority)
+                if (body.due_date !== undefined) data.due_date = body.due_date ? String(body.due_date) : null
+                if (body.category !== undefined) data.category = String(body.category)
+                if (body.images !== undefined) data.images = Array.isArray(body.images) ? body.images : []
+                const result = todosDb.update(id, data)
+                return ok(res, result)
+            }
+
+            // DELETE /api/todo/:id - 删除待办
+            const matchTodoDel = path.match(/^\/api\/todo\/(\d+)$/)
+            if (method === 'DELETE' && matchTodoDel) {
+                const id = parseInt(matchTodoDel[1])
+                const todo = todosDb.get(id)
+                if (!todo) return err(res, 404, '待办不存在')
+                todosDb.delete(id)
+                return ok(res, {deleted: true})
+            }
+
+            // POST /api/todo/:id/toggle - 切换完成状态
+            const matchTodoToggle = path.match(/^\/api\/todo\/(\d+)\/toggle$/)
+            if (method === 'POST' && matchTodoToggle) {
+                const id = parseInt(matchTodoToggle[1])
+                const result = todosDb.toggle(id)
+                if (!result) return err(res, 404, '待办不存在')
+                return ok(res, result)
             }
 
             // ========== 微信机器人 API ==========

@@ -208,6 +208,18 @@ const electronAPI = {
         login: () => safeInvoke('wechat-bot:login'),
         logout: () => safeInvoke('wechat-bot:logout'),
         getState: () => safeInvoke('wechat-bot:get-state')
+    },
+
+    // 待办事项
+    todos: {
+        list: (filters?: any) => safeInvoke('todos:list', filters),
+        get: (id: number) => safeInvoke('todos:get', id),
+        create: (data: any) => safeInvoke('todos:create', data),
+        update: (id: number, data: any) => safeInvoke('todos:update', id, data),
+        delete: (id: number) => safeInvoke('todos:delete', id),
+        toggle: (id: number) => safeInvoke('todos:toggle', id),
+        stats: () => safeInvoke('todos:stats'),
+        resolveImages: (paths: string[]) => safeInvoke('todos:resolve-images', paths)
     }
 }
 

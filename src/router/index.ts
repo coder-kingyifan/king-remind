@@ -22,6 +22,12 @@ const router = createRouter({
             meta: {title: '提醒管理', icon: 'Bell'}
         },
         {
+            path: '/todos',
+            name: 'todos',
+            component: () => import('@/pages/TodosPage.vue'),
+            meta: {title: '待办事项', icon: 'List'}
+        },
+        {
             path: '/notifications',
             name: 'notifications',
             component: () => import('@/pages/NotificationSettingsPage.vue'),
