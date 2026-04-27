@@ -4,6 +4,8 @@ import {getSolarDateFromLunar} from 'chinese-days'
 import {NotificationDispatcher} from './notifications/dispatcher'
 import {skillsDb} from './db/skills'
 import {executeSkill} from './skills/executor'
+import {todosDb} from './db/todos'
+import {settingsDb} from './db/settings'
 
 export class ReminderScheduler {
     private intervalId: NodeJS.Timeout | null = null
@@ -92,8 +94,107 @@ export class ReminderScheduler {
             if (dueReminders.length > 0) {
                 console.log(`[调度器] 触发了 ${dueReminders.length} 个提醒`)
             }
+
+            // 检查待办截止通知
+            this.checkTodoDue()
+            // 检查待办总结通知
+            this.checkTodoSummary()
         } catch (error: any) {
             console.error('[调度器] 检查提醒时出错:', error.message)
+        }
+    }
+
+    private checkTodoDue(): void {
+        try {
+            const enabled = settingsDb.get('todo_notify_enabled')
+            if (enabled !== 'true') return
+
+            const notifyTime = settingsDb.get('todo_notify_time') || '18:00'
+            const now = new Date()
+            const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+            if (currentTime !== notifyTime) return
+
+            // 防止同一分钟内重复触发
+            const today = now.toISOString().slice(0, 10)
+            const lastKey = `todo_last_notify_${today}_${notifyTime.replace(':', '')}`
+            if (settingsDb.get(lastKey) === '1') return
+            settingsDb.set(lastKey, '1')
+
+            // 查询今天截止的未完成待办
+            const todos = todosDb.list({completed: 0})
+            const dueToday = todos.filter((t: any) => t.due_date === today)
+            if (!dueToday.length) return
+
+            // 解析通知渠道
+            let channels: string[] = ['desktop']
+            try {
+                const raw = settingsDb.get('todo_notify_channels')
+                if (raw) channels = JSON.parse(raw)
+            } catch {}
+
+            const titles = dueToday.map((t: any) => t.title).join('、')
+            this.dispatcher.sendToChannels(channels, {
+                title: `待办提醒：${dueToday.length} 项今日截止`,
+                body: titles,
+                icon: '📋',
+                reminderId: 0
+            }).catch(err => {
+                console.error('[调度器] 发送待办通知失败:', err.message)
+            })
+
+            console.log(`[调度器] 发送待办截止通知: ${dueToday.length} 项`)
+        } catch (error: any) {
+            console.error('[调度器] 检查待办截止时出错:', error.message)
+        }
+    }
+
+    private checkTodoSummary(): void {
+        try {
+            const enabled = settingsDb.get('todo_summary_enabled')
+            if (enabled !== 'true') return
+
+            const notifyTime = settingsDb.get('todo_summary_time') || '18:00'
+            const now = new Date()
+            const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+            if (currentTime !== notifyTime) return
+
+            // 防止同一分钟内重复触发
+            const today = now.toISOString().slice(0, 10)
+            const lastKey = `todo_summary_last_${today}_${notifyTime.replace(':', '')}`
+            if (settingsDb.get(lastKey) === '1') return
+            settingsDb.set(lastKey, '1')
+
+            // 查询所有未完成待办
+            const todos = todosDb.list({completed: 0})
+            if (!todos.length) return
+
+            // 解析通知渠道
+            let channels: string[] = ['desktop']
+            try {
+                const raw = settingsDb.get('todo_summary_channels')
+                if (raw) channels = JSON.parse(raw)
+            } catch {}
+
+            // 按分类汇总
+            const catMap = new Map<string, number>()
+            for (const t of todos) {
+                const cat = (t as any).category || '未分类'
+                catMap.set(cat, (catMap.get(cat) || 0) + 1)
+            }
+            const summary = Array.from(catMap.entries()).map(([cat, n]) => `${cat} ${n}项`).join('，')
+
+            this.dispatcher.sendToChannels(channels, {
+                title: `待办总结：还有 ${todos.length} 项未完成`,
+                body: summary,
+                icon: '📊',
+                reminderId: 0
+            }).catch(err => {
+                console.error('[调度器] 发送待办总结通知失败:', err.message)
+            })
+
+            console.log(`[调度器] 发送待办总结通知: ${todos.length} 项未完成`)
+        } catch (error: any) {
+            console.error('[调度器] 检查待办总结时出错:', error.message)
         }
     }
 

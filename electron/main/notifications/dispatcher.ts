@@ -93,6 +93,21 @@ export class NotificationDispatcher {
         }
     }
 
+    async sendToChannels(channelIds: string[], message: NotificationMessage): Promise<void> {
+        for (const channelId of channelIds) {
+            if (channelId !== 'desktop' && !notificationConfigsDb.isChannelEnabled(channelId)) continue
+            const channel = this.channels.get(channelId)
+            if (!channel) continue
+            try {
+                await channel.send(message)
+                reminderLogsDb.create(message.reminderId, channelId, 'sent')
+            } catch (error: any) {
+                console.error(`[${channelId}] 发送通知失败:`, error.message)
+                reminderLogsDb.create(message.reminderId, channelId, 'failed', error.message)
+            }
+        }
+    }
+
     async testChannel(channelId: string): Promise<{ success: boolean; error?: string }> {
         const channel = this.channels.get(channelId)
         if (!channel) {

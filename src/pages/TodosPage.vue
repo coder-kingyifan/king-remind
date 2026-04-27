@@ -6,32 +6,22 @@
       <span class="hint" v-if="todosStore.stats.pending">{{ todosStore.stats.pending }} 项待完成</span>
     </div>
 
-    <!-- 分类 Tab -->
-    <div class="cat-tabs">
-      <span class="cat-tab" :class="{active: activeCategory === ''}" @click="activeCategory = ''">全部</span>
-      <span v-for="cat in customCategories" :key="cat" class="cat-tab" :class="{active: activeCategory === cat}" @click="activeCategory = cat">
-        {{ cat }}
-        <span class="cat-del" @click.stop="removeCategory(cat)">×</span>
-      </span>
-      <span v-if="!showNewCat" class="cat-tab add" @click="showNewCat = true">+</span>
-      <input v-if="showNewCat" ref="newCatRef" v-model="newCatName" class="cat-input" placeholder="分类名" @keydown.enter="addCategory" @blur="addCategory"/>
-    </div>
-
     <!-- 添加框 -->
     <div class="add-bar" :class="{hasContent: newTitle.trim()}">
       <span class="add-icon">+</span>
-      <input
+      <textarea
           ref="addInputRef"
           v-model="newTitle"
           class="add-input"
           placeholder="添加待办，回车提交"
+          rows="1"
           @keydown.enter.exact.prevent="handleAdd"
       />
       <transition name="slide">
         <div v-if="newTitle.trim()" class="add-extra">
           <span class="extra-btn" :class="{active: newDueDate}" @click.stop="showDatePicker = !showDatePicker">
             <el-icon :size="13"><Calendar/></el-icon>
-            {{ newDueDate ? fmtDate(newDueDate) : '日期' }}
+            {{ fmtDate(newDueDate) }}
           </span>
           <span class="extra-btn pri" :class="newPriority" @click="cyclePriority">
             {{ priLabel(newPriority) }}
@@ -49,7 +39,7 @@
             {{ opt.label }}
           </div>
           <div class="date-item">
-            <el-date-picker v-model="customDate" type="date" value-format="YYYY-MM-DD" placeholder="选日期..." size="small" style="width:120px" @change="onCustomDate"/>
+            <el-date-picker v-model="customDate" type="date" value-format="YYYY-MM-DD" placeholder="选日期..." size="small" style="width:120px" :disabled-date="disablePastDate" @change="onCustomDate"/>
           </div>
         </div>
       </div>
@@ -84,12 +74,15 @@
           </div>
           <div class="content" @click="openEdit(todo)">
             <span class="text">{{ todo.title }}</span>
+            <div class="item-meta" v-if="todo.completed===0">
+              <span v-if="todo.due_date" class="date-tag" :class="{late: isOverdue(todo)}">{{ fmtDate(todo.due_date) }}</span>
+              <span v-if="todo.priority!=='normal'" class="pri-tag" :class="todo.priority" @click.stop="cycleTodoPriority(todo)">{{ priLabel(todo.priority) }}</span>
+            </div>
             <div v-if="todoImages(todo).length" class="imgs">
               <img v-for="(img,i) in todoImages(todo).slice(0,2)" :key="i" :src="img" @click.stop="previewImage(img)"/>
             </div>
           </div>
-          <span v-if="todo.due_date && todo.completed===0" class="date-tag" :class="{late: isOverdue(todo)}">{{ fmtDate(todo.due_date) }}</span>
-          <span v-if="todo.priority!=='normal' && todo.completed===0" class="pri-dot" :class="todo.priority"></span>
+          <span class="item-del" @click.stop="handleDeleteTodo(todo)">×</span>
         </div>
       </div>
     </template>
@@ -98,29 +91,25 @@
 
     <!-- 编辑弹窗 -->
     <el-dialog v-model="editVisible" width="400px" :close-on-click-modal="true" destroy-on-close class="edit-dialog">
-      <div class="edit-check" @click="editForm.completed = editForm.completed === 1 ? 0 : 1">
-        <div v-if="editForm.completed===1" class="check-on"><el-icon :size="11"><Check/></el-icon></div>
-        <div v-else class="check-off"></div>
+      <div class="edit-top">
+        <div class="edit-check" @click="editForm.completed = editForm.completed === 1 ? 0 : 1">
+          <div v-if="editForm.completed===1" class="check-on"><el-icon :size="11"><Check/></el-icon></div>
+          <div v-else class="check-off"></div>
+        </div>
+        <span class="edit-status">{{ editForm.completed === 1 ? '已完成' : '未完成' }}</span>
       </div>
-      <input v-model="editForm.title" class="edit-title" placeholder="待办内容"/>
+      <textarea v-model="editForm.title" class="edit-title" placeholder="待办内容" rows="2"/>
       <div class="edit-row">
         <span class="edit-label">什么时候</span>
         <div class="edit-chips">
           <span v-for="opt in dueOptions" :key="opt.value" class="chip" :class="{active: editForm.due_date === opt.value}" @click="editForm.due_date = opt.value">{{ opt.label }}</span>
-          <el-date-picker v-model="editCustomDate" type="date" value-format="YYYY-MM-DD" size="small" placeholder="选日期" style="width:110px" @change="editForm.due_date = editCustomDate || ''"/>
+          <el-date-picker v-model="editCustomDate" type="date" value-format="YYYY-MM-DD" size="small" placeholder="选日期" style="width:110px" :disabled-date="disablePastDate" @change="(v: string) => { editForm.due_date = v || '' }"/>
         </div>
       </div>
       <div class="edit-row">
         <span class="edit-label">优先级</span>
         <div class="edit-chips">
           <span v-for="opt in priOptions" :key="opt.value" class="chip pri" :class="[opt.value, {active: editForm.priority === opt.value}]" @click="editForm.priority = opt.value">{{ opt.label }}</span>
-        </div>
-      </div>
-      <div class="edit-row">
-        <span class="edit-label">分类</span>
-        <div class="edit-chips">
-          <span v-for="cat in customCategories" :key="cat" class="chip" :class="{active: editForm.category === cat}" @click="editForm.category = editForm.category === cat ? '' : cat">{{ cat }}</span>
-          <input v-model="editForm.category" class="chip-input" placeholder="输入分类" v-if="editForm.category && !customCategories.includes(editForm.category)"/>
         </div>
       </div>
       <div class="edit-row" v-if="editForm.images.length">
@@ -133,7 +122,6 @@
         </div>
       </div>
       <template #footer>
-        <el-button size="small" @click="handleDeleteEdit" type="danger" plain>删除</el-button>
         <el-button size="small" type="primary" @click="handleSave">保存</el-button>
       </template>
     </el-dialog>
@@ -153,10 +141,9 @@ import type {Todo} from '@/types/todo'
 const todosStore = useTodosStore()
 const pageRef = ref<HTMLElement>()
 const addInputRef = ref<HTMLInputElement>()
-const newCatRef = ref<HTMLInputElement>()
 const newTitle = ref('')
 const newPriority = ref('normal')
-const newDueDate = ref('')
+const newDueDate = ref(dayStr(0))
 const customDate = ref('')
 const pasteImages = ref<string[]>([])
 const statusFilter = ref('all')
@@ -164,48 +151,14 @@ const showDatePicker = ref(false)
 const editVisible = ref(false)
 const editingTodo = ref<Todo | null>(null)
 const editCustomDate = ref('')
-const activeCategory = ref('')
-const showNewCat = ref(false)
-const newCatName = ref('')
 const previewVisible = ref(false)
 const previewUrl = ref('')
-
-// 自定义分类：默认 工作/学习/生活，持久化到 localStorage
-const DEFAULT_CATS = ['工作', '学习', '生活']
-const customCategories = ref<string[]>([])
-
-function loadCategories() {
-  try {
-    const saved = localStorage.getItem('todo_categories')
-    customCategories.value = saved ? JSON.parse(saved) : [...DEFAULT_CATS]
-  } catch { customCategories.value = [...DEFAULT_CATS] }
-}
-function saveCategories() { localStorage.setItem('todo_categories', JSON.stringify(customCategories.value)) }
-
-function addCategory() {
-  const name = newCatName.value.trim()
-  if (name && !customCategories.value.includes(name)) {
-    customCategories.value.push(name)
-    saveCategories()
-    activeCategory.value = name
-  }
-  newCatName.value = ''
-  showNewCat.value = false
-}
-
-function removeCategory(cat: string) {
-  if (customCategories.value.length <= 1) return
-  customCategories.value = customCategories.value.filter(c => c !== cat)
-  saveCategories()
-  if (activeCategory.value === cat) activeCategory.value = ''
-}
 
 const editForm = reactive({
   title: '',
   completed: 0,
   priority: 'normal' as string,
   due_date: '' as string,
-  category: '',
   images: [] as string[]
 })
 
@@ -220,7 +173,6 @@ const dueOptions = computed(() => [
   {label: '明天', value: dayStr(1)},
   {label: '后天', value: dayStr(2)},
   {label: '下周', value: dayStr(7)},
-  {label: '不设', value: ''},
 ])
 
 const priOptions = [
@@ -239,22 +191,18 @@ function onCustomDate(v: string) {
   if (v) { newDueDate.value = v; showDatePicker.value = false }
 }
 
-// 按天分组
+// 按日期分组
 interface DayGroup { key: string; label: string; items: Todo[] }
 
 const groupedTodos = computed<DayGroup[]>(() => {
   let todos = todosStore.todos
-  // 按分类 tab 过滤
-  if (activeCategory.value) {
-    todos = todos.filter(t => t.category === activeCategory.value)
-  }
   const today = dayStr(0)
   const tomorrow = dayStr(1)
-  const overdue: Todo[] = [], todayList: Todo[] = [], tomorrowList: Todo[] = [], upcoming: Todo[] = [], rest: Todo[] = []
+  const overdue: Todo[] = [], todayList: Todo[] = [], tomorrowList: Todo[] = [], upcoming: Todo[] = [], completedList: Todo[] = []
 
   for (const t of todos) {
-    if (t.completed === 1) { rest.push(t); continue }
-    if (!t.due_date) { rest.push(t); continue }
+    if (t.completed === 1) { completedList.push(t); continue }
+    if (!t.due_date) { todayList.push(t); continue }
     if (t.due_date < today) { overdue.push(t); continue }
     if (t.due_date === today) { todayList.push(t); continue }
     if (t.due_date === tomorrow) { tomorrowList.push(t); continue }
@@ -266,7 +214,7 @@ const groupedTodos = computed<DayGroup[]>(() => {
   if (todayList.length) g.push({key: 'today', label: '今天', items: todayList})
   if (tomorrowList.length) g.push({key: 'tomorrow', label: '明天', items: tomorrowList})
   if (upcoming.length) g.push({key: 'upcoming', label: '即将到来', items: upcoming})
-  if (rest.length) g.push({key: 'rest', label: '其他', items: rest})
+  if (completedList.length) g.push({key: 'completed', label: '已完成', items: completedList})
   return g
 })
 
@@ -274,6 +222,10 @@ function dayStr(offset: number): string {
   const d = new Date()
   d.setDate(d.getDate() + offset)
   return d.toISOString().slice(0, 10)
+}
+
+function disablePastDate(date: Date): boolean {
+  return date.getTime() < new Date(new Date().toDateString()).getTime()
 }
 
 // 图片
@@ -317,11 +269,10 @@ async function handleAdd() {
   const title = newTitle.value.trim()
   if (!title) return
   const images = pasteImages.value.length ? await saveImgs(pasteImages.value) : []
-  const category = activeCategory.value || undefined
-  await todosStore.createTodo({ title, priority: newPriority.value as any, due_date: newDueDate.value || null, category, images })
+  await todosStore.createTodo({ title, priority: newPriority.value as any, due_date: newDueDate.value, images })
   newTitle.value = ''
   newPriority.value = 'normal'
-  newDueDate.value = ''
+  newDueDate.value = dayStr(0)
   customDate.value = ''
   pasteImages.value = []
   addInputRef.value?.focus()
@@ -329,15 +280,27 @@ async function handleAdd() {
 
 function handleToggle(id: number) { todosStore.toggleTodo(id) }
 
+function cycleTodoPriority(todo: Todo) {
+  const order = ['normal', 'high', 'urgent']
+  const i = order.indexOf(todo.priority)
+  todosStore.updateTodo(todo.id, {priority: order[(i + 1) % order.length]})
+}
+
+function handleDeleteTodo(todo: Todo) {
+  ElMessageBox.confirm('确认要删除当前待办吗？', '删除待办', {confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'})
+    .then(() => { todosStore.deleteTodo(todo.id) })
+    .catch(() => {})
+}
+
 function openEdit(todo: Todo) {
   editingTodo.value = todo
   editForm.title = todo.title
   editForm.completed = todo.completed
   editForm.priority = todo.priority
-  editForm.due_date = todo.due_date || ''
-  editForm.category = todo.category || ''
+  editForm.due_date = todo.due_date || dayStr(0)
   editForm.images = todoImages(todo)
-  editCustomDate.value = ''
+  const quickValues = dueOptions.value.map(o => o.value)
+  editCustomDate.value = (!quickValues.includes(editForm.due_date)) ? editForm.due_date : ''
   editVisible.value = true
 }
 
@@ -349,18 +312,10 @@ async function handleSave() {
       completed: editForm.completed,
       priority: editForm.priority as any,
       due_date: editForm.due_date || null,
-      category: editForm.category,
       images: editForm.images
     })
   }
   editVisible.value = false
-}
-
-function handleDeleteEdit() {
-  if (!editingTodo.value) return
-  ElMessageBox.confirm(`删除「${editingTodo.value.title}」？`, '', {confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'})
-    .then(() => { todosStore.deleteTodo(editingTodo.value!.id); editVisible.value = false })
-    .catch(() => {})
 }
 
 function handleFilterChange() {
@@ -386,8 +341,14 @@ function priLabel(p: string): string { return ({urgent: '紧急', high: '重要'
 
 function previewImage(url: string) { previewUrl.value = url; previewVisible.value = true }
 
+function resizeAddInput() {
+  const el = addInputRef.value as any
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = el.scrollHeight + 'px'
+}
+
 onMounted(async () => {
-  loadCategories()
   await handleFilterChange()
   await todosStore.fetchStats()
   await resolveImages()
@@ -398,7 +359,7 @@ onActivated(async () => {
   await resolveImages()
 })
 watch(() => todosStore.todos.length, () => resolveImages())
-watch(showNewCat, async (v) => { if (v) { await nextTick(); newCatRef.value?.focus() } })
+watch(newTitle, () => nextTick(resizeAddInput))
 </script>
 
 <style scoped>
@@ -408,39 +369,15 @@ watch(showNewCat, async (v) => { if (v) { await nextTick(); newCatRef.value?.foc
 .header h1 { font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0; }
 .hint { font-size: 12px; color: var(--text-tertiary); }
 
-/* 分类 Tab */
-.cat-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
-.cat-tab {
-  font-size: 13px;
-  padding: 4px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  color: var(--text-secondary);
-  background: var(--bg-tertiary);
-  transition: all .15s;
-  user-select: none;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.cat-tab:hover { background: var(--bg-hover); }
-.cat-tab.active { background: var(--color-primary); color: #fff; }
-.cat-tab.add { background: transparent; border: 1px dashed var(--border-color); color: var(--text-tertiary); padding: 4px 8px; }
-.cat-tab.add:hover { border-color: var(--color-primary); color: var(--color-primary); }
-.cat-del { font-size: 11px; opacity: 0; transition: opacity .15s; margin-left: 2px; }
-.cat-tab:hover .cat-del { opacity: .6; }
-.cat-del:hover { opacity: 1 !important; }
-.cat-input { width: 72px; font-size: 13px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--color-primary); outline: none; background: transparent; color: var(--text-primary); }
-
 /* 添加栏 */
 .add-bar {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: flex-start; gap: 8px;
   padding: 10px 14px; border: 1px solid var(--border-color-light); border-radius: 8px;
   margin-bottom: 16px; transition: border-color .15s, box-shadow .15s; flex-wrap: wrap;
 }
 .add-bar.focused, .add-bar.hasContent { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(64,158,255,.1); }
-.add-icon { font-size: 18px; color: var(--color-primary); font-weight: 300; flex-shrink: 0; line-height: 1; }
-.add-input { flex: 1; min-width: 200px; border: none; outline: none; font-size: 14px; color: var(--text-primary); background: transparent; }
+.add-icon { font-size: 18px; color: var(--color-primary); font-weight: 300; flex-shrink: 0; line-height: 1; margin-top: 2px; }
+.add-input { flex: 1; min-width: 200px; border: none; outline: none; font-size: 14px; color: var(--text-primary); background: transparent; resize: none; line-height: 1.5; font-family: inherit; }
 .add-input::placeholder { color: var(--text-placeholder); }
 
 .add-extra { display: flex; align-items: center; gap: 6px; width: 100%; padding-top: 8px; }
@@ -473,41 +410,48 @@ watch(showNewCat, async (v) => { if (v) { await nextTick(); newCatRef.value?.foc
 /* 分组 */
 .group { margin-bottom: 16px; }
 .group-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; padding-left: 4px; }
-.group-name { font-size: 12px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .5px; }
+.group-name { font-size: 12px; font-weight: 600; color: var(--text-tertiary); }
 .group-name.overdue { color: var(--color-danger); }
 .group-name.today { color: var(--color-primary); }
+.group-name.completed { color: var(--color-success); }
 .group-num { font-size: 11px; color: var(--text-placeholder); }
 
 /* 待办项 */
-.item { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-radius: 6px; cursor: pointer; transition: background .1s; }
+.item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 4px; border-radius: 6px; cursor: pointer; transition: background .1s; position: relative; }
 .item:hover { background: var(--bg-hover); }
 .item.done .text { text-decoration: line-through; color: var(--text-tertiary); }
 .item.p-high .check-off { border-color: #E6A23C; }
 .item.p-urgent .check-off { border-color: #F56C6C; }
 
-.check { flex-shrink: 0; cursor: pointer; }
+.check { flex-shrink: 0; cursor: pointer; margin-top: 2px; }
 .check-off { width: 16px; height: 16px; border: 1.5px solid var(--border-color); border-radius: 50%; transition: border-color .15s; }
 .check-off:hover { border-color: var(--color-primary); }
 .check-on { width: 16px; height: 16px; background: var(--color-success); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; }
 
-.content { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
-.text { font-size: 14px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.imgs { display: flex; gap: 3px; flex-shrink: 0; }
+.content { flex: 1; min-width: 0; }
+.text { font-size: 14px; color: var(--text-primary); line-height: 1.5; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.item-meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.pri-tag { font-size: 11px; padding: 1px 6px; border-radius: 4px; cursor: pointer; }
+.pri-tag.high { color: #E6A23C; background: rgba(230,162,60,.1); }
+.pri-tag.urgent { color: #F56C6C; background: rgba(245,108,108,.1); }
+.imgs { display: flex; gap: 3px; flex-shrink: 0; margin-top: 4px; }
 .imgs img { width: 24px; height: 24px; border-radius: 3px; object-fit: cover; }
 
-.date-tag { font-size: 11px; color: var(--text-tertiary); flex-shrink: 0; }
+.date-tag { font-size: 11px; color: var(--text-tertiary); }
 .date-tag.late { color: var(--color-danger); }
-.pri-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.pri-dot.high { background: #E6A23C; }
-.pri-dot.urgent { background: #F56C6C; }
+.item-del { font-size: 14px; color: var(--text-placeholder); cursor: pointer; opacity: 0; transition: opacity .15s; flex-shrink: 0; margin-top: 2px; padding: 0 4px; }
+.item:hover .item-del { opacity: .5; }
+.item-del:hover { opacity: 1 !important; color: var(--color-danger); }
 
 /* 空/加载 */
 .empty { padding: 40px 0; text-align: center; color: var(--text-tertiary); font-size: 13px; }
 .loading { padding: 40px 0; text-align: center; color: var(--text-tertiary); font-size: 13px; }
 
 /* 编辑弹窗 */
-.edit-check { margin-bottom: 12px; cursor: pointer; }
-.edit-title { width: 100%; border: none; outline: none; font-size: 16px; font-weight: 500; color: var(--text-primary); background: transparent; padding: 0; margin-bottom: 16px; border-bottom: 1px solid var(--border-color-light); padding-bottom: 8px; }
+.edit-top { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.edit-check { cursor: pointer; }
+.edit-status { font-size: 13px; color: var(--text-secondary); }
+.edit-title { width: 100%; border: none; outline: none; font-size: 15px; font-weight: 500; color: var(--text-primary); background: transparent; padding: 0; margin-bottom: 16px; border-bottom: 1px solid var(--border-color-light); padding-bottom: 8px; resize: none; line-height: 1.5; font-family: inherit; }
 .edit-row { margin-bottom: 12px; }
 .edit-label { font-size: 12px; color: var(--text-tertiary); display: block; margin-bottom: 6px; }
 .edit-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
@@ -518,7 +462,6 @@ watch(showNewCat, async (v) => { if (v) { await nextTick(); newCatRef.value?.foc
 .chip.pri.high.active { background: #E6A23C; color: #fff; border-color: #E6A23C; }
 .chip.pri.urgent { color: #F56C6C; border-color: rgba(245,108,108,.3); }
 .chip.pri.urgent.active { background: #F56C6C; color: #fff; border-color: #F56C6C; }
-.chip-input { width: 80px; font-size: 12px; padding: 3px 8px; border-radius: 10px; border: 1px solid var(--color-primary); outline: none; background: transparent; color: var(--text-primary); }
 
 .edit-imgs { display: flex; gap: 6px; flex-wrap: wrap; }
 .ei { position: relative; width: 56px; height: 56px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color-light); }

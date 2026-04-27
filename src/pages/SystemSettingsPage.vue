@@ -171,6 +171,103 @@
         </div>
       </div>
 
+      <!-- 待办通知 -->
+      <div class="setting-section">
+        <h3 class="section-title">待办通知</h3>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">截止日提醒</div>
+            <div class="setting-desc">待办截止日期当天未完成时发送通知提醒</div>
+          </div>
+          <el-switch
+              :model-value="settingsStore.settings.todo_notify_enabled === 'true'"
+              @change="(val: boolean) => settingsStore.setSetting('todo_notify_enabled', String(val))"
+          />
+        </div>
+
+        <template v-if="settingsStore.settings.todo_notify_enabled === 'true'">
+          <div class="setting-item">
+            <div class="setting-info">
+              <div class="setting-label">通知时间</div>
+              <div class="setting-desc">截止日当天几点发送提醒</div>
+            </div>
+            <el-select
+                :model-value="settingsStore.settings.todo_notify_time || '18:00'"
+                @change="(val: string) => settingsStore.setSetting('todo_notify_time', val)"
+                size="small"
+                style="width: 120px;"
+            >
+              <el-option v-for="t in todoNotifyTimes" :key="t" :label="t" :value="t"/>
+            </el-select>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <div class="setting-label">通知渠道</div>
+              <div class="setting-desc">选择发送截止日提醒的通知渠道</div>
+            </div>
+            <el-select
+                :model-value="todoNotifyChannels"
+                @change="onTodoNotifyChannelsChange"
+                multiple
+                size="small"
+                style="width: 260px;"
+                collapse-tags
+                collapse-tags-tooltip
+            >
+              <el-option v-for="ch in todoChannelOptions" :key="ch.key" :label="ch.icon + ' ' + ch.name" :value="ch.key"/>
+            </el-select>
+          </div>
+        </template>
+
+        <div class="setting-item" style="margin-top: 16px;">
+          <div class="setting-info">
+            <div class="setting-label">每日总结提醒</div>
+            <div class="setting-desc">每天定时提醒还有多少待办未完成</div>
+          </div>
+          <el-switch
+              :model-value="settingsStore.settings.todo_summary_enabled === 'true'"
+              @change="(val: boolean) => settingsStore.setSetting('todo_summary_enabled', String(val))"
+          />
+        </div>
+
+        <template v-if="settingsStore.settings.todo_summary_enabled === 'true'">
+          <div class="setting-item">
+            <div class="setting-info">
+              <div class="setting-label">总结时间</div>
+              <div class="setting-desc">每天几点发送待办总结</div>
+            </div>
+            <el-select
+                :model-value="settingsStore.settings.todo_summary_time || '18:00'"
+                @change="(val: string) => settingsStore.setSetting('todo_summary_time', val)"
+                size="small"
+                style="width: 120px;"
+            >
+              <el-option v-for="t in todoNotifyTimes" :key="t" :label="t" :value="t"/>
+            </el-select>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <div class="setting-label">通知渠道</div>
+              <div class="setting-desc">选择发送待办总结的通知渠道</div>
+            </div>
+            <el-select
+                :model-value="todoSummaryChannels"
+                @change="onTodoSummaryChannelsChange"
+                multiple
+                size="small"
+                style="width: 260px;"
+                collapse-tags
+                collapse-tags-tooltip
+            >
+              <el-option v-for="ch in todoChannelOptions" :key="ch.key" :label="ch.icon + ' ' + ch.name" :value="ch.key"/>
+            </el-select>
+          </div>
+        </template>
+      </div>
+
       <!-- API 接口设置 -->
       <div class="setting-section">
         <h3 class="section-title">API 接口</h3>
@@ -775,11 +872,12 @@ print(resp.json())</pre>
 </template>
 
 <script setup lang="ts">
-import {onMounted, ref} from 'vue'
+import {onMounted, ref, computed} from 'vue'
 import {useSettingsStore} from '@/stores/settings'
 import {ElMessage} from 'element-plus'
 import {ArrowDown} from '@element-plus/icons-vue'
 import {setCachedAppMode} from '@/router'
+import {CHANNELS} from '@/types/notification'
 import alipayImg from '@/../resources/alipay.jpg'
 import wechatpayImg from '@/../resources/wechatpay.jpg'
 
@@ -855,6 +953,42 @@ const themeOptions = [
   {label: '🌙 暗色', value: 'dark'},
   {label: '💻 跟随系统', value: 'system'}
 ]
+
+// 待办通知时间选项（整点和半点）
+const todoNotifyTimes = [
+  '06:00', '06:30', '07:00', '07:30', '08:00', '08:30',
+  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+  '12:00', '13:00', '14:00', '15:00', '16:00', '17:00',
+  '18:00', '19:00', '20:00', '21:00', '22:00'
+]
+
+// 待办通知渠道选项
+const todoChannelOptions = computed(() => {
+  // desktop 始终可选，其他渠道需已启用
+  return CHANNELS.filter(ch => ch.key === 'desktop' || settingsStore.settings[`notify_${ch.key}_enabled`] === 'true')
+})
+
+const todoNotifyChannels = computed(() => {
+  try {
+    const raw = settingsStore.settings.todo_notify_channels
+    return raw ? JSON.parse(raw) : ['desktop']
+  } catch { return ['desktop'] }
+})
+
+async function onTodoNotifyChannelsChange(val: string[]) {
+  await settingsStore.setSetting('todo_notify_channels', JSON.stringify(val))
+}
+
+const todoSummaryChannels = computed(() => {
+  try {
+    const raw = settingsStore.settings.todo_summary_channels
+    return raw ? JSON.parse(raw) : ['desktop']
+  } catch { return ['desktop'] }
+})
+
+async function onTodoSummaryChannelsChange(val: string[]) {
+  await settingsStore.setSetting('todo_summary_channels', JSON.stringify(val))
+}
 
 async function onLaunchAtStartupChange(val: boolean) {
   await settingsStore.setSetting('launch_at_startup', String(val))
