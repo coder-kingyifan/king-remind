@@ -9,7 +9,7 @@
           v-for="item in currentNavItems"
           :key="item.path"
           class="nav-item"
-          :class="{ active: route.path === item.path || (item.path === '/' && route.path === '/') }"
+          :class="{ active: isActive(item.path) }"
           @click="router.push(item.path)"
       >
         <el-tooltip :content="item.title" placement="right" :show-after="400">
@@ -21,6 +21,15 @@
     </div>
 
     <div class="sidebar-bottom">
+      <div
+        class="nav-item"
+        :class="{ active: route.path.startsWith('/settings') || route.path === '/model-config' || route.path === '/notifications' }"
+        @click="router.push('/settings')"
+      >
+        <el-tooltip content="设置" placement="right" :show-after="400">
+          <el-icon :size="20"><Setting/></el-icon>
+        </el-tooltip>
+      </div>
       <div class="nav-item theme-toggle" @click="toggleTheme">
         <el-tooltip :content="themeTooltip" placement="right" :show-after="400">
           <el-icon :size="20">
@@ -37,7 +46,7 @@
 import {computed} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {useSettingsStore} from '@/stores/settings'
-import {Bell, ChatDotRound, Cpu, MagicStick, Message, Moon, Odometer, Setting, Sunny, HomeFilled, List, Memo} from '@element-plus/icons-vue'
+import {Bell, ChatDotRound, MagicStick, Moon, Odometer, Setting, Sunny, HomeFilled, List, Memo} from '@element-plus/icons-vue'
 import logoIcon from '../../../resources/icon.png'
 
 const route = useRoute()
@@ -46,31 +55,29 @@ const settingsStore = useSettingsStore()
 
 // AI 提醒模式 - 全功能导航
 const aiNavItems = [
-  {path: '/', title: 'AI 助手', icon: ChatDotRound},
-  {path: '/dashboard', title: '数据概览', icon: Odometer},
-  {path: '/reminders', title: '提醒管理', icon: Bell},
-  {path: '/todos', title: '待办事项', icon: List},
-  {path: '/meetings', title: '会议管理', icon: Memo},
-  {path: '/notifications', title: '通知渠道', icon: Message},
-  {path: '/model-config', title: '模型配置', icon: Cpu},
-  {path: '/skills', title: '技能中心', icon: MagicStick},
-  {path: '/settings', title: '系统设置', icon: Setting}
+  {path: '/', title: '对话', icon: ChatDotRound},
+  {path: '/dashboard', title: '导览', icon: Odometer},
+  {path: '/reminders', title: '提醒', icon: Bell},
+  {path: '/meetings', title: '会议', icon: Memo},
+  {path: '/skills', title: '技能中心', icon: MagicStick}
 ]
 
 // 普通模式 - 简洁导航
 const simpleNavItems = [
-  {path: '/', title: '导览', icon: HomeFilled},
-  {path: '/reminders', title: '创建提醒', icon: Bell},
-  {path: '/todos', title: '待办事项', icon: List},
-  {path: '/meetings', title: '会议管理', icon: Memo},
-  {path: '/notifications', title: '消息渠道', icon: Message},
-  {path: '/settings', title: '设置', icon: Setting}
+  {path: '/dashboard', title: '导览', icon: HomeFilled},
+  {path: '/reminders', title: '提醒', icon: Bell},
+  {path: '/meetings', title: '会议', icon: Memo}
 ]
 
 const currentNavItems = computed(() => {
   const mode = settingsStore.settings.app_mode
   return mode === 'simple' ? simpleNavItems : aiNavItems
 })
+
+function isActive(path: string): boolean {
+  if (path === '/') return route.path === '/'
+  return route.path === path
+}
 
 const themeTooltip = computed(() => {
   return settingsStore.currentTheme === 'dark' ? '切换亮色' : '切换暗色'
@@ -124,6 +131,7 @@ function toggleTheme() {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 4px;
   -webkit-app-region: no-drag;
 }
 

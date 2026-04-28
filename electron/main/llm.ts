@@ -304,6 +304,16 @@ export const PROVIDERS: ProviderPreset[] = [
         models: ['whisper-large-v3', 'distil-whisper-large-v3-en']
     },
     {
+        id: 'xiaomi_stt',
+        name: '小米（语音转写）',
+        baseUrl: 'https://apim-njimx.xiaomi.com/v1',
+        apiKeyRequired: true,
+        defaultModel: 'MiMo-7B-RL',
+        protocol: 'openai',
+        modelType: 'stt',
+        models: ['MiMo-7B-RL']
+    },
+    {
         id: 'custom_stt',
         name: '自定义（STT 服务）',
         baseUrl: '',

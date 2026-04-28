@@ -34,16 +34,19 @@ const router = createRouter({
             meta: {title: '会议管理', icon: 'Memo'}
         },
         {
+            path: '/settings',
+            name: 'settings',
+            component: () => import('@/pages/SettingsPage.vue'),
+            meta: {title: '设置', icon: 'Setting'}
+        },
+        // Legacy routes redirect to settings sub-tabs
+        {
             path: '/notifications',
-            name: 'notifications',
-            component: () => import('@/pages/NotificationSettingsPage.vue'),
-            meta: {title: '通知渠道', icon: 'Message'}
+            redirect: {path: '/settings', query: {tab: 'notifications'}}
         },
         {
             path: '/model-config',
-            name: 'model-config',
-            component: () => import('@/pages/ModelConfigPage.vue'),
-            meta: {title: '大模型 管理', icon: 'Cpu'}
+            redirect: {path: '/settings', query: {tab: 'models'}}
         },
         {
             path: '/skills',
@@ -56,12 +59,6 @@ const router = createRouter({
             name: 'skill-store',
             component: () => import('@/pages/SkillStorePage.vue'),
             meta: {title: '技能商店', icon: 'ShoppingBag'}
-        },
-        {
-            path: '/settings',
-            name: 'settings',
-            component: () => import('@/pages/SystemSettingsPage.vue'),
-            meta: {title: '系统设置', icon: 'Setting'}
         }
     ]
 })

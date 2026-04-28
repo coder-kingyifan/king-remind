@@ -1,9 +1,9 @@
 <template>
-  <div class="model-config-page">
-    <div class="page-header">
+  <div class="model-config-section">
+    <div class="section-header">
       <div>
-        <h1 class="page-title">模型配置</h1>
-        <p class="page-subtitle">管理 AI 模型，对话时可切换</p>
+        <h2 class="section-title">模型配置</h2>
+        <p class="section-subtitle">管理 AI 模型，对话时可切换</p>
       </div>
       <el-button type="primary" @click="openForm()">
         <el-icon><Plus/></el-icon>
@@ -248,7 +248,6 @@ const filteredProviders = computed(() => {
     return providers.value.filter(p => WEB_SEARCH_PROVIDERS.includes(p.id))
   }
   if (form.value.model_type === 'stt') {
-    // STT: show doubao, openai, custom, and any other that could work
     return providers.value.filter(p => STT_PROVIDERS.includes(p.id))
   }
   // Text: show all except web_search-only providers
@@ -296,7 +295,7 @@ const PROVIDER_ICONS: Record<string, string> = {
   // STT providers
   doubao_stt: '\u{1F399}', xunfei_stt: '\u{1F3A4}', ali_stt: '\u{2601}\uFE0F',
   baidu_stt: '\u{1F535}', openai_stt: '\u{1F916}', siliconflow_stt: '\u{1F525}',
-  groq_stt: '\u26A1', custom_stt: '\u2699\uFE0F'
+  groq_stt: '\u26A1', xiaomi_stt: '\u{1F4F1}', custom_stt: '\u2699\uFE0F'
 }
 
 function getProviderIcon(id: string): string {
@@ -527,25 +526,25 @@ async function setDefault(id: number) {
 </script>
 
 <style scoped>
-.model-config-page {
+.model-config-section {
   max-width: 780px;
 }
 
-.page-header {
+.section-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 20px;
 }
 
-.page-title {
-  font-size: 22px;
+.section-title {
+  font-size: 18px;
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 4px;
 }
 
-.page-subtitle {
+.section-subtitle {
   font-size: 13px;
   color: var(--text-tertiary);
 }
@@ -674,16 +673,6 @@ async function setDefault(id: number) {
 .model-tag {
   font-size: 11px;
   cursor: default;
-}
-
-.model-tag-static {
-  background: var(--bg-secondary);
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 13px;
-  color: var(--text-primary);
-  font-family: monospace;
-  flex: 1;
 }
 
 .model-actions {
