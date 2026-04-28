@@ -220,6 +220,38 @@ const electronAPI = {
         toggle: (id: number) => safeInvoke('todos:toggle', id),
         stats: () => safeInvoke('todos:stats'),
         resolveImages: (paths: string[]) => safeInvoke('todos:resolve-images', paths)
+    },
+
+    // 会议管理
+    meetings: {
+        list: (filters?: any) => safeInvoke('meetings:list', filters),
+        get: (id: number) => safeInvoke('meetings:get', id),
+        create: (data: any) => safeInvoke('meetings:create', data),
+        update: (id: number, data: any) => safeInvoke('meetings:update', id, data),
+        delete: (id: number) => safeInvoke('meetings:delete', id),
+        updateStatus: (id: number, status: string) => safeInvoke('meetings:update-status', id, status),
+        stats: () => safeInvoke('meetings:stats'),
+        uploadFiles: (files: Array<{ name: string; data: string; type: string }>) =>
+            safeInvoke('meetings:upload-files', files),
+        resolveFiles: (paths: string[]) => safeInvoke('meetings:resolve-files', paths),
+        saveRecording: (dataUrl: string, meetingId?: number) =>
+            safeInvoke('meetings:save-recording', dataUrl, meetingId),
+        aiSummarize: (meetingId: number) => safeInvoke('meetings:ai-summarize', meetingId),
+        aiChat: (meetingId: number, question: string, chatHistory?: Array<{role: string; content: string}>) =>
+            safeInvoke('meetings:ai-chat', meetingId, question, chatHistory),
+        // 分段
+        segments: {
+            list: (meetingId: number) => safeInvoke('meetings:segments:list', meetingId),
+            add: (data: any) => safeInvoke('meetings:segments:add', data),
+            addBatch: (segments: any[]) => safeInvoke('meetings:segments:add-batch', segments),
+            update: (id: number, data: any) => safeInvoke('meetings:segments:update', id, data),
+            delete: (id: number) => safeInvoke('meetings:segments:delete', id),
+            deleteByMeeting: (meetingId: number) => safeInvoke('meetings:segments:delete-by-meeting', meetingId),
+            reorder: (meetingId: number, orderedIds: number[]) => safeInvoke('meetings:segments:reorder', meetingId, orderedIds)
+        },
+        // 语音转文字
+        stt: (meetingId: number, enableDiarization?: boolean) =>
+            safeInvoke('meetings:stt', meetingId, enableDiarization)
     }
 }
 

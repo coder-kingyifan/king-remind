@@ -28,6 +28,12 @@ const router = createRouter({
             meta: {title: '待办事项', icon: 'List'}
         },
         {
+            path: '/meetings',
+            name: 'meetings',
+            component: () => import('@/pages/MeetingsPage.vue'),
+            meta: {title: '会议管理', icon: 'Memo'}
+        },
+        {
             path: '/notifications',
             name: 'notifications',
             component: () => import('@/pages/NotificationSettingsPage.vue'),

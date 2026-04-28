@@ -18,6 +18,8 @@ export interface ProviderPreset {
     models: string[]
     /** 联网搜索 API 协议，仅 web_search 类型使用 */
     searchProtocol?: 'openai' | 'tavily' | 'jina' | 'bochaai' | 'exa'
+    /** 模型类型标记，用于自动归类到对应 tab */
+    modelType?: 'text' | 'web_search' | 'stt'
 }
 
 export const PROVIDERS: ProviderPreset[] = [
@@ -183,6 +185,7 @@ export const PROVIDERS: ProviderPreset[] = [
         defaultModel: 'sonar',
         protocol: 'openai',
         searchProtocol: 'openai',
+        modelType: 'web_search',
         models: ['sonar', 'sonar-pro', 'sonar-reasoning', 'sonar-reasoning-pro', 'sonar-deep-research']
     },
     {
@@ -193,6 +196,7 @@ export const PROVIDERS: ProviderPreset[] = [
         defaultModel: 'tavily-search',
         protocol: 'openai',
         searchProtocol: 'tavily',
+        modelType: 'web_search',
         models: ['tavily-search', 'tavily-extract']
     },
     {
@@ -203,6 +207,7 @@ export const PROVIDERS: ProviderPreset[] = [
         defaultModel: 'jina-search',
         protocol: 'openai',
         searchProtocol: 'jina',
+        modelType: 'web_search',
         models: ['jina-search', 'jina-reader', 'grounding']
     },
     {
@@ -213,6 +218,7 @@ export const PROVIDERS: ProviderPreset[] = [
         defaultModel: 'bocha-web-search',
         protocol: 'openai',
         searchProtocol: 'bochaai',
+        modelType: 'web_search',
         models: ['bocha-web-search', 'bocha-ai-search']
     },
     {
@@ -223,7 +229,89 @@ export const PROVIDERS: ProviderPreset[] = [
         defaultModel: 'exa-search',
         protocol: 'openai',
         searchProtocol: 'exa',
+        modelType: 'web_search',
         models: ['exa-search', 'exa-contents']
+    },
+    // ========== 语音转文字模型 ==========
+    {
+        id: 'doubao_stt',
+        name: '豆包/火山引擎（语音转写）',
+        baseUrl: 'https://openspeech.bytedance.com/api/v1',
+        apiKeyRequired: true,
+        defaultModel: 'asr',
+        protocol: 'openai',
+        modelType: 'stt',
+        models: ['asr']
+    },
+    {
+        id: 'xunfei_stt',
+        name: '讯飞（语音转写）',
+        baseUrl: 'https://api.xf-yun.com/v1',
+        apiKeyRequired: true,
+        defaultModel: 'iat',
+        protocol: 'openai',
+        modelType: 'stt',
+        models: ['iat']
+    },
+    {
+        id: 'ali_stt',
+        name: '阿里云（语音识别）',
+        baseUrl: 'https://nls-gateway-cn-shanghai.aliyuncs.com',
+        apiKeyRequired: true,
+        defaultModel: 'paraformer-v2',
+        protocol: 'openai',
+        modelType: 'stt',
+        models: ['paraformer-v2', 'sensevoice']
+    },
+    {
+        id: 'baidu_stt',
+        name: '百度（语音识别）',
+        baseUrl: 'https://aip.baidubce.com/rpc/2.0/aas/v1',
+        apiKeyRequired: true,
+        defaultModel: 'asr',
+        protocol: 'openai',
+        modelType: 'stt',
+        models: ['asr']
+    },
+    {
+        id: 'openai_stt',
+        name: 'OpenAI Whisper',
+        baseUrl: 'https://api.openai.com/v1',
+        apiKeyRequired: true,
+        defaultModel: 'whisper-1',
+        protocol: 'openai',
+        modelType: 'stt',
+        models: ['whisper-1']
+    },
+    {
+        id: 'siliconflow_stt',
+        name: 'SiliconFlow（语音转写）',
+        baseUrl: 'https://api.siliconflow.cn/v1',
+        apiKeyRequired: true,
+        defaultModel: 'FunAudioLLM/SenseVoiceSmall',
+        protocol: 'openai',
+        modelType: 'stt',
+        models: ['FunAudioLLM/SenseVoiceSmall']
+    },
+    {
+        id: 'groq_stt',
+        name: 'Groq Whisper',
+        baseUrl: 'https://api.groq.com/openai/v1',
+        apiKeyRequired: true,
+        defaultModel: 'whisper-large-v3',
+        protocol: 'openai',
+        modelType: 'stt',
+        models: ['whisper-large-v3', 'distil-whisper-large-v3-en']
+    },
+    {
+        id: 'custom_stt',
+        name: '自定义（STT 服务）',
+        baseUrl: '',
+        apiKeyRequired: true,
+        defaultModel: '',
+        protocol: 'openai',
+        modelType: 'stt',
+        models: []
     }
 ]
 

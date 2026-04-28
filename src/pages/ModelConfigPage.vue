@@ -57,7 +57,7 @@
     </div>
 
     <div v-else class="empty-hint">
-      <p>还没有配置{{ activeType === 'web_search' ? '联网搜索' : '对话' }}模型，点击上方「添加模型」开始</p>
+      <p>还没有配置{{ activeType === 'web_search' ? '联网搜索' : activeType === 'stt' ? '语音转文字' : '对话' }}模型，点击上方「添加模型」开始</p>
     </div>
 
     <!-- 编辑弹窗 -->
@@ -73,6 +73,7 @@
             <el-select v-model="form.model_type" style="width: 100%;" @change="onModelTypeChange">
               <el-option label="对话模型" value="text"/>
               <el-option label="联网搜索" value="web_search"/>
+              <el-option label="语音转文字" value="stt"/>
             </el-select>
           </el-form-item>
           <el-form-item label="服务商" class="flex-1">
@@ -87,10 +88,10 @@
         </el-form-item>
 
         <!-- 对话模型才显示模型列表 -->
-        <el-form-item v-if="form.model_type !== 'web_search'" label="模型列表" required>
+        <el-form-item v-if="form.model_type !== 'web_search'" :label="form.model_type === 'stt' ? '模型名称' : '模型列表'" required>
           <div class="model-input-list">
             <div class="model-list-header">
-              <span class="model-list-hint">点击左侧星标设为默认模型，勾选多模态可识别图片</span>
+              <span class="model-list-hint">{{ form.model_type === 'stt' ? '语音转文字模型名称' : '点击左侧星标设为默认模型，勾选多模态可识别图片' }}</span>
             </div>
             <div v-for="(m, idx) in form.models" :key="idx" class="model-input-row">
               <span
@@ -106,6 +107,7 @@
                 style="flex: 1;"
               />
               <el-checkbox
+                v-if="form.model_type !== 'stt'"
                 :model-value="form.modelMultimodal[idx]"
                 @change="(val: boolean) => form.modelMultimodal[idx] = val"
               >多模态</el-checkbox>
@@ -186,6 +188,7 @@ interface ProviderInfo {
   apiKeyRequired: boolean
   defaultModel: string
   models: string[]
+  modelType?: string | null
 }
 
 const configs = ref<ModelConfigRow[]>([])
@@ -210,20 +213,27 @@ const form = ref({
 
 const typeTabs = [
   {value: 'text', label: '对话模型', icon: '\u{1F4AC}'},
+  {value: 'stt', label: '语音转文字', icon: '\u{1F399}'},
   {value: 'web_search', label: '联网搜索', icon: '\u{1F310}'}
 ]
 
 // Web search providers
 const WEB_SEARCH_PROVIDERS = ['perplexity', 'tavily', 'jina', 'bochaai', 'exa']
+// STT providers
+const STT_PROVIDERS = ['doubao_stt', 'xunfei_stt', 'ali_stt', 'baidu_stt', 'openai_stt', 'siliconflow_stt', 'groq_stt', 'custom_stt']
 
 function countByType(type: string): number {
-  if (type === 'text') return configs.value.filter(c => c.model_type !== 'web_search').length
+  if (type === 'text') return configs.value.filter(c => c.model_type !== 'web_search' && c.model_type !== 'stt').length
+  if (type === 'stt') return configs.value.filter(c => c.model_type === 'stt').length
   return configs.value.filter(c => c.model_type === 'web_search').length
 }
 
 const filteredConfigs = computed(() => {
   if (activeType.value === 'text') {
-    return configs.value.filter(c => c.model_type !== 'web_search')
+    return configs.value.filter(c => c.model_type !== 'web_search' && c.model_type !== 'stt')
+  }
+  if (activeType.value === 'stt') {
+    return configs.value.filter(c => c.model_type === 'stt')
   }
   return configs.value.filter(c => c.model_type === 'web_search')
 })
@@ -237,6 +247,11 @@ const filteredProviders = computed(() => {
   if (form.value.model_type === 'web_search') {
     return providers.value.filter(p => WEB_SEARCH_PROVIDERS.includes(p.id))
   }
+  if (form.value.model_type === 'stt') {
+    // STT: show doubao, openai, custom, and any other that could work
+    return providers.value.filter(p => STT_PROVIDERS.includes(p.id))
+  }
+  // Text: show all except web_search-only providers
   return providers.value.filter(p => !WEB_SEARCH_PROVIDERS.includes(p.id))
 })
 
@@ -277,7 +292,11 @@ const PROVIDER_ICONS: Record<string, string> = {
   siliconflow: '\u{1F525}', groq: '\u26A1', xiaomi: '\u{1F4F1}',
   custom: '\u2699\uFE0F', custom_anthropic: '\u{1F9E0}',
   perplexity: '\u{1F50D}', tavily: '\u{1F50E}', jina: '\u{1F310}',
-  bochaai: '\u{1F4E1}', exa: '\u{1F3AF}'
+  bochaai: '\u{1F4E1}', exa: '\u{1F3AF}',
+  // STT providers
+  doubao_stt: '\u{1F399}', xunfei_stt: '\u{1F3A4}', ali_stt: '\u{2601}\uFE0F',
+  baidu_stt: '\u{1F535}', openai_stt: '\u{1F916}', siliconflow_stt: '\u{1F525}',
+  groq_stt: '\u26A1', custom_stt: '\u2699\uFE0F'
 }
 
 function getProviderIcon(id: string): string {
@@ -298,9 +317,14 @@ onMounted(() => {
 })
 
 function onModelTypeChange(type: string) {
-  const list = type === 'web_search'
-    ? providers.value.filter(p => WEB_SEARCH_PROVIDERS.includes(p.id))
-    : providers.value.filter(p => !WEB_SEARCH_PROVIDERS.includes(p.id))
+  let list: ProviderInfo[]
+  if (type === 'web_search') {
+    list = providers.value.filter(p => p.modelType === 'web_search' || WEB_SEARCH_PROVIDERS.includes(p.id))
+  } else if (type === 'stt') {
+    list = providers.value.filter(p => p.modelType === 'stt' || STT_PROVIDERS.includes(p.id))
+  } else {
+    list = providers.value.filter(p => !p.modelType || p.modelType === 'text')
+  }
   if (!list.find(p => p.id === form.value.provider)) {
     form.value.provider = ''
     form.value.base_url = ''
@@ -320,6 +344,12 @@ function onProviderChange(id: string) {
   if (form.value.model_type === 'web_search' && p.models && p.models.length > 0) {
     form.value.models = [...p.models]
     form.value.modelMultimodal = p.models.map(() => false)
+    form.value.defaultModelIndex = 0
+  }
+  // STT: auto-fill default model name
+  if (form.value.model_type === 'stt' && p.models && p.models.length > 0) {
+    form.value.models = [p.models[0]]
+    form.value.modelMultimodal = [false]
     form.value.defaultModelIndex = 0
   }
 }
@@ -361,12 +391,14 @@ function openForm(cfg?: ModelConfigRow) {
       models,
       modelMultimodal: multimodal,
       defaultModelIndex: defaultIdx,
-      model_type: cfg.model_type === 'web_search' ? 'web_search' : 'text',
+      model_type: cfg.model_type === 'web_search' ? 'web_search' : (cfg.model_type === 'stt' ? 'stt' : 'text'),
       is_default: !!cfg.is_default
     }
   } else {
     editingId.value = null
-    const isWebSearch = activeType.value === 'web_search'
+    let modelType = 'text'
+    if (activeType.value === 'web_search') modelType = 'web_search'
+    else if (activeType.value === 'stt') modelType = 'stt'
     form.value = {
       name: '',
       provider: '',
@@ -375,7 +407,7 @@ function openForm(cfg?: ModelConfigRow) {
       models: [''],
       modelMultimodal: [false],
       defaultModelIndex: 0,
-      model_type: isWebSearch ? 'web_search' : 'text',
+      model_type: modelType,
       is_default: configs.value.length === 0
     }
   }
@@ -384,19 +416,19 @@ function openForm(cfg?: ModelConfigRow) {
 
 async function handleTestModel() {
   let validModels = form.value.models.filter(m => m.trim())
-  // For web_search, fall back to provider preset models
+  // For web_search/stt, fall back to provider preset models
   if (validModels.length === 0 && form.value.model_type === 'web_search' && currentProviderPreset.value?.models?.length) {
     validModels = [...currentProviderPreset.value.models]
   }
-  if (validModels.length === 0 && form.value.model_type !== 'web_search') {
+  if (validModels.length === 0 && form.value.model_type !== 'web_search' && form.value.model_type !== 'stt') {
     ElMessage.warning('请先填写至少一个模型名称')
     return
   }
-  if (form.value.model_type === 'web_search' && !form.value.provider) {
+  if ((form.value.model_type === 'web_search' || form.value.model_type === 'stt') && !form.value.provider) {
     ElMessage.warning('请先选择服务商')
     return
   }
-  const testModelName = validModels[form.value.defaultModelIndex] || validModels[0]
+  const testModelName = validModels[form.value.defaultModelIndex] || validModels[0] || 'asr'
   testing.value = true
   try {
     const result = await window.electronAPI.models.test({
@@ -419,19 +451,23 @@ async function handleTestModel() {
 
 async function handleSave() {
   let validModels = form.value.models.filter(m => m.trim())
-  // For web_search, fall back to provider preset models
+  // For web_search/stt, fall back to provider preset models
   if (validModels.length === 0 && form.value.model_type === 'web_search' && currentProviderPreset.value?.models?.length) {
     validModels = [...currentProviderPreset.value.models]
+  }
+  // For stt, use default model name
+  if (validModels.length === 0 && form.value.model_type === 'stt') {
+    validModels = [form.value.provider === 'doubao' ? 'asr' : 'whisper-1']
   }
   if (!form.value.name) {
     ElMessage.warning('请填写名称')
     return
   }
-  if (form.value.model_type !== 'web_search' && validModels.length === 0) {
+  if (form.value.model_type !== 'web_search' && form.value.model_type !== 'stt' && validModels.length === 0) {
     ElMessage.warning('请填写至少一个模型名称')
     return
   }
-  if (form.value.model_type === 'web_search' && !form.value.provider) {
+  if ((form.value.model_type === 'web_search' || form.value.model_type === 'stt') && !form.value.provider) {
     ElMessage.warning('请选择服务商')
     return
   }

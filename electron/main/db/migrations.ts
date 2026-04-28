@@ -696,6 +696,54 @@ export function runMigrations(): void {
             sql: `
                 ALTER TABLE todos ADD COLUMN images TEXT NOT NULL DEFAULT '[]';
             `
+        },
+        {
+            version: 28,
+            sql: `
+                CREATE TABLE IF NOT EXISTS meetings
+                (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    description TEXT DEFAULT '',
+                    meeting_type TEXT NOT NULL DEFAULT 'regular',
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    start_time TEXT NOT NULL,
+                    end_time TEXT DEFAULT NULL,
+                    location TEXT DEFAULT '',
+                    participants TEXT NOT NULL DEFAULT '[]',
+                    minutes TEXT DEFAULT '',
+                    ai_summary TEXT DEFAULT NULL,
+                    attachments TEXT NOT NULL DEFAULT '[]',
+                    recording_path TEXT DEFAULT NULL,
+                    has_recording INTEGER NOT NULL DEFAULT 0,
+                    todo_ids TEXT NOT NULL DEFAULT '[]',
+                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+                );
+                CREATE INDEX IF NOT EXISTS idx_meetings_status ON meetings(status);
+                CREATE INDEX IF NOT EXISTS idx_meetings_start_time ON meetings(start_time);
+                CREATE INDEX IF NOT EXISTS idx_meetings_type ON meetings(meeting_type);
+            `
+        },
+        {
+            version: 29,
+            sql: `
+                CREATE TABLE IF NOT EXISTS meeting_segments
+                (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    meeting_id INTEGER NOT NULL,
+                    segment_type TEXT NOT NULL DEFAULT 'text',
+                    content TEXT NOT NULL DEFAULT '',
+                    speaker TEXT DEFAULT '',
+                    sort_order INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                    FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_segments_meeting ON meeting_segments(meeting_id);
+
+                ALTER TABLE meetings ADD COLUMN stt_text TEXT DEFAULT NULL;
+                ALTER TABLE meetings ADD COLUMN stt_status TEXT NOT NULL DEFAULT 'none';
+            `
         }
     ]
 

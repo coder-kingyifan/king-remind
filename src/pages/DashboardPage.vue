@@ -39,6 +39,32 @@
       </div>
     </div>
 
+    <!-- 会议 -->
+    <div class="section">
+      <div class="section-head">
+        <span class="section-icon">📋</span>
+        <span class="section-name">会议</span>
+      </div>
+      <div class="metric-row">
+        <div class="metric" @click="router.push('/meetings')">
+          <span class="metric-val">{{ dashStats.meetingTotal }}</span>
+          <span class="metric-lbl">总会议</span>
+        </div>
+        <div class="metric" @click="router.push('/meetings')">
+          <span class="metric-val">{{ dashStats.meetingOngoing }}</span>
+          <span class="metric-lbl">进行中</span>
+        </div>
+        <div class="metric">
+          <span class="metric-val">{{ dashStats.meetingToday }}</span>
+          <span class="metric-lbl">今日会议</span>
+        </div>
+        <div class="metric">
+          <span class="metric-val">{{ dashStats.meetingPending }}</span>
+          <span class="metric-lbl">未开始</span>
+        </div>
+      </div>
+    </div>
+
     <!-- AI & 系统 -->
     <div v-if="!isSimpleMode" class="section">
       <div class="section-head">
@@ -142,7 +168,8 @@ const dashStats = ref({
   chatSessionCount: 0, chatMessageCount: 0,
   modelCount: 0, skillCount: 0, enabledSkillCount: 0,
   enabledChannels: 0, totalChannels: 0,
-  todoTotal: 0, todoCompleted: 0, todoPending: 0, todoOverdue: 0
+  todoTotal: 0, todoCompleted: 0, todoPending: 0, todoOverdue: 0,
+  meetingTotal: 0, meetingPending: 0, meetingOngoing: 0, meetingCompleted: 0, meetingToday: 0
 })
 
 const todoPercent = computed(() => {
