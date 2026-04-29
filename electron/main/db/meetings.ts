@@ -99,12 +99,14 @@ export const meetingsDb = {
         recording_path?: string | null
         has_recording?: number
         todo_ids?: number[]
+        stt_text?: string | null
+        stt_status?: string
     }): MeetingRow {
         const db = getDatabase()
 
         run(`
-            INSERT INTO meetings (title, description, meeting_type, status, start_time, end_time, location, participants, minutes, attachments, recording_path, has_recording, todo_ids)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO meetings (title, description, meeting_type, status, start_time, end_time, location, participants, minutes, attachments, recording_path, has_recording, todo_ids, stt_text, stt_status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             data.title,
             data.description || '',
@@ -118,7 +120,9 @@ export const meetingsDb = {
             JSON.stringify(data.attachments || []),
             data.recording_path || null,
             data.has_recording || 0,
-            JSON.stringify(data.todo_ids || [])
+            JSON.stringify(data.todo_ids || []),
+            data.stt_text || null,
+            data.stt_status || 'none'
         ])
 
         const idResult = db.exec('SELECT last_insert_rowid() as id')

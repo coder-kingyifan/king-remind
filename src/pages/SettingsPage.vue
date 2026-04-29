@@ -36,34 +36,54 @@
 </template>
 
 <script setup lang="ts">
-import {ref, watch} from 'vue'
+import {computed, ref, watch} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {Bell, Setting, Cpu} from '@element-plus/icons-vue'
 import ModelConfigSection from './settings/ModelConfigSection.vue'
 import NotificationSection from './settings/NotificationSection.vue'
 import SystemSection from './settings/SystemSection.vue'
+import {useSettingsStore} from '@/stores/settings'
 
 const route = useRoute()
 const router = useRouter()
+const settingsStore = useSettingsStore()
 
-const tabs = [
+const isSimpleMode = computed(() => settingsStore.settings.app_mode === 'simple')
+
+const allTabs = [
   {key: 'models', label: '模型配置', icon: Cpu},
   {key: 'notifications', label: '通知渠道', icon: Bell},
   {key: 'system', label: '系统设置', icon: Setting}
 ]
 
-const activeTab = ref('models')
+const tabs = computed(() => isSimpleMode.value ? allTabs.filter(t => t.key !== 'models') : allTabs)
 
-// 从路由 query 读取初始 tab
-watch(() => route.query.tab, (tab) => {
-  if (tab && tabs.some(t => t.key === tab)) {
+const defaultTab = computed(() => isSimpleMode.value ? 'notifications' : 'models')
+
+const activeTab = ref(defaultTab.value)
+
+// 从路由同步 tab：监听 path 和 query.tab
+watch([() => route.path, () => route.query.tab], ([path, tab]) => {
+  if (path !== '/settings') return
+  if (tab && tabs.value.some(t => t.key === tab)) {
     activeTab.value = tab as string
+  } else if (!tabs.value.some(t => t.key === activeTab.value)) {
+    activeTab.value = defaultTab.value
   }
 }, {immediate: true})
 
-// 切换 tab 时更新 URL
+// 当模式切换时，如果当前 tab 不可用则重置
+watch(isSimpleMode, () => {
+  if (!tabs.value.some(t => t.key === activeTab.value)) {
+    activeTab.value = defaultTab.value
+  }
+})
+
+// 切换 tab 时更新 URL（跳过初始化和重复值）
 watch(activeTab, (tab) => {
-  router.replace({path: '/settings', query: {tab}})
+  if (tab && route.query.tab !== tab) {
+    router.replace({path: '/settings', query: {tab}})
+  }
 })
 </script>
 

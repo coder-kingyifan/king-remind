@@ -1587,7 +1587,7 @@ export async function testModelConnection(data: {
             return {ok: true, message: 'WSS 连接成功', reply: '实时转写通道可连接'}
         }
         if (provider.modelType === 'stt') {
-            return {ok: false, message: '语音实时转写需要填写 ws:// 或 wss:// 地址'}
+            return {ok: true, message: '普通语音转写配置可用', reply: '保存后可用于录音文件批量转写'}
         }
 
         // 搜索 API 走各自的协议测试

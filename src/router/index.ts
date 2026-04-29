@@ -66,18 +66,21 @@ const router = createRouter({
 // 缓存 app_mode，避免每次导航都读取
 let cachedAppMode: string | null = null
 
-// 普通提醒模式下，/ 重定向到 /dashboard
+// 普通提醒模式下，/ 重定向到 /dashboard；AI 相关路由重定向到 /dashboard
 router.beforeEach(async (to, _from, next) => {
-    if (to.path === '/') {
-        try {
-            if (cachedAppMode === null) {
-                const settings = await window.electronAPI.settings.getAll()
-                cachedAppMode = settings.app_mode || 'ai'
-            }
-            if (cachedAppMode === 'simple') {
+    try {
+        if (cachedAppMode === null) {
+            const settings = await window.electronAPI.settings.getAll()
+            cachedAppMode = settings.app_mode || 'ai'
+        }
+        if (cachedAppMode === 'simple') {
+            if (to.path === '/' || aiRoutes.includes(to.path)) {
                 return next('/dashboard')
             }
-        } catch { /* ignore */ }
+        }
+    } catch { /* ignore */ }
+    if (to.path === '/') {
+        return next()
     }
     next()
 })

@@ -34,6 +34,10 @@ export interface RealtimeSttEvent {
     message?: string
     full_text?: string
     raw?: any
+    /** 增量文本：仅本次 final 新增的句子（不含之前已发送的） */
+    delta_text?: string
+    /** 增量话语：仅本次 final 新增的话语 */
+    delta_utterances?: RealtimeSttUtterance[]
 }
 
 export interface RealtimeSttUtterance {
@@ -44,7 +48,7 @@ export interface RealtimeSttUtterance {
 export interface RealtimeSttSession {
     id: string
     sendAudio(buffer: Buffer): void
-    stop(): string
+    stop(): Promise<string>
 }
 
 /**
@@ -52,9 +56,8 @@ export interface RealtimeSttSession {
  */
 function getSttConfig(): SttConfig | null {
     const configs = modelConfigsDb.list()
-    const sttConfigs = configs.filter(c => c.model_type === 'stt')
+    const sttConfigs = configs.filter(c => (c.model_type === 'stt' || c.model_type === 'file_stt') && !/^wss?:\/\//i.test(c.base_url))
     if (sttConfigs.length === 0) return null
-    // 优先使用默认配置
     const defaultCfg = sttConfigs.find(c => c.is_default === 1)
     const cfg = defaultCfg || sttConfigs[0]
     return {
@@ -67,7 +70,7 @@ function getSttConfig(): SttConfig | null {
 
 function getRealtimeSttConfig(): SttConfig | null {
     const configs = modelConfigsDb.list()
-    const realtimeConfigs = configs.filter(c => c.model_type === 'stt' && /^wss?:\/\//i.test(c.base_url))
+    const realtimeConfigs = configs.filter(c => (c.model_type === 'stt' || c.model_type === 'realtime_stt') && /^wss?:\/\//i.test(c.base_url))
     if (realtimeConfigs.length === 0) return null
     const defaultCfg = realtimeConfigs.find(c => c.is_default === 1)
     const cfg = defaultCfg || realtimeConfigs[0]
@@ -257,7 +260,7 @@ function getSpeakerLabel(data: any, fallbackIndex = 1): string {
     const text = String(value).trim()
     if (!text) return ''
     if (/^(用户|说话人|speaker|user)/i.test(text)) return text
-    return `用户${text || fallbackIndex}`
+    return `用户${text.length > 0 ? text : fallbackIndex}`
 }
 
 function getRealtimeUtteranceItems(data: any): any[] {
@@ -302,6 +305,27 @@ function formatRealtimeUtterances(utterances: RealtimeSttUtterance[]): string {
         }
     }
     return merged.map(item => `${item.speaker}：${item.text}`).join('\n')
+}
+
+function mergeRealtimeFinalText(parts: string[], nextText: string): string {
+    const text = nextText.trim()
+    if (!text) return parts.join('\n')
+
+    const current = parts.join('\n').trim()
+    if (!current) {
+        parts.push(text)
+        return text
+    }
+    if (current === text || current.endsWith(text)) {
+        return current
+    }
+    if (text.startsWith(current)) {
+        parts.splice(0, parts.length, text)
+        return text
+    }
+
+    parts.push(text)
+    return parts.join('\n')
 }
 
 function extractRealtimeText(data: any): { text: string; final: boolean; speaker?: string; utterances?: RealtimeSttUtterance[] } {
@@ -380,10 +404,12 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
     const sessionId = `stt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const pendingAudio: Buffer[] = []
     const finalParts: string[] = []
+    const sentUtterances: RealtimeSttUtterance[] = [] // 已发送的话语，用于计算增量
     const doubaoBigModel = isDoubaoBigModelRealtime(config)
     let opened = false
     let closed = false
     let endTimer: ReturnType<typeof setTimeout> | null = null
+    let stopResolver: ((text: string) => void) | null = null
 
     const ws = new WebSocket(url, {
         headers: doubaoBigModel
@@ -444,13 +470,46 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
         if (!parsed.text) return
 
         if (parsed.final) {
-            finalParts.push(parsed.text)
+            const fullText = mergeRealtimeFinalText(finalParts, parsed.text)
+
+            // 计算增量话语：仅本次新增的
+            let deltaUtterances: RealtimeSttUtterance[] = []
+            if (parsed.utterances && parsed.utterances.length > 0) {
+                const sentCount = sentUtterances.length
+                if (parsed.utterances.length > sentCount) {
+                    // 有新话语
+                    deltaUtterances = parsed.utterances.slice(sentCount)
+                }
+                // 更新已发送的话语记录
+                sentUtterances.length = 0
+                sentUtterances.push(...parsed.utterances)
+            }
+
+            // 增量文本：仅新增话语的格式化文本
+            let deltaText = ''
+            if (deltaUtterances.length > 0) {
+                deltaText = formatRealtimeUtterances(deltaUtterances)
+            } else {
+                // 没有话语信息时，用文本差异计算增量
+                const prevFull = finalParts.length > 1
+                    ? finalParts.slice(0, -1).join('\n').trim()
+                    : (finalParts.length === 1 ? '' : '')
+                if (fullText.startsWith(prevFull) && prevFull) {
+                    deltaText = fullText.slice(prevFull.length).trim()
+                    if (deltaText.startsWith('\n')) deltaText = deltaText.slice(1).trim()
+                } else {
+                    deltaText = parsed.text.trim()
+                }
+            }
+
             onEvent({
                 type: 'final',
                 text: parsed.text,
                 speaker: parsed.speaker,
                 utterances: parsed.utterances,
-                full_text: finalParts.join('\n'),
+                full_text: fullText,
+                delta_text: deltaText,
+                delta_utterances: deltaUtterances.length ? deltaUtterances : undefined,
                 raw
             })
         } else {
@@ -469,11 +528,20 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
     ws.on('close', () => {
         if (endTimer) clearTimeout(endTimer)
         closed = true
-        onEvent({type: 'closed', full_text: finalParts.join('\n')})
+        const fullText = finalParts.join('\n')
+        onEvent({type: 'closed', full_text: fullText})
+        if (stopResolver) {
+            stopResolver(fullText)
+            stopResolver = null
+        }
     })
 
     ws.on('error', (error) => {
         onEvent({type: 'error', message: error.message})
+        if (stopResolver) {
+            stopResolver(finalParts.join('\n'))
+            stopResolver = null
+        }
     })
 
     return {
@@ -487,19 +555,42 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
             }
         },
         stop() {
-            if (!closed && ws.readyState === WebSocket.OPEN) {
-                if (doubaoBigModel) {
-                    ws.send(buildDoubaoEndFrame())
-                    endTimer = setTimeout(() => ws.close(), 500)
-                } else {
-                    ws.send(JSON.stringify({type: 'end'}))
+            return new Promise<string>((resolve) => {
+                if (closed || ws.readyState === WebSocket.CLOSED) {
+                    resolve(finalParts.join('\n'))
+                    return
+                }
+                stopResolver = resolve
+                const finishTimer = setTimeout(() => {
+                    if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+                        ws.close()
+                    }
+                    if (stopResolver) {
+                        stopResolver(finalParts.join('\n'))
+                        stopResolver = null
+                    }
+                }, doubaoBigModel ? 1800 : 800)
+
+                const previousResolver = stopResolver
+                stopResolver = (text: string) => {
+                    clearTimeout(finishTimer)
+                    previousResolver?.(text)
+                }
+
+                if (ws.readyState === WebSocket.OPEN) {
+                    if (doubaoBigModel) {
+                        ws.send(buildDoubaoEndFrame())
+                        endTimer = setTimeout(() => ws.close(), 1200)
+                    } else {
+                        ws.send(JSON.stringify({type: 'end'}))
+                        setTimeout(() => {
+                            if (ws.readyState === WebSocket.OPEN) ws.close()
+                        }, 300)
+                    }
+                } else if (ws.readyState === WebSocket.CONNECTING) {
                     ws.close()
                 }
-            } else if (!closed && ws.readyState === WebSocket.CONNECTING) {
-                ws.close()
-            }
-            closed = true
-            return finalParts.join('\n')
+            })
         }
     }
 }
@@ -510,7 +601,7 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
 export async function transcribeAudio(audioPath: string, enableDiarization = true): Promise<SttResult> {
     const config = getSttConfig()
     if (!config) {
-        throw new Error('未配置语音转文字模型，请先在「模型配置 → 语音转文字」中添加')
+        throw new Error('未配置普通语音转文字模型，请先在「模型配置 → 语音模型」中添加非 WSS 的批量转写配置')
     }
 
     if (!fs.existsSync(audioPath)) {

@@ -41,7 +41,7 @@ export interface ModelConfig {
     model: string
     models: string   // JSON array string, e.g. '["gpt-4o","gpt-4o-mini"]'
     model_notes: string  // JSON object string, e.g. '{"gpt-4o":"多模态模型","gpt-4o-mini":"轻量模型"}'
-    model_type: string   // 'text' | 'multimodal' | 'web_search'
+    model_type: string   // 'text' | 'multimodal' | 'web_search' | 'realtime_stt' | 'file_stt'
     is_default: number
     created_at: string
     updated_at: string

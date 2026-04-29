@@ -8,8 +8,8 @@
     </div>
 
     <div class="settings-list">
-      <!-- 用户信息 -->
-      <div class="setting-section">
+      <!-- 用户信息（仅 AI 模式显示） -->
+      <div class="setting-section" v-if="settingsStore.settings.app_mode !== 'simple'">
         <h3 class="section-title">用户信息</h3>
 
         <div class="setting-item">

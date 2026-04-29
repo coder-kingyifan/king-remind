@@ -57,7 +57,7 @@
     </div>
 
     <div v-else class="empty-hint">
-      <p>还没有配置{{ activeType === 'web_search' ? '联网搜索' : activeType === 'stt' ? '语音实时转写' : '对话' }}模型，点击上方「添加模型」开始</p>
+      <p>还没有配置{{ activeType === 'web_search' ? '联网搜索' : activeType === 'realtime_stt' ? '实时语音' : activeType === 'file_stt' ? '语音转写' : '对话' }}模型，点击上方「添加模型」开始</p>
     </div>
 
     <!-- 编辑弹窗 -->
@@ -73,7 +73,8 @@
             <el-select v-model="form.model_type" style="width: 100%;" @change="onModelTypeChange">
               <el-option label="对话模型" value="text"/>
               <el-option label="联网搜索" value="web_search"/>
-              <el-option label="语音实时转写" value="stt"/>
+              <el-option label="实时语音" value="realtime_stt"/>
+              <el-option label="语音转写" value="file_stt"/>
             </el-select>
           </el-form-item>
           <el-form-item label="服务商" class="flex-1">
@@ -88,10 +89,10 @@
         </el-form-item>
 
         <!-- 对话模型才显示模型列表 -->
-        <el-form-item v-if="form.model_type !== 'web_search'" :label="form.model_type === 'stt' ? '实时转写模型名称' : '模型列表'" required>
+        <el-form-item v-if="form.model_type !== 'web_search'" :label="isSttModelType(form.model_type) ? '实时转写模型名称' : '模型列表'" required>
           <div class="model-input-list">
             <div class="model-list-header">
-              <span class="model-list-hint">{{ form.model_type === 'stt' ? 'WSS 实时转写模型名称，默认 realtime' : '点击左侧星标设为默认模型，勾选多模态可识别图片' }}</span>
+              <span class="model-list-hint">{{ isSttModelType(form.model_type) ? '语音模型名称：实时填 realtime，批量按服务商填写' : '点击左侧星标设为默认模型，勾选多模态可识别图片' }}</span>
             </div>
             <div v-for="(m, idx) in form.models" :key="idx" class="model-input-row">
               <span
@@ -130,9 +131,9 @@
           </div>
         </el-form-item>
 
-        <el-form-item :label="form.model_type === 'stt' ? 'WSS 地址' : 'API 地址'">
+        <el-form-item :label="isSttModelType(form.model_type) && isRealtimeSttProvider ? 'WSS 地址' : 'API 地址'">
           <el-input v-model="form.base_url"
-                    :placeholder="form.model_type === 'stt' ? 'wss://your-stt-server/ws' : (currentProviderPreset?.baseUrl || 'https://api.openai.com/v1')"/>
+                    :placeholder="isSttModelType(form.model_type) && isRealtimeSttProvider ? 'wss://your-stt-server/ws' : (currentProviderPreset?.baseUrl || 'https://api.openai.com/v1')"/>
         </el-form-item>
 
         <el-form-item label="API Key">
@@ -213,27 +214,49 @@ const form = ref({
 
 const typeTabs = [
   {value: 'text', label: '对话模型', icon: '\u{1F4AC}'},
-  {value: 'stt', label: '语音实时转写', icon: '\u{1F399}'},
+  {value: 'realtime_stt', label: '实时语音', icon: '\u{1F399}'},
+  {value: 'file_stt', label: '语音转写', icon: '\u{1F3A4}'},
   {value: 'web_search', label: '联网搜索', icon: '\u{1F310}'}
 ]
 
 // Web search providers
 const WEB_SEARCH_PROVIDERS = ['perplexity', 'tavily', 'jina', 'bochaai', 'exa']
-// STT providers
-const STT_PROVIDERS = ['realtime_stt', 'doubao_realtime_stt']
+// Realtime STT providers
+const REALTIME_STT_PROVIDERS = ['realtime_stt', 'doubao_realtime_stt']
+// File-based STT providers
+const FILE_STT_PROVIDERS = [
+  'doubao_stt', 'xunfei_stt', 'ali_stt', 'baidu_stt',
+  'openai_stt', 'siliconflow_stt', 'groq_stt', 'xiaomi_stt', 'custom_stt'
+]
+// All STT providers
+const STT_PROVIDERS = [...REALTIME_STT_PROVIDERS, ...FILE_STT_PROVIDERS]
+
+function isRealtimeStt(c: ModelConfigRow): boolean {
+  return c.model_type === 'realtime_stt' || (c.model_type === 'stt' && REALTIME_STT_PROVIDERS.includes(c.provider))
+}
+function isFileStt(c: ModelConfigRow): boolean {
+  return c.model_type === 'file_stt' || (c.model_type === 'stt' && FILE_STT_PROVIDERS.includes(c.provider))
+}
+function isSttModelType(type: string): boolean {
+  return type === 'stt' || type === 'realtime_stt' || type === 'file_stt'
+}
 
 function countByType(type: string): number {
-  if (type === 'text') return configs.value.filter(c => c.model_type !== 'web_search' && c.model_type !== 'stt').length
-  if (type === 'stt') return configs.value.filter(c => c.model_type === 'stt').length
+  if (type === 'text') return configs.value.filter(c => c.model_type !== 'web_search' && c.model_type !== 'stt' && c.model_type !== 'realtime_stt' && c.model_type !== 'file_stt').length
+  if (type === 'realtime_stt') return configs.value.filter(isRealtimeStt).length
+  if (type === 'file_stt') return configs.value.filter(isFileStt).length
   return configs.value.filter(c => c.model_type === 'web_search').length
 }
 
 const filteredConfigs = computed(() => {
   if (activeType.value === 'text') {
-    return configs.value.filter(c => c.model_type !== 'web_search' && c.model_type !== 'stt')
+    return configs.value.filter(c => c.model_type !== 'web_search' && c.model_type !== 'stt' && c.model_type !== 'realtime_stt' && c.model_type !== 'file_stt')
   }
-  if (activeType.value === 'stt') {
-    return configs.value.filter(c => c.model_type === 'stt')
+  if (activeType.value === 'realtime_stt') {
+    return configs.value.filter(isRealtimeStt)
+  }
+  if (activeType.value === 'file_stt') {
+    return configs.value.filter(isFileStt)
   }
   return configs.value.filter(c => c.model_type === 'web_search')
 })
@@ -241,14 +264,20 @@ const filteredConfigs = computed(() => {
 const currentProviderPreset = computed(() =>
   providers.value.find(p => p.id === form.value.provider)
 )
+const isRealtimeSttProvider = computed(() =>
+  ['realtime_stt', 'doubao_realtime_stt'].includes(form.value.provider)
+)
 
 // Filter providers based on model type
 const filteredProviders = computed(() => {
   if (form.value.model_type === 'web_search') {
     return providers.value.filter(p => WEB_SEARCH_PROVIDERS.includes(p.id))
   }
-  if (form.value.model_type === 'stt') {
-    return providers.value.filter(p => STT_PROVIDERS.includes(p.id))
+  if (form.value.model_type === 'realtime_stt') {
+    return providers.value.filter(p => REALTIME_STT_PROVIDERS.includes(p.id))
+  }
+  if (form.value.model_type === 'file_stt') {
+    return providers.value.filter(p => FILE_STT_PROVIDERS.includes(p.id))
   }
   // Text: show all except web_search-only providers
   return providers.value.filter(p => !WEB_SEARCH_PROVIDERS.includes(p.id))
@@ -320,13 +349,19 @@ function onModelTypeChange(type: string) {
   let list: ProviderInfo[]
   if (type === 'web_search') {
     list = providers.value.filter(p => p.modelType === 'web_search' || WEB_SEARCH_PROVIDERS.includes(p.id))
-  } else if (type === 'stt') {
-    list = providers.value.filter(p => STT_PROVIDERS.includes(p.id))
+  } else if (type === 'realtime_stt') {
+    list = providers.value.filter(p => REALTIME_STT_PROVIDERS.includes(p.id))
+  } else if (type === 'file_stt') {
+    list = providers.value.filter(p => FILE_STT_PROVIDERS.includes(p.id))
   } else {
     list = providers.value.filter(p => !p.modelType || p.modelType === 'text')
   }
   if (!list.find(p => p.id === form.value.provider)) {
-    const defaultProvider = type === 'stt' ? providers.value.find(p => p.id === 'realtime_stt') : null
+    const defaultProvider = type === 'realtime_stt'
+      ? providers.value.find(p => p.id === 'realtime_stt')
+      : type === 'file_stt'
+        ? providers.value.find(p => p.id === 'doubao_stt')
+        : null
     form.value.provider = defaultProvider?.id || ''
     form.value.base_url = defaultProvider?.baseUrl || ''
     form.value.name = defaultProvider?.name || ''
@@ -348,7 +383,7 @@ function onProviderChange(id: string) {
     form.value.defaultModelIndex = 0
   }
   // STT: auto-fill default model name
-  if (form.value.model_type === 'stt' && p.models && p.models.length > 0) {
+  if (isSttModelType(form.value.model_type) && p.models && p.models.length > 0) {
     form.value.models = [p.models[0]]
     form.value.modelMultimodal = [false]
     form.value.defaultModelIndex = 0
@@ -368,6 +403,17 @@ function removeModelInput(idx: number) {
   } else if (form.value.defaultModelIndex > idx) {
     form.value.defaultModelIndex--
   }
+}
+
+function resolveModelType(cfg: ModelConfigRow): string {
+  if (cfg.model_type === 'realtime_stt') return 'realtime_stt'
+  if (cfg.model_type === 'file_stt') return 'file_stt'
+  if (cfg.model_type === 'web_search') return 'web_search'
+  if (cfg.model_type === 'stt') {
+    // Legacy: infer from provider
+    return REALTIME_STT_PROVIDERS.includes(cfg.provider) ? 'realtime_stt' : 'file_stt'
+  }
+  return 'text'
 }
 
 function openForm(cfg?: ModelConfigRow) {
@@ -392,15 +438,23 @@ function openForm(cfg?: ModelConfigRow) {
       models,
       modelMultimodal: multimodal,
       defaultModelIndex: defaultIdx,
-      model_type: cfg.model_type === 'web_search' ? 'web_search' : (cfg.model_type === 'stt' ? 'stt' : 'text'),
+      model_type: resolveModelType(cfg),
       is_default: !!cfg.is_default
     }
   } else {
     editingId.value = null
     let modelType = 'text'
-    if (activeType.value === 'web_search') modelType = 'web_search'
-    else if (activeType.value === 'stt') modelType = 'stt'
-    const defaultProvider = modelType === 'stt' ? providers.value.find(p => p.id === 'realtime_stt') : null
+    let defaultProviderId = ''
+    if (activeType.value === 'web_search') {
+      modelType = 'web_search'
+    } else if (activeType.value === 'realtime_stt') {
+      modelType = 'realtime_stt'
+      defaultProviderId = 'realtime_stt'
+    } else if (activeType.value === 'file_stt') {
+      modelType = 'file_stt'
+      defaultProviderId = 'doubao_stt'
+    }
+    const defaultProvider = defaultProviderId ? providers.value.find(p => p.id === defaultProviderId) : null
     form.value = {
       name: defaultProvider?.name || '',
       provider: defaultProvider?.id || '',
@@ -426,7 +480,7 @@ async function handleTestModel() {
     ElMessage.warning('请先填写至少一个模型名称')
     return
   }
-  if ((form.value.model_type === 'web_search' || form.value.model_type === 'stt') && !form.value.provider) {
+  if ((form.value.model_type === 'web_search' || isSttModelType(form.value.model_type)) && !form.value.provider) {
     ElMessage.warning('请先选择服务商')
     return
   }
@@ -458,7 +512,7 @@ async function handleSave() {
     validModels = [...currentProviderPreset.value.models]
   }
   // For stt, use default model name
-  if (validModels.length === 0 && form.value.model_type === 'stt') {
+  if (validModels.length === 0 && isSttModelType(form.value.model_type)) {
     validModels = ['realtime']
   }
   if (!form.value.name) {
@@ -469,7 +523,7 @@ async function handleSave() {
     ElMessage.warning('请填写至少一个模型名称')
     return
   }
-  if ((form.value.model_type === 'web_search' || form.value.model_type === 'stt') && !form.value.provider) {
+  if ((form.value.model_type === 'web_search' || isSttModelType(form.value.model_type)) && !form.value.provider) {
     ElMessage.warning('请选择服务商')
     return
   }

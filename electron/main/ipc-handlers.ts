@@ -1,6 +1,6 @@
 import {app, BrowserWindow, dialog, ipcMain, nativeTheme} from 'electron'
 import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'fs'
-import {extname, join} from 'path'
+import {extname, isAbsolute, join} from 'path'
 import {remindersDb} from './db/reminders'
 import {notificationConfigsDb} from './db/notification-configs'
 import {selectNotificationSoundFile, previewNotificationSound} from './notifications/notification-window'
@@ -1000,6 +1000,10 @@ ${content}`
     })
 
     // ========== 语音转文字 (STT) ==========
+    function resolveMeetingFilePath(filePath: string): string {
+        return isAbsolute(filePath) ? filePath : join(app.getPath('userData'), filePath)
+    }
+
     safeHandle('meetings:stt', async (_event, meetingId: number, enableDiarization?: boolean) => {
         const meeting = meetingsDb.get(meetingId)
         if (!meeting) throw new Error('会议不存在')
@@ -1008,29 +1012,46 @@ ${content}`
         meetingsDb.update(meetingId, {stt_status: 'pending'} as any)
 
         try {
-            // 查找录音文件路径
-            let audioPath = meeting.recording_path
-            if (!audioPath) {
-                // 检查分段中是否有音频
-                const segments = meetingSegmentsDb.listByMeeting(meetingId)
-                const audioSegment = segments.find(s => s.segment_type === 'audio' && s.content)
-                if (audioSegment) audioPath = audioSegment.content
+            const audioPaths: string[] = []
+            if (meeting.recording_path) {
+                audioPaths.push(meeting.recording_path)
             }
-            if (!audioPath) throw new Error('没有找到录音文件')
 
-            const result = await transcribeAudio(audioPath, enableDiarization !== false)
+            const segments = meetingSegmentsDb.listByMeeting(meetingId)
+            for (const segment of segments) {
+                if (segment.segment_type === 'audio' && segment.content && !audioPaths.includes(segment.content)) {
+                    audioPaths.push(segment.content)
+                }
+            }
+
+            if (!audioPaths.length) throw new Error('没有找到录音文件')
+
+            const results = []
+            for (const audioPath of audioPaths) {
+                results.push(await transcribeAudio(resolveMeetingFilePath(audioPath), enableDiarization !== false))
+            }
+
+            const result = {
+                utterances: results.flatMap(item => item.utterances),
+                full_text: results.map(item => item.full_text).filter(Boolean).join('\n')
+            }
 
             // 更新会议转写文本
             meetingsDb.update(meetingId, {
                 stt_text: result.full_text,
-                stt_status: 'done'
+                stt_status: 'done',
+                minutes: result.full_text
             } as any)
 
             // 将说话人分离结果写入分段
             if (result.utterances.length > 1 || (result.utterances.length === 1 && result.utterances[0].speaker !== '说话人1')) {
                 // 删除旧的 STT 生成的分段，保留手动添加的
                 const existingSegments = meetingSegmentsDb.listByMeeting(meetingId)
-                const sttSegments = existingSegments.filter(s => s.speaker && s.speaker.startsWith('说话人'))
+                const sttSegments = existingSegments.filter(s =>
+                    s.segment_type === 'text' &&
+                    s.speaker &&
+                    (s.speaker.startsWith('说话人') || s.speaker.startsWith('用户') || s.speaker === '实时转写')
+                )
                 for (const s of sttSegments) {
                     meetingSegmentsDb.delete(s.id)
                 }
@@ -1077,10 +1098,10 @@ ${content}`
         session.sendAudio(Buffer.from(base64Audio, 'base64'))
     })
 
-    safeHandle('meetings:stt-realtime:stop', (_event, sessionId: string) => {
+    safeHandle('meetings:stt-realtime:stop', async (_event, sessionId: string) => {
         const session = realtimeSttSessions.get(sessionId)
         if (!session) return {full_text: ''}
-        const fullText = session.stop()
+        const fullText = await session.stop()
         realtimeSttSessions.delete(sessionId)
         return {full_text: fullText}
     })
