@@ -2,6 +2,9 @@ import path from 'path'
 import fs from 'fs'
 import axios from 'axios'
 import FormData from 'form-data'
+import WebSocket from 'ws'
+import {randomUUID} from 'crypto'
+import {gunzipSync, gzipSync} from 'zlib'
 import {modelConfigsDb} from './db/model-configs'
 
 interface SttUtterance {
@@ -23,6 +26,27 @@ interface SttConfig {
     model: string
 }
 
+export interface RealtimeSttEvent {
+    type: 'ready' | 'partial' | 'final' | 'closed' | 'error'
+    text?: string
+    speaker?: string
+    utterances?: RealtimeSttUtterance[]
+    message?: string
+    full_text?: string
+    raw?: any
+}
+
+export interface RealtimeSttUtterance {
+    speaker: string
+    text: string
+}
+
+export interface RealtimeSttSession {
+    id: string
+    sendAudio(buffer: Buffer): void
+    stop(): string
+}
+
 /**
  * 查找 STT 模型配置
  */
@@ -38,6 +62,445 @@ function getSttConfig(): SttConfig | null {
         baseUrl: cfg.base_url,
         apiKey: cfg.api_key,
         model: cfg.model
+    }
+}
+
+function getRealtimeSttConfig(): SttConfig | null {
+    const configs = modelConfigsDb.list()
+    const realtimeConfigs = configs.filter(c => c.model_type === 'stt' && /^wss?:\/\//i.test(c.base_url))
+    if (realtimeConfigs.length === 0) return null
+    const defaultCfg = realtimeConfigs.find(c => c.is_default === 1)
+    const cfg = defaultCfg || realtimeConfigs[0]
+    return {
+        provider: cfg.provider,
+        baseUrl: cfg.base_url,
+        apiKey: cfg.api_key,
+        model: cfg.model
+    }
+}
+
+export function hasRealtimeSttConfig(): boolean {
+    return !!getRealtimeSttConfig()
+}
+
+function normalizeRealtimeUrl(config: SttConfig): string {
+    if (/^wss?:\/\//i.test(config.baseUrl)) return config.baseUrl
+    if (/^https:\/\//i.test(config.baseUrl)) return config.baseUrl.replace(/^https:/i, 'wss:')
+    if (/^http:\/\//i.test(config.baseUrl)) return config.baseUrl.replace(/^http:/i, 'ws:')
+    throw new Error('实时转写需要在语音转文字模型配置中填写 ws:// 或 wss:// 地址')
+}
+
+function isDoubaoBigModelRealtime(config: SttConfig): boolean {
+    return /openspeech\.bytedance\.com\/api\/v3\/sauc\/bigmodel/i.test(config.baseUrl)
+}
+
+function parseKeyValueSecret(secret: string): Record<string, string> {
+    const result: Record<string, string> = {}
+    for (const part of secret.split(/[;\n]/)) {
+        const index = part.indexOf('=')
+        if (index <= 0) continue
+        result[part.slice(0, index).trim()] = part.slice(index + 1).trim()
+    }
+    return result
+}
+
+function resolveDoubaoAuth(config: SttConfig, sessionId: string): Record<string, string> {
+    const apiKey = (config.apiKey || '').trim()
+    let parsed: Record<string, string> = {}
+
+    if (apiKey.startsWith('{')) {
+        try {
+            parsed = JSON.parse(apiKey)
+        } catch {}
+    } else if (apiKey.includes('=')) {
+        parsed = parseKeyValueSecret(apiKey)
+    }
+
+    const resourceId =
+        parsed.resourceId ||
+        parsed.resource_id ||
+        (config.model?.startsWith('volc.') ? config.model : '') ||
+        'volc.bigasr.sauc.duration'
+
+    const headers: Record<string, string> = {
+        'X-Api-Resource-Id': resourceId,
+        'X-Api-Connect-Id': sessionId,
+        'X-Api-Request-Id': sessionId,
+        'X-Api-Sequence': '-1'
+    }
+
+    const appKey = parsed.appKey || parsed.app_key || parsed.appid || parsed.appId
+    const accessKey = parsed.accessKey || parsed.access_key || parsed.token || parsed.accessToken
+    const newApiKey = parsed.apiKey || parsed.api_key || (!appKey && !accessKey ? apiKey : '')
+
+    if (newApiKey) {
+        headers['X-Api-Key'] = newApiKey
+    } else {
+        if (appKey) headers['X-Api-App-Key'] = appKey
+        if (accessKey) headers['X-Api-Access-Key'] = accessKey
+    }
+
+    return headers
+}
+
+function buildDoubaoFullClientRequest(config: SttConfig, sessionId: string): Buffer {
+    const payload = {
+        user: {
+            uid: 'king-remind'
+        },
+        audio: {
+            format: 'pcm',
+            codec: 'raw',
+            rate: 16000,
+            bits: 16,
+            channel: 1,
+            language: 'zh-CN'
+        },
+        request: {
+            reqid: sessionId,
+            model_name: 'bigmodel',
+            enable_itn: true,
+            enable_punc: true,
+            enable_speaker_info: true,
+            show_utterances: true,
+            result_type: 'single'
+        }
+    }
+
+    const compressed = gzipSync(Buffer.from(JSON.stringify(payload), 'utf8'))
+    const length = Buffer.alloc(4)
+    length.writeUInt32BE(compressed.length, 0)
+    return Buffer.concat([
+        Buffer.from([0x11, 0x10, 0x11, 0x00]),
+        length,
+        compressed
+    ])
+}
+
+function buildDoubaoAudioFrame(audio: Buffer): Buffer {
+    const length = Buffer.alloc(4)
+    length.writeUInt32BE(audio.length, 0)
+    return Buffer.concat([
+        Buffer.from([0x11, 0x20, 0x00, 0x00]),
+        length,
+        audio
+    ])
+}
+
+function buildDoubaoEndFrame(): Buffer {
+    const length = Buffer.alloc(4)
+    length.writeUInt32BE(0, 0)
+    return Buffer.concat([
+        Buffer.from([0x11, 0x22, 0x00, 0x00]),
+        length
+    ])
+}
+
+function parseDoubaoRealtimeFrame(message: any): any {
+    const buffer = Buffer.isBuffer(message)
+        ? message
+        : Array.isArray(message)
+            ? Buffer.concat(message)
+            : Buffer.from(message)
+    if (buffer.length < 4) return null
+
+    const headerSize = (buffer[0] & 0x0f) * 4
+    const messageType = (buffer[1] >> 4) & 0x0f
+    const flags = buffer[1] & 0x0f
+    const serialization = (buffer[2] >> 4) & 0x0f
+    const compression = buffer[2] & 0x0f
+    let offset = headerSize
+
+    if (flags === 0x01 || flags === 0x03) {
+        offset += 4
+    }
+
+    if (messageType === 0x0f) {
+        const code = buffer.length >= offset + 4 ? buffer.readUInt32BE(offset) : 0
+        offset += 4
+        const size = buffer.length >= offset + 4 ? buffer.readUInt32BE(offset) : 0
+        offset += 4
+        const errorPayload = size ? buffer.subarray(offset, offset + size).toString('utf8') : ''
+        return {error: {code, message: errorPayload || '火山实时转写返回错误'}}
+    }
+
+    if (buffer.length < offset + 4) return null
+    const payloadSize = buffer.readUInt32BE(offset)
+    offset += 4
+    let payload = buffer.subarray(offset, offset + payloadSize)
+    if (compression === 0x01 && payload.length) {
+        payload = gunzipSync(payload)
+    }
+
+    if (serialization === 0x01) {
+        try {
+            return JSON.parse(payload.toString('utf8'))
+        } catch {
+            return payload.toString('utf8')
+        }
+    }
+    return payload.toString('utf8')
+}
+
+function getSpeakerLabel(data: any, fallbackIndex = 1): string {
+    const value =
+        data?.speaker_id ??
+        data?.speakerId ??
+        data?.speaker ??
+        data?.user_id ??
+        data?.userId ??
+        data?.uid ??
+        data?.channel_id ??
+        data?.channelId
+
+    if (value === undefined || value === null || value === '') return ''
+    const text = String(value).trim()
+    if (!text) return ''
+    if (/^(用户|说话人|speaker|user)/i.test(text)) return text
+    return `用户${text || fallbackIndex}`
+}
+
+function getRealtimeUtteranceItems(data: any): any[] {
+    const candidates = [
+        data?.result?.utterances,
+        data?.utterances,
+        data?.data?.utterances,
+        data?.payload?.utterances,
+        data?.payload?.result?.utterances,
+        data?.result?.segments,
+        data?.segments,
+        data?.results
+    ]
+    for (const item of candidates) {
+        if (Array.isArray(item) && item.length > 0) return item
+    }
+    const single = data?.result?.utterance || data?.utterance
+    return single ? [single] : []
+}
+
+function normalizeRealtimeUtterances(data: any): RealtimeSttUtterance[] {
+    return getRealtimeUtteranceItems(data)
+        .map((item, index) => {
+            const text = String(item?.text || item?.content || item?.transcript || '').trim()
+            if (!text) return null
+            return {
+                speaker: getSpeakerLabel(item, index + 1) || '用户1',
+                text
+            }
+        })
+        .filter((item): item is RealtimeSttUtterance => !!item)
+}
+
+function formatRealtimeUtterances(utterances: RealtimeSttUtterance[]): string {
+    const merged: RealtimeSttUtterance[] = []
+    for (const item of utterances) {
+        const last = merged[merged.length - 1]
+        if (last && last.speaker === item.speaker) {
+            last.text += item.text
+        } else {
+            merged.push({...item})
+        }
+    }
+    return merged.map(item => `${item.speaker}：${item.text}`).join('\n')
+}
+
+function extractRealtimeText(data: any): { text: string; final: boolean; speaker?: string; utterances?: RealtimeSttUtterance[] } {
+    if (typeof data === 'string') return {text: data, final: true}
+
+    const utterances = normalizeRealtimeUtterances(data)
+    const utteranceText = utterances.length ? formatRealtimeUtterances(utterances) : ''
+
+    const directText =
+        data?.text ??
+        data?.transcript ??
+        data?.delta ??
+        data?.content ??
+        data?.result?.text ??
+        data?.result?.transcript ??
+        data?.result?.utterance?.text ??
+        data?.data?.text ??
+        data?.data?.transcript ??
+        data?.payload?.text ??
+        data?.payload?.result?.text ??
+        data?.choices?.[0]?.delta?.content ??
+        data?.choices?.[0]?.message?.content
+
+    let text = utteranceText || (typeof directText === 'string' ? directText : '')
+
+    if (!text && Array.isArray(data?.segments)) {
+        text = data.segments.map((seg: any) => seg?.text || seg?.content || '').join('')
+    }
+
+    if (!text && Array.isArray(data?.results)) {
+        text = data.results.map((item: any) => item?.text || item?.transcript || '').join('')
+    }
+
+    const speaker = getSpeakerLabel(data)
+    if (speaker && text && !utteranceText && !text.startsWith(`${speaker}：`)) {
+        text = `${speaker}：${text}`
+    }
+
+    const eventName = String(data?.type || data?.event || data?.status || '').toLowerCase()
+    const final =
+        data?.is_final === true ||
+        data?.final === true ||
+        data?.completed === true ||
+        data?.done === true ||
+        (getRealtimeUtteranceItems(data).length > 0 && getRealtimeUtteranceItems(data).every((item: any) => item?.definite !== false)) ||
+        eventName.includes('final') ||
+        eventName.includes('completed') ||
+        eventName.includes('sentence_end')
+
+    return {
+        text,
+        final,
+        speaker: utterances.length === 1 ? utterances[0].speaker : speaker || undefined,
+        utterances: utterances.length ? utterances : undefined
+    }
+}
+
+/**
+ * 创建实时语音转文字会话。
+ *
+ * 约定协议:
+ * - 连接语音转文字配置中的 ws/wss baseUrl
+ * - 鉴权头: Authorization: Bearer <apiKey>
+ * - 打开后发送 start JSON，随后发送 pcm_s16le 二进制音频帧
+ * - 停止时发送 end JSON
+ *
+ * 自定义 STT 服务只要兼容以上协议即可直接使用；服务返回的常见 text/transcript/final 字段会被自动解析。
+ */
+export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => void): RealtimeSttSession {
+    const config = getRealtimeSttConfig()
+    if (!config) {
+        throw new Error('未配置语音实时转写模型，请先在「模型配置 → 语音实时转写」中添加 WSS 地址')
+    }
+
+    const url = normalizeRealtimeUrl(config)
+    const sessionId = `stt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const pendingAudio: Buffer[] = []
+    const finalParts: string[] = []
+    const doubaoBigModel = isDoubaoBigModelRealtime(config)
+    let opened = false
+    let closed = false
+    let endTimer: ReturnType<typeof setTimeout> | null = null
+
+    const ws = new WebSocket(url, {
+        headers: doubaoBigModel
+            ? resolveDoubaoAuth(config, randomUUID())
+            : {
+                Authorization: `Bearer ${config.apiKey}`,
+                'X-Model': config.model || '',
+                'X-Provider': config.provider || ''
+            }
+    })
+
+    ws.on('open', () => {
+        opened = true
+        if (doubaoBigModel) {
+            ws.send(buildDoubaoFullClientRequest(config, sessionId))
+        } else {
+            ws.send(JSON.stringify({
+                type: 'start',
+                model: config.model,
+                provider: config.provider,
+                audio_format: 'pcm_s16le',
+                sample_rate: 16000,
+                channels: 1,
+                language: 'zh-CN',
+                interim_results: true
+            }))
+        }
+        while (pendingAudio.length && ws.readyState === WebSocket.OPEN) {
+            const buffer = pendingAudio.shift()!
+            ws.send(doubaoBigModel ? buildDoubaoAudioFrame(buffer) : buffer)
+        }
+        onEvent({type: 'ready'})
+    })
+
+    ws.on('message', (message) => {
+        let raw: any
+        if (doubaoBigModel) {
+            try {
+                raw = parseDoubaoRealtimeFrame(message)
+            } catch (e: any) {
+                onEvent({type: 'error', message: e.message || '火山实时转写响应解析失败'})
+                return
+            }
+        } else {
+            raw = message.toString()
+            try {
+                raw = JSON.parse(raw)
+            } catch {}
+        }
+
+        if (raw?.error) {
+            const message = raw.error.message || raw.error.msg || JSON.stringify(raw.error)
+            onEvent({type: 'error', message})
+            return
+        }
+
+        const parsed = extractRealtimeText(raw)
+        if (!parsed.text) return
+
+        if (parsed.final) {
+            finalParts.push(parsed.text)
+            onEvent({
+                type: 'final',
+                text: parsed.text,
+                speaker: parsed.speaker,
+                utterances: parsed.utterances,
+                full_text: finalParts.join('\n'),
+                raw
+            })
+        } else {
+            const fullText = finalParts.length ? `${finalParts.join('\n')}\n${parsed.text}` : parsed.text
+            onEvent({
+                type: 'partial',
+                text: parsed.text,
+                speaker: parsed.speaker,
+                utterances: parsed.utterances,
+                full_text: fullText,
+                raw
+            })
+        }
+    })
+
+    ws.on('close', () => {
+        if (endTimer) clearTimeout(endTimer)
+        closed = true
+        onEvent({type: 'closed', full_text: finalParts.join('\n')})
+    })
+
+    ws.on('error', (error) => {
+        onEvent({type: 'error', message: error.message})
+    })
+
+    return {
+        id: sessionId,
+        sendAudio(buffer: Buffer) {
+            if (closed || !buffer.length) return
+            if (opened && ws.readyState === WebSocket.OPEN) {
+                ws.send(doubaoBigModel ? buildDoubaoAudioFrame(buffer) : buffer)
+            } else {
+                pendingAudio.push(buffer)
+            }
+        },
+        stop() {
+            if (!closed && ws.readyState === WebSocket.OPEN) {
+                if (doubaoBigModel) {
+                    ws.send(buildDoubaoEndFrame())
+                    endTimer = setTimeout(() => ws.close(), 500)
+                } else {
+                    ws.send(JSON.stringify({type: 'end'}))
+                    ws.close()
+                }
+            } else if (!closed && ws.readyState === WebSocket.CONNECTING) {
+                ws.close()
+            }
+            closed = true
+            return finalParts.join('\n')
+        }
     }
 }
 

@@ -1,4 +1,6 @@
 import axios from 'axios'
+import WebSocket from 'ws'
+import {randomUUID} from 'crypto'
 import {settingsDb} from './db/settings'
 import {CreateReminderInput, remindersDb} from './db/reminders'
 import {modelConfigsDb} from './db/model-configs'
@@ -232,10 +234,35 @@ export const PROVIDERS: ProviderPreset[] = [
         modelType: 'web_search',
         models: ['exa-search', 'exa-contents']
     },
-    // ========== 语音转文字模型 ==========
+    // ========== 语音实时转写模型 ==========
+    {
+        id: 'realtime_stt',
+        name: '实时语音转写（WSS）',
+        baseUrl: 'wss://your-stt-server/ws',
+        apiKeyRequired: true,
+        defaultModel: 'realtime',
+        protocol: 'openai',
+        modelType: 'stt',
+        models: ['realtime']
+    },
+    {
+        id: 'doubao_realtime_stt',
+        name: '豆包/火山引擎（实时大模型）',
+        baseUrl: 'wss://openspeech.bytedance.com/api/v3/sauc/bigmodel',
+        apiKeyRequired: true,
+        defaultModel: 'volc.bigasr.sauc.duration',
+        protocol: 'openai',
+        modelType: 'stt',
+        models: [
+            'volc.bigasr.sauc.duration',
+            'volc.bigasr.sauc.concurrent',
+            'volc.seedasr.sauc.duration',
+            'volc.seedasr.sauc.concurrent'
+        ]
+    },
     {
         id: 'doubao_stt',
-        name: '豆包/火山引擎（语音转写）',
+        name: '豆包/火山引擎（普通 ASR）',
         baseUrl: 'https://openspeech.bytedance.com/api/v1',
         apiKeyRequired: true,
         defaultModel: 'asr',
@@ -245,7 +272,7 @@ export const PROVIDERS: ProviderPreset[] = [
     },
     {
         id: 'xunfei_stt',
-        name: '讯飞（语音转写）',
+        name: '讯飞（普通 ASR）',
         baseUrl: 'https://api.xf-yun.com/v1',
         apiKeyRequired: true,
         defaultModel: 'iat',
@@ -255,7 +282,7 @@ export const PROVIDERS: ProviderPreset[] = [
     },
     {
         id: 'ali_stt',
-        name: '阿里云（语音识别）',
+        name: '阿里云（普通 ASR）',
         baseUrl: 'https://nls-gateway-cn-shanghai.aliyuncs.com',
         apiKeyRequired: true,
         defaultModel: 'paraformer-v2',
@@ -265,7 +292,7 @@ export const PROVIDERS: ProviderPreset[] = [
     },
     {
         id: 'baidu_stt',
-        name: '百度（语音识别）',
+        name: '百度（普通 ASR）',
         baseUrl: 'https://aip.baidubce.com/rpc/2.0/aas/v1',
         apiKeyRequired: true,
         defaultModel: 'asr',
@@ -275,7 +302,7 @@ export const PROVIDERS: ProviderPreset[] = [
     },
     {
         id: 'openai_stt',
-        name: 'OpenAI Whisper',
+        name: 'OpenAI Whisper（普通转写）',
         baseUrl: 'https://api.openai.com/v1',
         apiKeyRequired: true,
         defaultModel: 'whisper-1',
@@ -285,7 +312,7 @@ export const PROVIDERS: ProviderPreset[] = [
     },
     {
         id: 'siliconflow_stt',
-        name: 'SiliconFlow（语音转写）',
+        name: 'SiliconFlow（普通转写）',
         baseUrl: 'https://api.siliconflow.cn/v1',
         apiKeyRequired: true,
         defaultModel: 'FunAudioLLM/SenseVoiceSmall',
@@ -295,7 +322,7 @@ export const PROVIDERS: ProviderPreset[] = [
     },
     {
         id: 'groq_stt',
-        name: 'Groq Whisper',
+        name: 'Groq Whisper（普通转写）',
         baseUrl: 'https://api.groq.com/openai/v1',
         apiKeyRequired: true,
         defaultModel: 'whisper-large-v3',
@@ -305,7 +332,7 @@ export const PROVIDERS: ProviderPreset[] = [
     },
     {
         id: 'xiaomi_stt',
-        name: '小米（语音转写）',
+        name: '小米（普通转写）',
         baseUrl: 'https://apim-njimx.xiaomi.com/v1',
         apiKeyRequired: true,
         defaultModel: 'MiMo-7B-RL',
@@ -315,7 +342,7 @@ export const PROVIDERS: ProviderPreset[] = [
     },
     {
         id: 'custom_stt',
-        name: '自定义（STT 服务）',
+        name: '自定义（兼容旧版 STT）',
         baseUrl: '',
         apiKeyRequired: true,
         defaultModel: '',
@@ -1466,6 +1493,58 @@ export async function generateSessionTitle(
 
 // ======================== 模型连接测试 ========================
 
+function parseKeyValueSecret(secret: string): Record<string, string> {
+    const result: Record<string, string> = {}
+    for (const part of secret.split(/[;\n]/)) {
+        const index = part.indexOf('=')
+        if (index <= 0) continue
+        result[part.slice(0, index).trim()] = part.slice(index + 1).trim()
+    }
+    return result
+}
+
+function resolveDoubaoRealtimeHeaders(data: {
+    api_key: string
+    model: string
+}): Record<string, string> {
+    const apiKey = (data.api_key || '').trim()
+    let parsed: Record<string, string> = {}
+
+    if (apiKey.startsWith('{')) {
+        try {
+            parsed = JSON.parse(apiKey)
+        } catch {}
+    } else if (apiKey.includes('=')) {
+        parsed = parseKeyValueSecret(apiKey)
+    }
+
+    const resourceId =
+        parsed.resourceId ||
+        parsed.resource_id ||
+        (data.model?.startsWith('volc.') ? data.model : '') ||
+        'volc.bigasr.sauc.duration'
+
+    const headers: Record<string, string> = {
+        'X-Api-Resource-Id': resourceId,
+        'X-Api-Connect-Id': randomUUID(),
+        'X-Api-Request-Id': randomUUID(),
+        'X-Api-Sequence': '-1'
+    }
+
+    const appKey = parsed.appKey || parsed.app_key || parsed.appid || parsed.appId
+    const accessKey = parsed.accessKey || parsed.access_key || parsed.token || parsed.accessToken
+    const newApiKey = parsed.apiKey || parsed.api_key || (!appKey && !accessKey ? apiKey : '')
+
+    if (newApiKey) {
+        headers['X-Api-Key'] = newApiKey
+    } else {
+        if (appKey) headers['X-Api-App-Key'] = appKey
+        if (accessKey) headers['X-Api-Access-Key'] = accessKey
+    }
+
+    return headers
+}
+
 export async function testModelConnection(data: {
     provider: string
     base_url: string
@@ -1477,6 +1556,38 @@ export async function testModelConnection(data: {
         const baseUrl = data.base_url || provider.baseUrl
         if (!baseUrl) {
             return {ok: false, message: '请填写 API 地址'}
+        }
+
+        if (provider.modelType === 'stt' && /^wss?:\/\//i.test(baseUrl)) {
+            await new Promise<void>((resolve, reject) => {
+                const isDoubaoRealtime = /openspeech\.bytedance\.com\/api\/v3\/sauc\/bigmodel/i.test(baseUrl)
+                const ws = new WebSocket(baseUrl, {
+                    headers: isDoubaoRealtime
+                        ? resolveDoubaoRealtimeHeaders(data)
+                        : {
+                            Authorization: data.api_key ? `Bearer ${data.api_key}` : '',
+                            'X-Model': data.model || 'realtime',
+                            'X-Provider': data.provider
+                        }
+                })
+                const timer = setTimeout(() => {
+                    ws.close()
+                    reject(new Error('WSS 连接超时'))
+                }, 8000)
+                ws.on('open', () => {
+                    clearTimeout(timer)
+                    ws.close()
+                    resolve()
+                })
+                ws.on('error', (error) => {
+                    clearTimeout(timer)
+                    reject(error)
+                })
+            })
+            return {ok: true, message: 'WSS 连接成功', reply: '实时转写通道可连接'}
+        }
+        if (provider.modelType === 'stt') {
+            return {ok: false, message: '语音实时转写需要填写 ws:// 或 wss:// 地址'}
         }
 
         // 搜索 API 走各自的协议测试

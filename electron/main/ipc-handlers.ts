@@ -28,7 +28,7 @@ import {checkForUpdate} from './updater'
 import {todosDb} from './db/todos'
 import {meetingsDb} from './db/meetings'
 import {meetingSegmentsDb} from './db/meeting-segments'
-import {transcribeAudio} from './stt'
+import {createRealtimeSttSession, hasRealtimeSttConfig, transcribeAudio, type RealtimeSttSession} from './stt'
 
 // sql.js 返回的对象可能含有不可被 structured clone 序列化的属性（如 Uint8Array 等）
 // 在 IPC 返回前必须转为纯 JS 对象
@@ -51,6 +51,7 @@ function safeHandle(channel: string, handler: (...args: any[]) => any): void {
 
 let schedulerRef: any = null
 let dispatcherRef: any = null
+const realtimeSttSessions = new Map<string, RealtimeSttSession>()
 
 export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: NotificationDispatcher, scheduler: any): void {
     schedulerRef = scheduler
@@ -1053,5 +1054,34 @@ ${content}`
             meetingsDb.update(meetingId, {stt_status: 'error'} as any)
             throw e
         }
+    })
+
+    safeHandle('meetings:stt-realtime:available', () => {
+        return hasRealtimeSttConfig()
+    })
+
+    safeHandle('meetings:stt-realtime:start', (event) => {
+        const session = createRealtimeSttSession((payload) => {
+            event.sender.send('meetings:stt-realtime:event', {
+                sessionId: session.id,
+                ...payload
+            })
+        })
+        realtimeSttSessions.set(session.id, session)
+        return {sessionId: session.id}
+    })
+
+    ipcMain.on('meetings:stt-realtime:chunk', (_event, sessionId: string, base64Audio: string) => {
+        const session = realtimeSttSessions.get(sessionId)
+        if (!session || !base64Audio) return
+        session.sendAudio(Buffer.from(base64Audio, 'base64'))
+    })
+
+    safeHandle('meetings:stt-realtime:stop', (_event, sessionId: string) => {
+        const session = realtimeSttSessions.get(sessionId)
+        if (!session) return {full_text: ''}
+        const fullText = session.stop()
+        realtimeSttSessions.delete(sessionId)
+        return {full_text: fullText}
     })
 }

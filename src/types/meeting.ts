@@ -71,6 +71,8 @@ export interface CreateMeetingInput {
     recording_path?: string | null
     has_recording?: number
     todo_ids?: number[]
+    stt_text?: string | null
+    stt_status?: 'none' | 'pending' | 'done' | 'error'
 }
 
 export interface MeetingStats {

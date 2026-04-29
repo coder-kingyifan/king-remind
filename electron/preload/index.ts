@@ -251,7 +251,19 @@ const electronAPI = {
         },
         // 语音转文字
         stt: (meetingId: number, enableDiarization?: boolean) =>
-            safeInvoke('meetings:stt', meetingId, enableDiarization)
+            safeInvoke('meetings:stt', meetingId, enableDiarization),
+        realtimeSttAvailable: () => safeInvoke('meetings:stt-realtime:available'),
+        startRealtimeStt: () => safeInvoke('meetings:stt-realtime:start'),
+        sendRealtimeSttChunk: (sessionId: string, base64Audio: string) => {
+            ipcRenderer.send('meetings:stt-realtime:chunk', sessionId, base64Audio)
+        },
+        stopRealtimeStt: (sessionId: string) => safeInvoke('meetings:stt-realtime:stop', sessionId),
+        onRealtimeSttEvent: (callback: (event: any) => void) => {
+            ipcRenderer.on('meetings:stt-realtime:event', (_event, data) => callback(data))
+        },
+        removeRealtimeSttListener: () => {
+            ipcRenderer.removeAllListeners('meetings:stt-realtime:event')
+        }
     }
 }
 

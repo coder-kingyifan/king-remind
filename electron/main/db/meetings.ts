@@ -16,6 +16,8 @@ export interface MeetingRow {
     recording_path: string | null
     has_recording: number
     todo_ids: string // JSON array
+    stt_text: string | null
+    stt_status: string
     created_at: string
     updated_at: string
 }
@@ -140,6 +142,8 @@ export const meetingsDb = {
         recording_path: string | null
         has_recording: number
         todo_ids: number[]
+        stt_text: string | null
+        stt_status: string
     }>): MeetingRow | undefined {
         const fields: string[] = []
         const params: any[] = []
@@ -158,6 +162,8 @@ export const meetingsDb = {
         if (data.recording_path !== undefined) { fields.push('recording_path = ?'); params.push(data.recording_path) }
         if (data.has_recording !== undefined) { fields.push('has_recording = ?'); params.push(data.has_recording) }
         if (data.todo_ids !== undefined) { fields.push('todo_ids = ?'); params.push(JSON.stringify(data.todo_ids)) }
+        if (data.stt_text !== undefined) { fields.push('stt_text = ?'); params.push(data.stt_text) }
+        if (data.stt_status !== undefined) { fields.push('stt_status = ?'); params.push(data.stt_status) }
 
         if (fields.length === 0) return meetingsDb.get(id)
 

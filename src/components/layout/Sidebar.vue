@@ -58,6 +58,7 @@ const aiNavItems = [
   {path: '/', title: '对话', icon: ChatDotRound},
   {path: '/dashboard', title: '导览', icon: Odometer},
   {path: '/reminders', title: '提醒', icon: Bell},
+  {path: '/todos', title: '待办', icon: List},
   {path: '/meetings', title: '会议', icon: Memo},
   {path: '/skills', title: '技能中心', icon: MagicStick}
 ]
@@ -66,6 +67,7 @@ const aiNavItems = [
 const simpleNavItems = [
   {path: '/dashboard', title: '导览', icon: HomeFilled},
   {path: '/reminders', title: '提醒', icon: Bell},
+  {path: '/todos', title: '待办', icon: List},
   {path: '/meetings', title: '会议', icon: Memo}
 ]
 

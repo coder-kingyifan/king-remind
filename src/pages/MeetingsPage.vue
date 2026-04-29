@@ -9,8 +9,8 @@
         </p>
       </div>
       <div class="header-actions">
-        <el-button size="small" round @click="startQuickRecord" :disabled="isRecording" class="rec-btn">
-          <el-icon style="margin-right:4px"><Microphone/></el-icon>录音
+        <el-button size="small" round @click="startQuickRecord" :disabled="isAnyRecording" class="rec-btn">
+          <el-icon style="margin-right:4px"><Microphone/></el-icon>实时录音
         </el-button>
         <el-button type="primary" size="small" round @click="openCreate">
           <el-icon style="margin-right:4px"><Plus/></el-icon>新建会议
@@ -19,10 +19,14 @@
     </div>
 
     <!-- 录音浮窗 -->
-    <div v-if="isRecording" class="recording-float">
-      <span class="rec-dot"></span>
-      <span class="rec-time">{{ formatDuration(recordingDuration) }}</span>
-      <el-button type="danger" size="small" round @click="stopQuickRecord">停止</el-button>
+    <div v-if="isAnyRecording" class="recording-float">
+      <div class="recording-float-main">
+        <span class="rec-dot"></span>
+        <span class="rec-time">{{ formatDuration(recordingDuration) }}</span>
+        <span class="rt-state" :class="realtimeSttStatus">{{ realtimeStatusLabel }}</span>
+        <el-button type="danger" size="small" round @click="stopCurrentRecording">停止</el-button>
+      </div>
+      <div v-if="liveTranscript" class="recording-live">{{ liveTranscript }}</div>
     </div>
 
     <!-- 筛选 -->
@@ -106,7 +110,7 @@
           <div class="section-actions">
             <el-button size="small" text @click="addTextSegment"><el-icon><EditPen/></el-icon>文本</el-button>
             <el-button size="small" text @click="addAudioSegment"><el-icon><Upload/></el-icon>音频</el-button>
-            <el-button size="small" text @click="startSegmentRecord" v-if="!isSegmentRecording"><el-icon><Microphone/></el-icon>录音</el-button>
+            <el-button size="small" text @click="startSegmentRecord" v-if="!isSegmentRecording"><el-icon><Microphone/></el-icon>实时录音</el-button>
             <el-button size="small" text type="danger" @click="stopSegmentRecord" v-else><span class="rec-dot-sm"></span>停止</el-button>
           </div>
         </div>
@@ -143,14 +147,15 @@
       <div class="detail-section">
         <label>会议录音</label>
         <div class="recording-area">
-          <template v-if="isRecording && !editForm.id">
+          <template v-if="isRecording">
             <span class="rec-dot"></span>
             <span class="rec-time">{{ formatDuration(recordingDuration) }}</span>
             <el-button type="danger" size="small" round @click="stopRecording">停止录音</el-button>
+            <span class="rt-state" :class="realtimeSttStatus">{{ realtimeStatusLabel }}</span>
           </template>
           <template v-else>
             <el-button size="small" round @click="startRecording">
-              <el-icon style="margin-right:4px"><Microphone/></el-icon>开始录音
+              <el-icon style="margin-right:4px"><Microphone/></el-icon>开始实时录音
             </el-button>
           </template>
           <div v-if="editForm.recording_path" class="recording-play">
@@ -175,6 +180,17 @@
             <p>{{ (editForm as any).stt_text }}</p>
           </div>
         </div>
+      </div>
+
+      <div class="detail-section" v-if="liveTranscript || realtimeError">
+        <div class="section-head">
+          <label>实时转写</label>
+          <span class="stt-status" :class="realtimeSttStatus">{{ realtimeStatusLabel }}</span>
+        </div>
+        <div v-if="liveTranscript" class="stt-text live">
+          <p>{{ liveTranscript }}</p>
+        </div>
+        <p v-if="realtimeError" class="stt-error">{{ realtimeError }}</p>
       </div>
 
       <!-- 附件 -->
@@ -258,7 +274,7 @@
 </template>
 
 <script setup lang="ts">
-import {onActivated, onMounted, reactive, ref, watch} from 'vue'
+import {computed, onActivated, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue'
 import {useMeetingsStore} from '@/stores/meetings'
 import {ArrowDown, ArrowUp, Location, Microphone, Plus, Upload, Document, MagicStick, User, EditPen} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
@@ -319,6 +335,11 @@ const mediaRecorder = ref<MediaRecorder | null>(null)
 const recordingChunks = ref<Blob[]>([])
 const recordingUrl = ref('')
 const pendingRecordingPath = ref('')
+const recordingTarget = ref<'quick' | 'meeting' | 'segment'>('quick')
+const audioContext = ref<AudioContext | null>(null)
+const audioSource = ref<MediaStreamAudioSourceNode | null>(null)
+const audioProcessor = ref<ScriptProcessorNode | null>(null)
+const audioGain = ref<GainNode | null>(null)
 
 // 分段内录音
 const isSegmentRecording = ref(false)
@@ -327,6 +348,23 @@ const segmentChunks = ref<Blob[]>([])
 
 // STT
 const sttLoading = ref(false)
+const realtimeSttSessionId = ref('')
+const realtimeSttStatus = ref<'idle' | 'connecting' | 'ready' | 'closed' | 'error' | 'recording_only'>('idle')
+const realtimeFinalText = ref('')
+const realtimePartialText = ref('')
+const realtimeError = ref('')
+const isAnyRecording = computed(() => isRecording.value || isSegmentRecording.value)
+const liveTranscript = computed(() => `${realtimeFinalText.value}${realtimePartialText.value}`.trim())
+const realtimeStatusLabel = computed(() => {
+  return ({
+    idle: '未连接',
+    connecting: '连接中',
+    ready: '实时转写中',
+    closed: '已结束',
+    error: '转写异常',
+    recording_only: '仅录音'
+  } as Record<string, string>)[realtimeSttStatus.value] || '未连接'
+})
 
 // AI
 const aiSummary = ref<AiSummary | null>(null)
@@ -391,9 +429,168 @@ function handleFilterChange() {
 
 // ========== 快速录音 ==========
 async function startQuickRecord() {
+  await startRealtimeRecording('quick')
+}
+
+function stopQuickRecord() {
+  stopCurrentRecording()
+}
+
+function recorderMimeType(): string {
+  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus']
+  return candidates.find(type => MediaRecorder.isTypeSupported(type)) || 'audio/webm'
+}
+
+function floatTo16BitPcm(input: Float32Array): ArrayBuffer {
+  const output = new ArrayBuffer(input.length * 2)
+  const view = new DataView(output)
+  for (let i = 0; i < input.length; i++) {
+    const sample = Math.max(-1, Math.min(1, input[i]))
+    view.setInt16(i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true)
+  }
+  return output
+}
+
+function downsampleBuffer(input: Float32Array, inputSampleRate: number, targetSampleRate: number): Float32Array {
+  if (inputSampleRate === targetSampleRate) return input
+  const ratio = inputSampleRate / targetSampleRate
+  const outputLength = Math.round(input.length / ratio)
+  const output = new Float32Array(outputLength)
+  let inputOffset = 0
+  for (let i = 0; i < outputLength; i++) {
+    const nextOffset = Math.round((i + 1) * ratio)
+    let sum = 0
+    let count = 0
+    for (let j = inputOffset; j < nextOffset && j < input.length; j++) {
+      sum += input[j]
+      count++
+    }
+    output[i] = count ? sum / count : 0
+    inputOffset = nextOffset
+  }
+  return output
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  }
+  return btoa(binary)
+}
+
+async function startRealtimePipeline(stream: MediaStream): Promise<boolean> {
+  realtimeSttStatus.value = 'connecting'
+  realtimeError.value = ''
+  realtimeFinalText.value = ''
+  realtimePartialText.value = ''
+
+  const available = await window.electronAPI.meetings.realtimeSttAvailable()
+  if (!available) {
+    realtimeSttStatus.value = 'recording_only'
+    return false
+  }
+
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({audio: true})
-    mediaRecorder.value = new MediaRecorder(stream, {mimeType: 'audio/webm'})
+    const session = await window.electronAPI.meetings.startRealtimeStt()
+    realtimeSttSessionId.value = session.sessionId
+
+    const context = new AudioContext()
+    const source = context.createMediaStreamSource(stream)
+    const processor = context.createScriptProcessor(4096, 1, 1)
+    const gain = context.createGain()
+    gain.gain.value = 0
+
+    processor.onaudioprocess = (event) => {
+      if (!realtimeSttSessionId.value) return
+      const input = event.inputBuffer.getChannelData(0)
+      const downsampled = downsampleBuffer(input, context.sampleRate, 16000)
+      const pcm = floatTo16BitPcm(downsampled)
+      window.electronAPI.meetings.sendRealtimeSttChunk(realtimeSttSessionId.value, arrayBufferToBase64(pcm))
+    }
+
+    source.connect(processor)
+    processor.connect(gain)
+    gain.connect(context.destination)
+
+    audioContext.value = context
+    audioSource.value = source
+    audioProcessor.value = processor
+    audioGain.value = gain
+    return true
+  } catch (e: any) {
+    realtimeSttStatus.value = 'recording_only'
+    realtimeError.value = e?.message ? `实时转写不可用，已继续录音：${e.message}` : ''
+    return false
+  }
+}
+
+async function stopRealtimePipeline() {
+  audioProcessor.value?.disconnect()
+  audioSource.value?.disconnect()
+  audioGain.value?.disconnect()
+  if (audioContext.value && audioContext.value.state !== 'closed') {
+    await audioContext.value.close().catch(() => {})
+  }
+  audioContext.value = null
+  audioSource.value = null
+  audioProcessor.value = null
+  audioGain.value = null
+
+  if (realtimeSttSessionId.value) {
+    try {
+      const result = await window.electronAPI.meetings.stopRealtimeStt(realtimeSttSessionId.value)
+      if (result?.full_text && !realtimeFinalText.value) realtimeFinalText.value = result.full_text
+    } catch {}
+  }
+  realtimeSttSessionId.value = ''
+}
+
+function handleRealtimeSttEvent(event: any) {
+  if (!event || event.sessionId !== realtimeSttSessionId.value) return
+  if (event.type === 'ready') {
+    realtimeSttStatus.value = 'ready'
+    editForm.stt_status = 'pending'
+    return
+  }
+  if (event.type === 'partial') {
+    realtimePartialText.value = event.text || ''
+    return
+  }
+  if (event.type === 'final') {
+    realtimeFinalText.value = event.full_text || `${realtimeFinalText.value}${event.text || ''}`
+    realtimePartialText.value = ''
+    editForm.stt_text = realtimeFinalText.value
+    editForm.minutes = realtimeFinalText.value
+    editForm.stt_status = 'pending'
+    return
+  }
+  if (event.type === 'closed') {
+    realtimeSttStatus.value = 'closed'
+    if (event.full_text) realtimeFinalText.value = event.full_text
+    if (liveTranscript.value) {
+      editForm.stt_text = liveTranscript.value
+      editForm.minutes = liveTranscript.value
+      editForm.stt_status = 'done'
+    }
+    return
+  }
+  if (event.type === 'error') {
+    realtimeSttStatus.value = 'error'
+    realtimeError.value = event.message || '实时转写连接异常'
+    editForm.stt_status = 'error'
+  }
+}
+
+async function startRealtimeRecording(target: 'quick' | 'meeting' | 'segment') {
+  if (isAnyRecording.value) return
+  let stream: MediaStream | null = null
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({audio: true})
+    await startRealtimePipeline(stream)
+    recordingTarget.value = target
+    mediaRecorder.value = new MediaRecorder(stream, {mimeType: recorderMimeType()})
     recordingChunks.value = []
 
     mediaRecorder.value.ondataavailable = (e) => {
@@ -410,32 +607,54 @@ async function startQuickRecord() {
       })
 
       try {
-        const path = await window.electronAPI.meetings.saveRecording(dataUrl)
+        const path = await window.electronAPI.meetings.saveRecording(dataUrl, editForm.id || undefined)
         if (path) {
-          pendingRecordingPath.value = path
           recordingUrl.value = dataUrl
-          ElMessage.success('录音完成，请创建会议')
-          openCreateWithRecording(path, dataUrl)
+          if (target === 'segment') {
+            await appendAudioSegment(path, dataUrl)
+            ElMessage.success(liveTranscript.value ? '录音和转写已插入' : '录音已插入')
+          } else if (target === 'quick') {
+            pendingRecordingPath.value = path
+            openCreateWithRecording(path, dataUrl)
+            ElMessage.success('录音完成，请创建会议')
+          } else {
+            editForm.recording_path = path
+            editForm.has_recording = 1
+            if (editForm.id && liveTranscript.value) {
+              await window.electronAPI.meetings.update(editForm.id, {
+                stt_text: liveTranscript.value,
+                stt_status: 'done',
+                minutes: liveTranscript.value
+              })
+              await handleFilterChange()
+            }
+            ElMessage.success(liveTranscript.value ? '录音和实时转写已保存' : '录音已保存')
+          }
         }
       } catch (e: any) {
         ElMessage.error('录音保存失败: ' + e.message)
       }
     }
 
-    mediaRecorder.value.start()
-    isRecording.value = true
+    mediaRecorder.value.start(1000)
+    isRecording.value = target !== 'segment'
+    isSegmentRecording.value = target === 'segment'
     recordingDuration.value = 0
     recordingTimer.value = setInterval(() => { recordingDuration.value++ }, 1000)
-  } catch {
-    ElMessage.error('无法访问麦克风，请检查权限')
+  } catch (e: any) {
+    stream?.getTracks().forEach(track => track.stop())
+    await stopRealtimePipeline()
+    ElMessage.error(e?.message || '无法访问麦克风，请检查权限')
   }
 }
 
-function stopQuickRecord() {
+async function stopCurrentRecording() {
+  await stopRealtimePipeline()
   if (mediaRecorder.value && mediaRecorder.value.state !== 'inactive') {
     mediaRecorder.value.stop()
   }
   isRecording.value = false
+  isSegmentRecording.value = false
   if (recordingTimer.value) {
     clearInterval(recordingTimer.value)
     recordingTimer.value = null
@@ -447,9 +666,9 @@ function openCreateWithRecording(recordingPath: string, dataUrl: string) {
   Object.assign(editForm, {
     id: 0, title: '', description: '', meeting_type: 'regular', status: 'ongoing',
     start_time: new Date().toISOString().slice(0, 16).replace('T', ' '),
-    end_time: '', location: '', participants: [], minutes: '',
+    end_time: '', location: '', participants: [], minutes: liveTranscript.value,
     attachments: [], recording_path: recordingPath, has_recording: 1, todo_ids: [],
-    stt_text: '', stt_status: 'none'
+    stt_text: liveTranscript.value, stt_status: liveTranscript.value ? 'done' : 'none'
   })
   recordingUrl.value = dataUrl
   aiSummary.value = null
@@ -462,123 +681,73 @@ function openCreateWithRecording(recordingPath: string, dataUrl: string) {
 
 // ========== 会议内录音 ==========
 async function startRecording() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({audio: true})
-    mediaRecorder.value = new MediaRecorder(stream, {mimeType: 'audio/webm'})
-    recordingChunks.value = []
-
-    mediaRecorder.value.ondataavailable = (e) => {
-      if (e.data.size > 0) recordingChunks.value.push(e.data)
-    }
-
-    mediaRecorder.value.onstop = async () => {
-      stream.getTracks().forEach(t => t.stop())
-      const blob = new Blob(recordingChunks.value, {type: 'audio/webm'})
-      const dataUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.readAsDataURL(blob)
-      })
-
-      try {
-        const path = await window.electronAPI.meetings.saveRecording(dataUrl, editForm.id || undefined)
-        if (path) {
-          editForm.recording_path = path
-          editForm.has_recording = 1
-          recordingUrl.value = dataUrl
-          ElMessage.success('录音已保存')
-        }
-      } catch (e: any) {
-        ElMessage.error('录音保存失败: ' + e.message)
-      }
-    }
-
-    mediaRecorder.value.start()
-    isRecording.value = true
-    recordingDuration.value = 0
-    recordingTimer.value = setInterval(() => { recordingDuration.value++ }, 1000)
-  } catch {
-    ElMessage.error('无法访问麦克风，请检查权限')
-  }
+  await startRealtimeRecording('meeting')
 }
 
 function stopRecording() {
-  if (mediaRecorder.value && mediaRecorder.value.state !== 'inactive') {
-    mediaRecorder.value.stop()
-  }
-  isRecording.value = false
-  if (recordingTimer.value) {
-    clearInterval(recordingTimer.value)
-    recordingTimer.value = null
-  }
+  stopCurrentRecording()
 }
 
 // ========== 分段录音 ==========
 async function startSegmentRecord() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({audio: true})
-    segmentRecorder.value = new MediaRecorder(stream, {mimeType: 'audio/webm'})
-    segmentChunks.value = []
-
-    segmentRecorder.value.ondataavailable = (e) => {
-      if (e.data.size > 0) segmentChunks.value.push(e.data)
-    }
-
-    segmentRecorder.value.onstop = async () => {
-      stream.getTracks().forEach(t => t.stop())
-      const blob = new Blob(segmentChunks.value, {type: 'audio/webm'})
-      const dataUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.readAsDataURL(blob)
-      })
-
-      try {
-        const path = await window.electronAPI.meetings.saveRecording(dataUrl, editForm.id || undefined)
-        if (path) {
-          if (editForm.id) {
-            const seg = await window.electronAPI.meetings.segments.add({
-              meeting_id: editForm.id,
-              segment_type: 'audio',
-              content: path,
-              speaker: '',
-              sort_order: segments.value.length
-            })
-            segments.value.push(seg)
-          } else {
-            segments.value.push({
-              id: -(Date.now()),
-              meeting_id: 0,
-              segment_type: 'audio',
-              content: path,
-              speaker: '',
-              sort_order: segments.value.length,
-              created_at: new Date().toISOString()
-            })
-          }
-          segAudioUrls.value[path] = dataUrl
-          ElMessage.success('录音已插入')
-        }
-      } catch (e: any) {
-        ElMessage.error('录音保存失败: ' + e.message)
-      }
-    }
-
-    segmentRecorder.value.start()
-    isSegmentRecording.value = true
-  } catch {
-    ElMessage.error('无法访问麦克风，请检查权限')
-  }
+  await startRealtimeRecording('segment')
 }
 
 function stopSegmentRecord() {
-  if (segmentRecorder.value && segmentRecorder.value.state !== 'inactive') {
-    segmentRecorder.value.stop()
-  }
-  isSegmentRecording.value = false
+  stopCurrentRecording()
 }
 
 // ========== 分段管理 ==========
+async function appendAudioSegment(path: string, dataUrl: string) {
+  if (editForm.id) {
+    const seg = await window.electronAPI.meetings.segments.add({
+      meeting_id: editForm.id,
+      segment_type: 'audio',
+      content: path,
+      speaker: '',
+      sort_order: segments.value.length
+    })
+    segments.value.push(seg)
+  } else {
+    segments.value.push({
+      id: -(Date.now()),
+      meeting_id: 0,
+      segment_type: 'audio',
+      content: path,
+      speaker: '',
+      sort_order: segments.value.length,
+      created_at: new Date().toISOString()
+    })
+  }
+  segAudioUrls.value[path] = dataUrl
+
+  if (!liveTranscript.value) return
+  const textSegment = {
+    id: -(Date.now() + 1),
+    meeting_id: editForm.id || 0,
+    segment_type: 'text' as const,
+    content: liveTranscript.value,
+    speaker: '实时转写',
+    sort_order: segments.value.length,
+    created_at: new Date().toISOString()
+  }
+  if (editForm.id) {
+    const saved = await window.electronAPI.meetings.segments.add({
+      meeting_id: editForm.id,
+      segment_type: 'text',
+      content: liveTranscript.value,
+      speaker: '实时转写',
+      sort_order: segments.value.length
+    })
+    segments.value.push(saved)
+  } else {
+    segments.value.push(textSegment)
+  }
+  editForm.stt_text = liveTranscript.value
+  editForm.minutes = liveTranscript.value
+  editForm.stt_status = 'done'
+}
+
 function addTextSegment() {
   segments.value.push({
     id: -(Date.now()),
@@ -786,7 +955,9 @@ async function handleSave() {
     attachments: editForm.attachments,
     recording_path: editForm.recording_path || null,
     has_recording: editForm.has_recording,
-    todo_ids: editForm.todo_ids
+    todo_ids: editForm.todo_ids,
+    stt_text: editForm.stt_text || null,
+    stt_status: editForm.stt_status
   }
 
   let meetingId: number
@@ -904,6 +1075,7 @@ async function sendAiChat() {
 
 // 生命周期
 onMounted(async () => {
+  window.electronAPI.meetings.onRealtimeSttEvent(handleRealtimeSttEvent)
   await handleFilterChange()
   await meetingsStore.fetchStats()
 })
@@ -912,17 +1084,21 @@ onActivated(async () => {
   await meetingsStore.fetchStats()
 })
 
+onBeforeUnmount(() => {
+  window.electronAPI.meetings.removeRealtimeSttListener()
+  if (isAnyRecording.value) stopCurrentRecording()
+})
+
 // 清理录音
 watch(detailVisible, (v) => {
   if (!v) {
-    if (isRecording.value) stopRecording()
-    if (isSegmentRecording.value) stopSegmentRecord()
+    if (isAnyRecording.value) stopCurrentRecording()
   }
 })
 </script>
 
 <style scoped>
-.meetings-page { max-width: 700px; outline: none; }
+.meetings-page { width: min(100%, 980px); margin: 0 auto; outline: none; }
 
 .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
 .page-title { font-size: 22px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
@@ -932,15 +1108,33 @@ watch(detailVisible, (v) => {
 /* 录音浮窗 */
 .recording-float {
   position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 18px; border-radius: 24px;
+  display: flex; flex-direction: column; gap: 8px;
+  width: min(420px, calc(100vw - 48px));
+  padding: 12px 14px; border-radius: 12px;
   background: var(--bg-primary); border: 1px solid rgba(245,108,108,.3);
   box-shadow: 0 4px 16px rgba(0,0,0,.12);
+}
+.recording-float-main { display: flex; align-items: center; gap: 10px; }
+.recording-live {
+  max-height: 72px;
+  overflow: auto;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: #F56C6C; animation: pulse 1s infinite; }
 .rec-dot-sm { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #F56C6C; animation: pulse 1s infinite; margin-right: 4px; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
 .rec-time { font-size: 14px; font-weight: 600; color: #F56C6C; font-variant-numeric: tabular-nums; }
+.rt-state { font-size: 11px; padding: 2px 7px; border-radius: 4px; background: var(--bg-tertiary); color: var(--text-tertiary); }
+.rt-state.ready { color: #67C23A; background: rgba(103,194,58,.1); }
+.rt-state.connecting { color: #E6A23C; background: rgba(230,162,60,.1); }
+.rt-state.error { color: #F56C6C; background: rgba(245,108,108,.1); }
+.rt-state.recording_only { color: #909399; background: rgba(144,147,153,.12); }
 
 /* 筛选 */
 .filters { margin-bottom: 16px; }
@@ -1039,6 +1233,8 @@ watch(detailVisible, (v) => {
 .stt-status.done { background: rgba(103,194,58,.1); color: #67C23A; }
 .stt-status.pending { background: rgba(230,162,60,.1); color: #E6A23C; }
 .stt-text { margin-top: 8px; padding: 8px; background: var(--bg-tertiary); border-radius: 4px; font-size: 13px; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; }
+.stt-text.live { border: 1px solid rgba(64,158,255,.18); background: var(--color-primary-bg); }
+.stt-error { margin-top: 6px; color: var(--color-danger); font-size: 12px; }
 
 /* 附件 */
 .attachment-area { }

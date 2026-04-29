@@ -57,7 +57,7 @@
     </div>
 
     <div v-else class="empty-hint">
-      <p>还没有配置{{ activeType === 'web_search' ? '联网搜索' : activeType === 'stt' ? '语音转文字' : '对话' }}模型，点击上方「添加模型」开始</p>
+      <p>还没有配置{{ activeType === 'web_search' ? '联网搜索' : activeType === 'stt' ? '语音实时转写' : '对话' }}模型，点击上方「添加模型」开始</p>
     </div>
 
     <!-- 编辑弹窗 -->
@@ -73,7 +73,7 @@
             <el-select v-model="form.model_type" style="width: 100%;" @change="onModelTypeChange">
               <el-option label="对话模型" value="text"/>
               <el-option label="联网搜索" value="web_search"/>
-              <el-option label="语音转文字" value="stt"/>
+              <el-option label="语音实时转写" value="stt"/>
             </el-select>
           </el-form-item>
           <el-form-item label="服务商" class="flex-1">
@@ -88,10 +88,10 @@
         </el-form-item>
 
         <!-- 对话模型才显示模型列表 -->
-        <el-form-item v-if="form.model_type !== 'web_search'" :label="form.model_type === 'stt' ? '模型名称' : '模型列表'" required>
+        <el-form-item v-if="form.model_type !== 'web_search'" :label="form.model_type === 'stt' ? '实时转写模型名称' : '模型列表'" required>
           <div class="model-input-list">
             <div class="model-list-header">
-              <span class="model-list-hint">{{ form.model_type === 'stt' ? '语音转文字模型名称' : '点击左侧星标设为默认模型，勾选多模态可识别图片' }}</span>
+              <span class="model-list-hint">{{ form.model_type === 'stt' ? 'WSS 实时转写模型名称，默认 realtime' : '点击左侧星标设为默认模型，勾选多模态可识别图片' }}</span>
             </div>
             <div v-for="(m, idx) in form.models" :key="idx" class="model-input-row">
               <span
@@ -130,9 +130,9 @@
           </div>
         </el-form-item>
 
-        <el-form-item label="API 地址">
+        <el-form-item :label="form.model_type === 'stt' ? 'WSS 地址' : 'API 地址'">
           <el-input v-model="form.base_url"
-                    :placeholder="currentProviderPreset?.baseUrl || 'https://api.openai.com/v1'"/>
+                    :placeholder="form.model_type === 'stt' ? 'wss://your-stt-server/ws' : (currentProviderPreset?.baseUrl || 'https://api.openai.com/v1')"/>
         </el-form-item>
 
         <el-form-item label="API Key">
@@ -213,14 +213,14 @@ const form = ref({
 
 const typeTabs = [
   {value: 'text', label: '对话模型', icon: '\u{1F4AC}'},
-  {value: 'stt', label: '语音转文字', icon: '\u{1F399}'},
+  {value: 'stt', label: '语音实时转写', icon: '\u{1F399}'},
   {value: 'web_search', label: '联网搜索', icon: '\u{1F310}'}
 ]
 
 // Web search providers
 const WEB_SEARCH_PROVIDERS = ['perplexity', 'tavily', 'jina', 'bochaai', 'exa']
 // STT providers
-const STT_PROVIDERS = ['doubao_stt', 'xunfei_stt', 'ali_stt', 'baidu_stt', 'openai_stt', 'siliconflow_stt', 'groq_stt', 'xiaomi_stt', 'custom_stt']
+const STT_PROVIDERS = ['realtime_stt', 'doubao_realtime_stt']
 
 function countByType(type: string): number {
   if (type === 'text') return configs.value.filter(c => c.model_type !== 'web_search' && c.model_type !== 'stt').length
@@ -293,6 +293,7 @@ const PROVIDER_ICONS: Record<string, string> = {
   perplexity: '\u{1F50D}', tavily: '\u{1F50E}', jina: '\u{1F310}',
   bochaai: '\u{1F4E1}', exa: '\u{1F3AF}',
   // STT providers
+  realtime_stt: '\u{1F399}', doubao_realtime_stt: '\u{1F399}',
   doubao_stt: '\u{1F399}', xunfei_stt: '\u{1F3A4}', ali_stt: '\u{2601}\uFE0F',
   baidu_stt: '\u{1F535}', openai_stt: '\u{1F916}', siliconflow_stt: '\u{1F525}',
   groq_stt: '\u26A1', xiaomi_stt: '\u{1F4F1}', custom_stt: '\u2699\uFE0F'
@@ -320,15 +321,16 @@ function onModelTypeChange(type: string) {
   if (type === 'web_search') {
     list = providers.value.filter(p => p.modelType === 'web_search' || WEB_SEARCH_PROVIDERS.includes(p.id))
   } else if (type === 'stt') {
-    list = providers.value.filter(p => p.modelType === 'stt' || STT_PROVIDERS.includes(p.id))
+    list = providers.value.filter(p => STT_PROVIDERS.includes(p.id))
   } else {
     list = providers.value.filter(p => !p.modelType || p.modelType === 'text')
   }
   if (!list.find(p => p.id === form.value.provider)) {
-    form.value.provider = ''
-    form.value.base_url = ''
-    form.value.name = ''
-    form.value.models = ['']
+    const defaultProvider = type === 'stt' ? providers.value.find(p => p.id === 'realtime_stt') : null
+    form.value.provider = defaultProvider?.id || ''
+    form.value.base_url = defaultProvider?.baseUrl || ''
+    form.value.name = defaultProvider?.name || ''
+    form.value.models = defaultProvider?.models?.length ? [defaultProvider.models[0]] : ['']
     form.value.modelMultimodal = [false]
     form.value.defaultModelIndex = 0
   }
@@ -398,12 +400,13 @@ function openForm(cfg?: ModelConfigRow) {
     let modelType = 'text'
     if (activeType.value === 'web_search') modelType = 'web_search'
     else if (activeType.value === 'stt') modelType = 'stt'
+    const defaultProvider = modelType === 'stt' ? providers.value.find(p => p.id === 'realtime_stt') : null
     form.value = {
-      name: '',
-      provider: '',
-      base_url: '',
+      name: defaultProvider?.name || '',
+      provider: defaultProvider?.id || '',
+      base_url: defaultProvider?.baseUrl || '',
       api_key: '',
-      models: [''],
+      models: defaultProvider?.models?.length ? [defaultProvider.models[0]] : [''],
       modelMultimodal: [false],
       defaultModelIndex: 0,
       model_type: modelType,
@@ -427,7 +430,7 @@ async function handleTestModel() {
     ElMessage.warning('请先选择服务商')
     return
   }
-  const testModelName = validModels[form.value.defaultModelIndex] || validModels[0] || 'asr'
+  const testModelName = validModels[form.value.defaultModelIndex] || validModels[0] || 'realtime'
   testing.value = true
   try {
     const result = await window.electronAPI.models.test({
@@ -456,7 +459,7 @@ async function handleSave() {
   }
   // For stt, use default model name
   if (validModels.length === 0 && form.value.model_type === 'stt') {
-    validModels = [form.value.provider === 'doubao' ? 'asr' : 'whisper-1']
+    validModels = ['realtime']
   }
   if (!form.value.name) {
     ElMessage.warning('请填写名称')
