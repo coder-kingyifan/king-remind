@@ -57,6 +57,8 @@ function createWindow(): BrowserWindow {
         const alwaysOnTop = settingsDb.get('always_on_top')
         if (alwaysOnTop === 'true') {
             mainWindow?.setAlwaysOnTop(true)
+            // 通知渲染进程同步置顶按钮状态
+            mainWindow?.webContents.send('window:always-on-top-changed', true)
         }
         mainWindow?.show()
     })
