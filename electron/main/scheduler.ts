@@ -7,6 +7,23 @@ import {executeSkill} from './skills/executor'
 import {todosDb} from './db/todos'
 import {settingsDb} from './db/settings'
 
+function getLocalDateStr(date: Date = new Date()): string {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+}
+
+function getLocalDateTimeStr(date: Date = new Date()): string {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    const h = String(date.getHours()).padStart(2, '0')
+    const min = String(date.getMinutes()).padStart(2, '0')
+    const s = String(date.getSeconds()).padStart(2, '0')
+    return `${y}-${m}-${d}T${h}:${min}:${s}`
+}
+
 export class ReminderScheduler {
     private intervalId: NodeJS.Timeout | null = null
     private dispatcher: NotificationDispatcher
@@ -115,7 +132,7 @@ export class ReminderScheduler {
             if (currentTime !== notifyTime) return
 
             // 防止同一分钟内重复触发
-            const today = now.toISOString().slice(0, 10)
+            const today = getLocalDateStr(now)
             const lastKey = `todo_last_notify_${today}_${notifyTime.replace(':', '')}`
             if (settingsDb.get(lastKey) === '1') return
             settingsDb.set(lastKey, '1')
@@ -159,7 +176,7 @@ export class ReminderScheduler {
             if (currentTime !== notifyTime) return
 
             // 防止同一分钟内重复触发
-            const today = now.toISOString().slice(0, 10)
+            const today = getLocalDateStr(now)
             const lastKey = `todo_summary_last_${today}_${notifyTime.replace(':', '')}`
             if (settingsDb.get(lastKey) === '1') return
             settingsDb.set(lastKey, '1')
@@ -209,7 +226,7 @@ export class ReminderScheduler {
                 days: 24 * 60 * 60 * 1000
             }
             const intervalMs = value * multipliers[unit]
-            return new Date(Date.now() + intervalMs).toISOString()
+            return getLocalDateTimeStr(new Date(Date.now() + intervalMs))
         }
 
         // months / years
@@ -219,7 +236,7 @@ export class ReminderScheduler {
         } else if (unit === 'years') {
             next.setFullYear(next.getFullYear() + value)
         }
-        return next.toISOString()
+        return getLocalDateTimeStr(next)
     }
 
     private isWithinActiveHours(reminder: Reminder): boolean {
@@ -252,14 +269,14 @@ export class ReminderScheduler {
     /** 检查今天是否是工作日（当 workday_only 开启时） */
     private matchesWorkday(reminder: Reminder): boolean {
         if (!reminder.workday_only) return true
-        const today = new Date().toISOString().slice(0, 10)
+        const today = getLocalDateStr()
         return workdaysDb.isWorkday(today)
     }
 
     /** 检查今天是否是节假日（当 holiday_only 开启时） */
     private matchesHoliday(reminder: Reminder): boolean {
         if (!reminder.holiday_only) return true
-        const today = new Date().toISOString().slice(0, 10)
+        const today = getLocalDateStr()
         return !workdaysDb.isWorkday(today)
     }
 
@@ -277,7 +294,7 @@ export class ReminderScheduler {
                 if (result?.date) {
                     const triggerDate = new Date(`${result.date}T${time}:00`)
                     if (triggerDate > now) {
-                        return triggerDate.toISOString()
+                        return getLocalDateTimeStr(triggerDate)
                     }
                 }
             } catch { /* ignore */

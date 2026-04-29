@@ -744,6 +744,20 @@ export function runMigrations(): void {
                 ALTER TABLE meetings ADD COLUMN stt_text TEXT DEFAULT NULL;
                 ALTER TABLE meetings ADD COLUMN stt_status TEXT NOT NULL DEFAULT 'none';
             `
+        },
+        {
+            version: 30,
+            sql: `
+                ALTER TABLE meeting_segments ADD COLUMN start_time REAL DEFAULT 0;
+                ALTER TABLE meeting_segments ADD COLUMN end_time REAL DEFAULT 0;
+            `
+        },
+        {
+            version: 31,
+            sql: `
+                ALTER TABLE notification_logs ADD COLUMN reminder_title TEXT DEFAULT NULL;
+                ALTER TABLE notification_logs ADD COLUMN reminder_icon TEXT DEFAULT NULL;
+            `
         }
     ]
 

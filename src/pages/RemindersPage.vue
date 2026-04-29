@@ -27,18 +27,18 @@
     </div>
 
     <!-- 提醒列表 -->
-    <div v-if="remindersStore.loading" class="loading-state">
-      <el-icon class="is-loading" :size="24">
-        <Loading/>
-      </el-icon>
+    <div v-if="remindersStore.loading" class="state-wrap">
+      <el-icon class="loading-icon" :size="26"><Loading /></el-icon>
       <span>加载中...</span>
     </div>
 
-    <div v-else-if="remindersStore.reminders.length === 0" class="empty-state">
-      <div class="empty-icon">🔔</div>
-      <p class="empty-title">暂无提醒</p>
-      <p class="empty-text">点击"新建提醒"按钮创建您的第一个提醒</p>
-      <el-button type="primary" plain @click="openCreateDialog">创建提醒</el-button>
+    <div v-else-if="remindersStore.reminders.length === 0" class="state-wrap empty">
+      <div class="empty-illustration" aria-hidden="true">
+        <div class="empty-bell"></div>
+        <div class="empty-ring"></div>
+      </div>
+      <strong>设置提醒，不再错过重要事项</strong>
+      <p>支持定时和循环提醒，可推送到桌面或企业微信。</p>
     </div>
 
     <div v-else class="reminder-list">
@@ -88,6 +88,10 @@
                 :title="channelName(ch)"
             >
               <img v-if="ch === 'wechat_work'" :src="wechatWorkIcon" class="channel-badge-img"/>
+              <img v-else-if="ch === 'wechat_test'" :src="wechatTestIcon" class="channel-badge-img"/>
+              <img v-else-if="ch === 'wechat_bot'" :src="wechatTestIcon" class="channel-badge-img"/>
+              <img v-else-if="ch === 'dingtalk'" :src="dingtalkIcon" class="channel-badge-img"/>
+              <img v-else-if="ch === 'feishu'" :src="feishuIcon" class="channel-badge-img"/>
               <template v-else>{{ channelIcon(ch) }}</template>
             </span>
           </div>
@@ -143,6 +147,9 @@ import type {Reminder} from '@/types/reminder'
 import ReminderForm from '@/components/reminder/ReminderForm.vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import wechatWorkIcon from '@/../resources/wechat-work.png'
+import wechatTestIcon from '@/../resources/wechat.png'
+import dingtalkIcon from '@/../resources/dingding.ico'
+import feishuIcon from '@/../resources/feishu.png'
 
 const remindersStore = useRemindersStore()
 const skillsStore = useSkillsStore()
@@ -369,39 +376,104 @@ function getSkillName(skillId: number): string {
   vertical-align: middle;
 }
 
-/* 空状态 */
-.empty-state {
-  background: var(--bg-card);
-  border: 1px dashed var(--border-color);
-  border-radius: 12px;
-  padding: 60px 40px;
+/* 空/加载状态 */
+.state-wrap {
+  display: flex;
+  min-height: 420px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px 84px;
+  color: var(--text-tertiary);
+  font-size: 13px;
   text-align: center;
 }
 
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
+.loading-icon {
+  margin-bottom: 10px;
+  animation: rotate 1s linear infinite;
 }
 
-.empty-title {
-  font-size: 16px;
-  font-weight: 600;
+.empty strong {
+  margin-top: 16px;
   color: var(--text-primary);
-  margin-bottom: 6px;
+  font-size: 15px;
+  font-weight: 700;
 }
 
-.empty-text {
-  font-size: 13px;
+.empty p {
+  margin-top: 8px;
   color: var(--text-tertiary);
-  margin-bottom: 16px;
+  line-height: 1.5;
 }
 
-.loading-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 60px;
-  color: var(--text-tertiary);
+.empty-illustration {
+  position: relative;
+  width: 112px;
+  height: 100px;
+}
+
+.empty-bell {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  width: 40px;
+  height: 36px;
+  border: 2.5px solid rgba(230, 162, 60, .45);
+  border-radius: 20px 20px 0 0;
+  background: rgba(230, 162, 60, .06);
+  transform: translateX(-50%);
+}
+
+.empty-bell::before {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  width: 12px;
+  height: 10px;
+  border: 2.5px solid rgba(230, 162, 60, .45);
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  transform: translateX(-50%);
+  content: '';
+}
+
+.empty-bell::after {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  width: 10px;
+  height: 6px;
+  border-radius: 0 0 5px 5px;
+  background: rgba(230, 162, 60, .45);
+  transform: translateX(-50%);
+  content: '';
+}
+
+.empty-ring {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(230, 162, 60, .25);
+  border-radius: 50%;
+}
+
+.empty-ring::before {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border: 1.5px solid rgba(230, 162, 60, .15);
+  border-radius: 50%;
+  content: '';
+}
+
+@keyframes rotate {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

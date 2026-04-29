@@ -224,6 +224,10 @@
                 :disabled="ch.key !== 'desktop' && !notificationsStore.isEnabled(ch.key)"
             >
               <img v-if="ch.key === 'wechat_work'" :src="wechatWorkIcon" class="channel-checkbox-img"/>
+              <img v-else-if="ch.key === 'wechat_test'" :src="wechatTestIcon" class="channel-checkbox-img"/>
+              <img v-else-if="ch.key === 'wechat_bot'" :src="wechatTestIcon" class="channel-checkbox-img"/>
+              <img v-else-if="ch.key === 'dingtalk'" :src="dingtalkIcon" class="channel-checkbox-img"/>
+              <img v-else-if="ch.key === 'feishu'" :src="feishuIcon" class="channel-checkbox-img"/>
               <template v-else>{{ ch.icon }}</template>
               {{ ch.name }}
               <span v-if="ch.key !== 'desktop' && !notificationsStore.isEnabled(ch.key)" class="channel-disabled-tip">（未启用）</span>
@@ -253,6 +257,26 @@ import type {Reminder} from '@/types/reminder'
 import {ElMessage} from 'element-plus'
 import {Calendar, Refresh} from '@element-plus/icons-vue'
 import wechatWorkIcon from '@/../resources/wechat-work.png'
+import wechatTestIcon from '@/../resources/wechat.png'
+import dingtalkIcon from '@/../resources/dingding.ico'
+import feishuIcon from '@/../resources/feishu.png'
+
+function getLocalDateStr(date: Date = new Date()): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function getLocalDateTimeStr(date: Date = new Date()): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  const h = String(date.getHours()).padStart(2, '0')
+  const min = String(date.getMinutes()).padStart(2, '0')
+  const s = String(date.getSeconds()).padStart(2, '0')
+  return `${y}-${m}-${d}T${h}:${min}:${s}`
+}
 
 const props = defineProps<{
   visible: boolean
@@ -434,7 +458,7 @@ function handleTypeChange(type: string | number | boolean) {
     activeEnd.value = null
     executionDayMode.value = 'all'
     const now = new Date()
-    scheduledDate.value = now.toISOString().slice(0, 10)
+    scheduledDate.value = getLocalDateStr(now)
     scheduledTime.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
   } else {
     form.value.interval_value = 60
@@ -525,7 +549,7 @@ function initForm() {
       holiday_only: 0,
       is_lunar: false,
       lunar_repeat: false,
-      start_time: new Date().toISOString().slice(0, 19),
+      start_time: getLocalDateTimeStr(),
       end_time: null,
       channels: ['desktop'],
       skill_id: null
@@ -537,7 +561,7 @@ function initForm() {
     lunarDay.value = 1
     lunarTime.value = '09:00'
     const now = new Date()
-    scheduledDate.value = now.toISOString().slice(0, 10)
+    scheduledDate.value = getLocalDateStr(now)
     scheduledTime.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
   }
 }

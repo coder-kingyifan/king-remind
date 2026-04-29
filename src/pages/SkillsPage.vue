@@ -46,18 +46,19 @@
     </div>
 
     <!-- 加载态 -->
-    <div v-if="skillsStore.loading" class="loading-state">
-      <el-icon class="is-loading" :size="24"><Loading/></el-icon>
+    <div v-if="skillsStore.loading" class="state-wrap">
+      <el-icon class="loading-icon" :size="26"><Loading /></el-icon>
       <span>加载中...</span>
     </div>
 
     <!-- 空态 -->
-    <div v-else-if="filteredSkills.length === 0" class="empty-state">
-      <div class="empty-icon">⚡</div>
-      <p class="empty-title">暂无已启用的技能</p>
-      <p class="empty-text">
-        <el-button type="primary" link @click="router.push('/skill-store')">前往技能商店安装</el-button>
-      </p>
+    <div v-else-if="filteredSkills.length === 0" class="state-wrap empty">
+      <div class="empty-illustration" aria-hidden="true">
+        <div class="empty-gear"></div>
+        <div class="empty-bolt"></div>
+      </div>
+      <strong>安装技能，让提醒更智能</strong>
+      <p>前往技能商店安装技能，绑定后提醒触发时自动获取动态内容。</p>
     </div>
 
     <!-- 技能网格 -->
@@ -534,26 +535,98 @@ onActivated(() => {
   color: #F56C6C;
 }
 
-/* 空状态 */
-.empty-state {
-  background: var(--bg-card);
-  border: 1px dashed var(--border-color);
-  border-radius: 12px;
-  padding: 60px 40px;
+/* 空/加载状态 */
+.state-wrap {
+  display: flex;
+  min-height: 420px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px 84px;
+  color: var(--text-tertiary);
+  font-size: 13px;
   text-align: center;
 }
 
-.empty-icon { font-size: 48px; margin-bottom: 16px; }
-.empty-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
-.empty-text { font-size: 13px; color: var(--text-tertiary); }
+.loading-icon {
+  margin-bottom: 10px;
+  animation: rotate 1s linear infinite;
+}
 
-.loading-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 60px;
+.empty strong {
+  margin-top: 16px;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.empty p {
+  margin-top: 8px;
   color: var(--text-tertiary);
+  line-height: 1.5;
+}
+
+.empty-illustration {
+  position: relative;
+  width: 112px;
+  height: 100px;
+}
+
+.empty-gear {
+  position: absolute;
+  left: 14px;
+  top: 18px;
+  width: 44px;
+  height: 44px;
+  border: 3px solid rgba(108, 92, 231, .4);
+  border-radius: 50%;
+  background: rgba(108, 92, 231, .06);
+}
+
+.empty-gear::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  border: 2.5px solid rgba(108, 92, 231, .4);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  content: '';
+}
+
+.empty-gear::after {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: rgba(108, 92, 231, .35);
+  transform: translateX(-50%);
+  box-shadow:
+    22px 12px 0 rgba(108, 92, 231, .35),
+    22px 34px 0 rgba(108, 92, 231, .35),
+    0px 44px 0 rgba(108, 92, 231, .35),
+    -22px 34px 0 rgba(108, 92, 231, .35),
+    -22px 12px 0 rgba(108, 92, 231, .35);
+  content: '';
+}
+
+.empty-bolt {
+  position: absolute;
+  right: 12px;
+  bottom: 16px;
+  width: 28px;
+  height: 44px;
+  background: rgba(253, 121, 168, .35);
+  clip-path: polygon(40% 0%, 100% 0%, 30% 45%, 65% 45%, 0% 100%, 25% 55%, 0% 55%);
+}
+
+@keyframes rotate {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 测试结果 */

@@ -116,7 +116,14 @@
               </div>
             </div>
             <div class="reminder-item-right">
-              <div class="channel-badges"><span v-for="ch in parseChannels(reminder.channels)" :key="ch" class="channel-badge">{{ channelIcon(ch) }}</span></div>
+              <div class="channel-badges"><span v-for="ch in parseChannels(reminder.channels)" :key="ch" class="channel-badge">
+                <img v-if="ch === 'wechat_work'" :src="wechatWorkIcon" class="channel-badge-img"/>
+                <img v-else-if="ch === 'wechat_test'" :src="wechatTestIcon" class="channel-badge-img"/>
+                <img v-else-if="ch === 'wechat_bot'" :src="wechatTestIcon" class="channel-badge-img"/>
+                <img v-else-if="ch === 'dingtalk'" :src="dingtalkIcon" class="channel-badge-img"/>
+                <img v-else-if="ch === 'feishu'" :src="feishuIcon" class="channel-badge-img"/>
+                <template v-else>{{ channelIcon(ch) }}</template>
+              </span></div>
               <el-switch :model-value="reminder.is_active === 1" size="small" @change="() => remindersStore.toggleReminder(reminder.id)"/>
             </div>
           </div>
@@ -130,9 +137,16 @@
         <div v-else class="log-list">
           <div v-for="log in recentLogs" :key="log.id" class="log-item-wrapper">
             <div class="log-item">
-              <span class="log-status" :class="log.status">{{ log.status === 'sent' ? '✓' : '✗' }}</span>
+              <span class="log-status" :class="log.status">{{ log.reminder_icon || (log.status === 'sent' ? '✓' : '✗') }}</span>
               <span class="log-title">{{ log.reminder_title || '未知' }}</span>
-              <span class="log-channel">{{ channelIcon(log.channel) }}</span>
+              <span class="log-channel">
+                <img v-if="log.channel === 'wechat_work'" :src="wechatWorkIcon" class="channel-badge-img"/>
+                <img v-else-if="log.channel === 'wechat_test'" :src="wechatTestIcon" class="channel-badge-img"/>
+                <img v-else-if="log.channel === 'wechat_bot'" :src="wechatTestIcon" class="channel-badge-img"/>
+                <img v-else-if="log.channel === 'dingtalk'" :src="dingtalkIcon" class="channel-badge-img"/>
+                <img v-else-if="log.channel === 'feishu'" :src="feishuIcon" class="channel-badge-img"/>
+                <template v-else>{{ channelIcon(log.channel) }}</template>
+              </span>
               <span class="log-time">{{ formatTime(log.sent_at) }}</span>
               <span v-if="log.status === 'failed' && log.error_message" class="log-expand-arrow" :class="{ expanded: expandedErrors[log.id] }" @click="toggleLogError(log.id)">
                 <el-icon :size="14"><ArrowDown/></el-icon>
@@ -153,6 +167,10 @@ import {useRemindersStore} from '@/stores/reminders'
 import {useSettingsStore} from '@/stores/settings'
 import {ArrowDown} from '@element-plus/icons-vue'
 import {CHANNELS} from '@/types/notification'
+import wechatWorkIcon from '@/../resources/wechat-work.png'
+import wechatTestIcon from '@/../resources/wechat.png'
+import dingtalkIcon from '@/../resources/dingding.ico'
+import feishuIcon from '@/../resources/feishu.png'
 
 const router = useRouter()
 const remindersStore = useRemindersStore()
@@ -269,6 +287,7 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
 .reminder-item-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .channel-badges { display: flex; gap: 2px; }
 .channel-badge { font-size: 13px; }
+.channel-badge-img { width: 14px; height: 14px; border-radius: 2px; vertical-align: middle; }
 
 /* 空状态 */
 .empty-state { background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: 12px; padding: 40px; text-align: center; }

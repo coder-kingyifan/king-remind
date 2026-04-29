@@ -42,10 +42,13 @@ export async function fetchStoreManifest(): Promise<StoreManifest> {
         })
         return response.data
     } catch (e: any) {
+        if (e.code === 'ENOTFOUND' || e.code === 'ECONNREFUSED' || e.code === 'ECONNRESET' || e.code === 'ETIMEDOUT' || e.code === 'ERR_NETWORK') {
+            throw new Error('无法访问 GitHub，请检查网络连接')
+        }
         if (e.response?.status === 404) {
             throw new Error('商店数据源未找到（404），请确保仓库中存在 skill-store.json 文件')
         }
-        throw e
+        throw new Error('无法访问 GitHub，请检查网络连接')
     }
 }
 

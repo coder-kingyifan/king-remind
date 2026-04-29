@@ -85,10 +85,10 @@ export class NotificationDispatcher {
 
             try {
                 await channel.send(message)
-                reminderLogsDb.create(reminder.id, channelId, 'sent')
+                reminderLogsDb.create(reminder.id, channelId, 'sent', undefined, reminder.title, reminder.icon)
             } catch (error: any) {
                 console.error(`[${channelId}] 发送通知失败:`, error.message)
-                reminderLogsDb.create(reminder.id, channelId, 'failed', error.message)
+                reminderLogsDb.create(reminder.id, channelId, 'failed', error.message, reminder.title, reminder.icon)
             }
         }
     }

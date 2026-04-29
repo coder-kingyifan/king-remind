@@ -46,6 +46,23 @@ export interface CreateReminderInput {
     skill_id?: number | null
 }
 
+function getLocalDateStr(date: Date = new Date()): string {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+}
+
+function getLocalDateTimeStr(date: Date = new Date()): string {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    const h = String(date.getHours()).padStart(2, '0')
+    const min = String(date.getMinutes()).padStart(2, '0')
+    const s = String(date.getSeconds()).padStart(2, '0')
+    return `${y}-${m}-${d}T${h}:${min}:${s}`
+}
+
 function toPlain<T>(obj: T): T {
     return JSON.parse(JSON.stringify(obj))
 }
@@ -120,7 +137,7 @@ function calculateNextTrigger(startTime: string, intervalValue: number, interval
         }
     }
 
-    return next.toISOString()
+    return getLocalDateTimeStr(next)
 }
 
 function getLastInsertId(): number {
@@ -158,7 +175,7 @@ export const remindersDb = {
 
         let nextTrigger: string
         if (remindType === 'scheduled') {
-            nextTrigger = new Date(input.start_time).toISOString()
+            nextTrigger = getLocalDateTimeStr(new Date(input.start_time))
         } else {
             nextTrigger = calculateNextTrigger(input.start_time, intervalValue, intervalUnit)
         }
@@ -221,7 +238,7 @@ export const remindersDb = {
 
         let nextTrigger: string
         if (remindType === 'scheduled') {
-            nextTrigger = new Date(startTime).toISOString()
+            nextTrigger = getLocalDateTimeStr(new Date(startTime))
         } else {
             nextTrigger = calculateNextTrigger(startTime, intervalValue, intervalUnit)
         }
@@ -263,7 +280,7 @@ export const remindersDb = {
 
         if (newActive === 1) {
             if (existing.remind_type === 'scheduled') {
-                nextTrigger = new Date(existing.start_time).toISOString()
+                nextTrigger = getLocalDateTimeStr(new Date(existing.start_time))
             } else {
                 nextTrigger = calculateNextTrigger(existing.start_time, existing.interval_value, existing.interval_unit)
             }
@@ -279,7 +296,7 @@ export const remindersDb = {
     },
 
     getDueReminders(): Reminder[] {
-        const now = new Date().toISOString()
+        const now = getLocalDateTimeStr()
         return queryAll(`
       SELECT * FROM reminders
       WHERE is_active = 1
@@ -311,7 +328,7 @@ export const remindersDb = {
     getTodayStats(): { total: number; active: number; triggeredToday: number } {
         const total = (queryOne('SELECT COUNT(*) as count FROM reminders') as any)?.count || 0
         const active = (queryOne('SELECT COUNT(*) as count FROM reminders WHERE is_active = 1') as any)?.count || 0
-        const today = new Date().toISOString().slice(0, 10)
+        const today = getLocalDateStr()
         const triggeredToday = (queryOne(
             "SELECT COUNT(DISTINCT reminder_id) as count FROM notification_logs WHERE sent_at >= ?", [today]
         ) as any)?.count || 0

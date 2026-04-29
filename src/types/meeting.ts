@@ -20,6 +20,8 @@ export interface MeetingSegment {
     content: string
     speaker: string
     sort_order: number
+    start_time: number  // 秒，相对于录音开始
+    end_time: number    // 秒，相对于录音开始
     created_at: string
 }
 

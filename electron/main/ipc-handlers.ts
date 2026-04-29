@@ -855,11 +855,13 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
         if (!existsSync(recordingsDir)) {
             mkdirSync(recordingsDir, {recursive: true})
         }
-        const matches = dataUrl.match(/^data:[^;]+;base64,(.+)$/)
+        const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/)
         if (!matches) return null
-        const filename = `recording-${meetingId || Date.now()}-${Math.random().toString(36).substring(2, 6)}.webm`
+        const mime = matches[1]
+        const ext = mime.includes('wav') ? 'wav' : 'webm'
+        const filename = `recording-${meetingId || Date.now()}-${Math.random().toString(36).substring(2, 6)}.${ext}`
         const filePath = join(recordingsDir, filename)
-        writeFileSync(filePath, Buffer.from(matches[1], 'base64'))
+        writeFileSync(filePath, Buffer.from(matches[2], 'base64'))
         const relativePath = `meetings/recordings/${filename}`
         if (meetingId) {
             meetingsDb.update(meetingId, {recording_path: relativePath, has_recording: 1})
@@ -964,6 +966,8 @@ ${content}`
         content: string
         speaker?: string
         sort_order?: number
+        start_time?: number
+        end_time?: number
     }) => {
         return meetingSegmentsDb.add(data)
     })
@@ -974,6 +978,8 @@ ${content}`
         content: string
         speaker?: string
         sort_order?: number
+        start_time?: number
+        end_time?: number
     }>) => {
         return meetingSegmentsDb.addBatch(segments)
     })
@@ -983,6 +989,8 @@ ${content}`
         content: string
         speaker: string
         sort_order: number
+        start_time: number
+        end_time: number
     }>) => {
         return meetingSegmentsDb.update(id, data)
     })

@@ -37,7 +37,10 @@
     </div>
 
     <!-- 列表 -->
-    <div v-if="meetingsStore.loading" class="loading">加载中...</div>
+    <div v-if="meetingsStore.loading" class="state-wrap">
+        <el-icon class="loading-icon" :size="26"><Loading /></el-icon>
+        <span>加载中...</span>
+      </div>
 
     <template v-else-if="meetingsStore.meetings.length">
       <div v-for="meeting in meetingsStore.meetings" :key="meeting.id" class="meeting-card" @click="openDetail(meeting)">
@@ -52,11 +55,18 @@
           <span v-if="meeting.has_recording" class="meta-item recording"><el-icon :size="12"><Microphone/></el-icon>有录音</span>
           <span v-if="(meeting as any).stt_status === 'done' && !isSimpleMode" class="meta-item stt"><el-icon :size="12"><Document/></el-icon>已转写</span>
         </div>
-        <span class="card-del" @click.stop="handleDelete(meeting)">&times;</span>
+        <el-icon :size="14" class="card-del" @click.stop="handleDelete(meeting)"><Delete/></el-icon>
       </div>
     </template>
 
-    <div v-else class="empty"><p>还没有会议，点击「新建会议」或「录音」开始</p></div>
+    <div v-else class="state-wrap empty">
+        <div class="empty-illustration" aria-hidden="true">
+          <div class="empty-mic"></div>
+          <div class="empty-bubble"></div>
+        </div>
+        <strong>记录会议，留存关键信息</strong>
+        <p>可以新建会议或直接录音，支持实时转写和 AI 摘要。</p>
+      </div>
 
     <!-- 新建/编辑弹窗 -->
     <el-dialog v-model="detailVisible" width="680px" :close-on-click-modal="false" destroy-on-close top="4vh">
@@ -119,6 +129,7 @@
         <div class="segments-list" v-if="segments.length">
           <div v-for="(seg, i) in segments" :key="seg.id || i" class="segment-item" :class="seg.segment_type">
             <div class="seg-header">
+              <span v-if="seg.start_time > 0 || seg.end_time > 0" class="seg-time">{{ formatSegmentTime(seg.start_time) }} - {{ formatSegmentTime(seg.end_time) }}</span>
               <span class="seg-type-badge" :class="seg.segment_type">{{ seg.segment_type === 'audio' ? '语音' : '文本' }}</span>
               <input v-model="seg.speaker" class="seg-speaker" placeholder="说话人" @change="updateSegment(seg)"/>
               <span v-if="segments.filter(s => s.speaker && s.speaker === seg.speaker).length > 1" class="seg-rename-all" @click="renameAllSpeaker(seg.speaker)" title="重命名所有同名说话人">⇄</span>
@@ -277,10 +288,20 @@
 <script setup lang="ts">
 import {computed, onActivated, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue'
 import {useMeetingsStore} from '@/stores/meetings'
-import {ArrowDown, ArrowUp, Location, Microphone, Plus, Upload, Document, MagicStick, User, EditPen} from '@element-plus/icons-vue'
+import {ArrowDown, ArrowUp, Location, Microphone, Plus, Upload, Document, MagicStick, User, EditPen, Delete} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import type {AiSummary, Meeting, MeetingAttachment, MeetingSegment} from '@/types/meeting'
 import {useSettingsStore} from '@/stores/settings'
+
+function getLocalDateTimeStr(date: Date = new Date()): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  const h = String(date.getHours()).padStart(2, '0')
+  const min = String(date.getMinutes()).padStart(2, '0')
+  const s = String(date.getSeconds()).padStart(2, '0')
+  return `${y}-${m}-${d}T${h}:${min}:${s}`
+}
 
 const meetingsStore = useMeetingsStore()
 const settingsStore = useSettingsStore()
@@ -337,6 +358,7 @@ const recordingDuration = ref(0)
 const recordingTimer = ref<ReturnType<typeof setInterval> | null>(null)
 const mediaRecorder = ref<MediaRecorder | null>(null)
 const recordingChunks = ref<Blob[]>([])
+const existingRecordingChunks = ref<Blob[]>([]) // 普通模式继续录音时，保存已有录音数据用于合并
 const recordingUrl = ref('')
 const pendingRecordingPath = ref('')
 const recordingTarget = ref<'quick' | 'meeting' | 'segment'>('quick')
@@ -356,6 +378,7 @@ const realtimeSttSessionId = ref('')
 const realtimeSttStatus = ref<'idle' | 'connecting' | 'ready' | 'closed' | 'error' | 'recording_only'>('idle')
 const realtimePartialText = ref('')
 const realtimeError = ref('')
+const recordingStartTime = ref(0) // 录音开始时间戳（ms），用于计算分段相对时间
 const isAnyRecording = computed(() => isRecording.value || isSegmentRecording.value)
 const liveTranscript = computed(() => {
   // 从分段中拼接所有已确认的文本，加上当前 partial
@@ -589,23 +612,30 @@ async function handleRealtimeSttEvent(event: any) {
   }
   if (event.type === 'final') {
     realtimePartialText.value = ''
-    // 使用增量数据保存分段，确保每句独立保存不重复
+    const now = Date.now()
+    const elapsed = recordingStartTime.value ? (now - recordingStartTime.value) / 1000 : 0
+    console.log(`[前端STT] final事件: delta_utterances=${event.delta_utterances?.length}, delta_text="${event.delta_text?.slice(0, 50)}", segments当前=${segments.value.length}`)
+
+    // 使用增量话语保存分段
     const deltaUtterances = event.delta_utterances || []
     if (deltaUtterances.length > 0) {
-      // 有增量话语，逐句保存
+      // 有增量话语，逐句保存到数据库
       for (const utt of deltaUtterances) {
         const text = utt.text?.trim()
         if (!text) continue
         const speaker = utt.speaker || ''
-        const now = new Date().toISOString()
+        const startTime = utt.start_time ?? Math.max(0, elapsed - 5)
+        const endTime = utt.end_time ?? elapsed
         if (editForm.id) {
           try {
             const saved = await window.electronAPI.meetings.segments.add({
               meeting_id: editForm.id,
               segment_type: 'text',
               content: text,
-              speaker: speaker,
-              sort_order: segments.value.length
+              speaker,
+              sort_order: segments.value.length,
+              start_time: startTime,
+              end_time: endTime
             })
             segments.value.push(saved)
           } catch (e) {
@@ -615,9 +645,11 @@ async function handleRealtimeSttEvent(event: any) {
               meeting_id: editForm.id,
               segment_type: 'text',
               content: text,
-              speaker: speaker,
+              speaker,
               sort_order: segments.value.length,
-              created_at: now
+              start_time: startTime,
+              end_time: endTime,
+              created_at: getLocalDateTimeStr()
             })
           }
         } else {
@@ -627,26 +659,31 @@ async function handleRealtimeSttEvent(event: any) {
             meeting_id: 0,
             segment_type: 'text',
             content: text,
-            speaker: speaker,
+            speaker,
             sort_order: segments.value.length,
-            created_at: now
+            start_time: startTime,
+            end_time: endTime,
+            created_at: getLocalDateTimeStr()
           })
         }
       }
     } else {
       // 没有增量话语信息，使用 delta_text 保存
-      const deltaText = (event.delta_text || event.text || '').trim()
+      const deltaText = (event.delta_text || '').trim()
       if (deltaText) {
         const speaker = event.speaker || ''
-        const now = new Date().toISOString()
+        const startTime = Math.max(0, elapsed - 5)
+        const endTime = elapsed
         if (editForm.id) {
           try {
             const saved = await window.electronAPI.meetings.segments.add({
               meeting_id: editForm.id,
               segment_type: 'text',
               content: deltaText,
-              speaker: speaker,
-              sort_order: segments.value.length
+              speaker,
+              sort_order: segments.value.length,
+              start_time: startTime,
+              end_time: endTime
             })
             segments.value.push(saved)
           } catch (e) {
@@ -656,21 +693,24 @@ async function handleRealtimeSttEvent(event: any) {
               meeting_id: editForm.id,
               segment_type: 'text',
               content: deltaText,
-              speaker: speaker,
+              speaker,
               sort_order: segments.value.length,
-              created_at: now
+              start_time: startTime,
+              end_time: endTime,
+              created_at: getLocalDateTimeStr()
             })
           }
         } else {
-          // 新会议尚未保存，本地暂存
           segments.value.push({
             id: -(Date.now()),
             meeting_id: 0,
             segment_type: 'text',
             content: deltaText,
-            speaker: speaker,
+            speaker,
             sort_order: segments.value.length,
-            created_at: now
+            start_time: startTime,
+            end_time: endTime,
+            created_at: getLocalDateTimeStr()
           })
         }
       }
@@ -708,6 +748,7 @@ async function startRealtimeRecording(target: 'quick' | 'meeting' | 'segment') {
     stream = await navigator.mediaDevices.getUserMedia({audio: true})
     await startRealtimePipeline(stream)
     recordingTarget.value = target
+    recordingStartTime.value = Date.now() // 记录音开始时间
     mediaRecorder.value = new MediaRecorder(stream, {mimeType: recorderMimeType()})
     recordingChunks.value = []
 
@@ -767,6 +808,70 @@ async function startRealtimeRecording(target: 'quick' | 'meeting' | 'segment') {
 }
 
 // ========== 普通模式录音（无 STT） ==========
+
+// 将 AudioBuffer 编码为 WAV Blob
+function audioBufferToWav(audioBuffer: AudioBuffer): Blob {
+  const numChannels = audioBuffer.numberOfChannels
+  const sampleRate = audioBuffer.sampleRate
+  const length = audioBuffer.length
+  const bytesPerSample = 2
+  const dataLength = length * numChannels * bytesPerSample
+  const headerLength = 44
+  const totalLength = headerLength + dataLength
+  const arrayBuffer = new ArrayBuffer(totalLength)
+  const view = new DataView(arrayBuffer)
+
+  // WAV header
+  const writeString = (offset: number, str: string) => { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)) }
+  writeString(0, 'RIFF')
+  view.setUint32(4, totalLength - 8, true)
+  writeString(8, 'WAVE')
+  writeString(12, 'fmt ')
+  view.setUint32(16, 16, true) // chunk size
+  view.setUint16(20, 1, true) // PCM
+  view.setUint16(22, numChannels, true)
+  view.setUint32(24, sampleRate, true)
+  view.setUint32(28, sampleRate * numChannels * bytesPerSample, true)
+  view.setUint16(32, numChannels * bytesPerSample, true)
+  view.setUint16(34, bytesPerSample * 8, true)
+  writeString(36, 'data')
+  view.setUint32(40, dataLength, true)
+
+  // 交错写入 PCM 数据
+  let offset = 44
+  for (let i = 0; i < length; i++) {
+    for (let ch = 0; ch < numChannels; ch++) {
+      const sample = Math.max(-1, Math.min(1, audioBuffer.getChannelData(ch)[i]))
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true)
+      offset += 2
+    }
+  }
+  return new Blob([arrayBuffer], {type: 'audio/wav'})
+}
+
+// 合并两个音频 Blob 为一个 WAV（解码→拼接→编码）
+async function mergeAudioBlobs(existing: Blob, appended: Blob): Promise<Blob> {
+  const ctx = new AudioContext()
+  try {
+    const [buf1, buf2] = await Promise.all([
+      ctx.decodeAudioData(await existing.arrayBuffer()),
+      ctx.decodeAudioData(await appended.arrayBuffer())
+    ])
+    const sampleRate = buf1.sampleRate
+    const channels = Math.max(buf1.numberOfChannels, buf2.numberOfChannels)
+    const totalLength = buf1.length + buf2.length
+    const merged = ctx.createBuffer(channels, totalLength, sampleRate)
+    for (let ch = 0; ch < channels; ch++) {
+      const data = merged.getChannelData(ch)
+      data.set(buf1.getChannelData(Math.min(ch, buf1.numberOfChannels - 1)), 0)
+      data.set(buf2.getChannelData(Math.min(ch, buf2.numberOfChannels - 1)), buf1.length)
+    }
+    return audioBufferToWav(merged)
+  } finally {
+    await ctx.close().catch(() => {})
+  }
+}
+
 async function startPlainRecording(target: 'quick' | 'detail' | 'segment') {
   if (isAnyRecording.value) return
   let stream: MediaStream | null = null
@@ -776,25 +881,49 @@ async function startPlainRecording(target: 'quick' | 'detail' | 'segment') {
     mediaRecorder.value = new MediaRecorder(stream, {mimeType: recorderMimeType()})
     recordingChunks.value = []
 
+    // 普通模式继续录音：先加载已有录音数据用于合并
+    existingRecordingChunks.value = []
+    if (isSimpleMode.value && target === 'detail' && editForm.has_recording && editForm.recording_path) {
+      try {
+        const urls = await window.electronAPI.meetings.resolveFiles([editForm.recording_path])
+        if (urls?.[0]) {
+          const resp = await fetch(urls[0])
+          const existingBlob = await resp.blob()
+          existingRecordingChunks.value = [existingBlob]
+        }
+      } catch { /* ignore */ }
+    }
+
     mediaRecorder.value.ondataavailable = (e) => {
       if (e.data.size > 0) recordingChunks.value.push(e.data)
     }
 
     mediaRecorder.value.onstop = async () => {
       stream!.getTracks().forEach(t => t.stop())
-      const blob = new Blob(recordingChunks.value, {type: 'audio/webm'})
+      const newBlob = new Blob(recordingChunks.value, {type: 'audio/webm'})
+
+      // 普通模式继续录音：合并已有录音 + 新录音
+      let finalBlob: Blob
+      if (existingRecordingChunks.value.length > 0) {
+        try {
+          finalBlob = await mergeAudioBlobs(existingRecordingChunks.value[0], newBlob)
+        } catch {
+          // 合并失败则只保留新录音
+          finalBlob = newBlob
+        }
+        existingRecordingChunks.value = []
+      } else {
+        finalBlob = newBlob
+      }
+
       const dataUrl = await new Promise<string>((resolve) => {
         const reader = new FileReader()
         reader.onload = () => resolve(reader.result as string)
-        reader.readAsDataURL(blob)
+        reader.readAsDataURL(finalBlob)
       })
 
       try {
-        // 普通模式已有录音时，不传 meetingId 避免覆盖 recording_path
-        const saveMeetingId = (isSimpleMode.value && editForm.has_recording && target === 'detail')
-          ? undefined
-          : (editForm.id || undefined)
-        const path = await window.electronAPI.meetings.saveRecording(dataUrl, saveMeetingId)
+        const path = await window.electronAPI.meetings.saveRecording(dataUrl, editForm.id || undefined)
         if (path) {
           recordingUrl.value = dataUrl
           if (target === 'segment') {
@@ -805,15 +934,9 @@ async function startPlainRecording(target: 'quick' | 'detail' | 'segment') {
             openCreateWithRecording(path, dataUrl)
             ElMessage.success('录音完成，请创建会议')
           } else {
-            // 普通模式：已有录音时追加为音频分段，不覆盖
-            if (isSimpleMode.value && editForm.has_recording) {
-              await appendAudioSegment(path, dataUrl)
-              ElMessage.success('录音已追加')
-            } else {
-              editForm.recording_path = path
-              editForm.has_recording = 1
-              ElMessage.success('录音已保存')
-            }
+            editForm.recording_path = path
+            editForm.has_recording = 1
+            ElMessage.success('录音已保存')
           }
         }
       } catch (e: any) {
@@ -853,7 +976,7 @@ function openCreateWithRecording(recordingPath: string, dataUrl: string) {
   editingMeeting.value = null
   Object.assign(editForm, {
     id: 0, title: '', description: '', meeting_type: 'regular', status: 'ongoing',
-    start_time: new Date().toISOString().slice(0, 16).replace('T', ' '),
+    start_time: new Date().toLocaleString('sv-SE', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',', ''),
     end_time: '', location: '', participants: [], minutes: liveTranscript.value,
     attachments: [], recording_path: recordingPath, has_recording: 1, todo_ids: [],
     stt_text: liveTranscript.value, stt_status: liveTranscript.value ? 'done' : 'none'
@@ -882,13 +1005,16 @@ function stopSegmentRecord() {
 
 // ========== 分段管理 ==========
 async function appendAudioSegment(path: string, dataUrl: string) {
+  const elapsed = recordingStartTime.value ? (Date.now() - recordingStartTime.value) / 1000 : 0
   if (editForm.id) {
     const seg = await window.electronAPI.meetings.segments.add({
       meeting_id: editForm.id,
       segment_type: 'audio',
       content: path,
       speaker: '',
-      sort_order: segments.value.length
+      sort_order: segments.value.length,
+      start_time: 0,
+      end_time: elapsed
     })
     segments.value.push(seg)
   } else {
@@ -899,7 +1025,9 @@ async function appendAudioSegment(path: string, dataUrl: string) {
       content: path,
       speaker: '',
       sort_order: segments.value.length,
-      created_at: new Date().toISOString()
+      start_time: 0,
+      end_time: elapsed,
+      created_at: getLocalDateTimeStr()
     })
   }
   segAudioUrls.value[path] = dataUrl
@@ -919,7 +1047,9 @@ function addTextSegment() {
     content: '',
     speaker: '',
     sort_order: segments.value.length,
-    created_at: new Date().toISOString()
+    start_time: 0,
+    end_time: 0,
+    created_at: getLocalDateTimeStr()
   })
 }
 
@@ -960,13 +1090,20 @@ async function addAudioSegment() {
           content: path,
           speaker: '',
           sort_order: segments.value.length,
-          created_at: new Date().toISOString()
+          created_at: getLocalDateTimeStr()
         })
       }
       segAudioUrls.value[path] = dataUrl
     }
   }
   input.click()
+}
+
+function formatSegmentTime(seconds: number): string {
+  if (!seconds || seconds <= 0) return ''
+  const m = Math.floor(seconds / 60)
+  const s = Math.floor(seconds % 60)
+  return m > 0 ? `${m}:${s.toString().padStart(2, '0')}` : `${s}s`
 }
 
 async function updateSegment(seg: MeetingSegment) {
@@ -1040,7 +1177,7 @@ function openCreate() {
   editingMeeting.value = null
   Object.assign(editForm, {
     id: 0, title: '', description: '', meeting_type: 'regular', status: 'pending',
-    start_time: new Date().toISOString().slice(0, 16).replace('T', ' '),
+    start_time: new Date().toLocaleString('sv-SE', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',', ''),
     end_time: '', location: '', participants: [], minutes: '',
     attachments: [], recording_path: '', has_recording: 0, todo_ids: [],
     stt_text: '', stt_status: 'none'
@@ -1166,7 +1303,9 @@ async function handleSave() {
         segment_type: s.segment_type,
         content: s.content,
         speaker: s.speaker,
-        sort_order: segments.value.indexOf(s)
+        sort_order: segments.value.indexOf(s),
+        start_time: s.start_time || 0,
+        end_time: s.end_time || 0
       }))
     )
   }
@@ -1459,6 +1598,117 @@ watch(detailVisible, (v) => {
 .ai-input::placeholder { color: var(--text-placeholder); }
 
 /* 空/加载 */
-.empty { padding: 40px 0; text-align: center; color: var(--text-tertiary); font-size: 13px; }
-.loading { padding: 40px 0; text-align: center; color: var(--text-tertiary); font-size: 13px; }
+.state-wrap {
+  display: flex;
+  min-height: 420px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px 84px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.loading-icon {
+  margin-bottom: 10px;
+  animation: rotate 1s linear infinite;
+}
+
+.empty strong {
+  margin-top: 16px;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.empty p {
+  margin-top: 8px;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+}
+
+.empty-illustration {
+  position: relative;
+  width: 112px;
+  height: 100px;
+}
+
+.empty-mic {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  width: 24px;
+  height: 38px;
+  border: 2.5px solid rgba(64, 158, 255, .45);
+  border-radius: 12px 12px 18px 18px;
+  background: rgba(64, 158, 255, .06);
+  transform: translateX(-50%);
+}
+
+.empty-mic::before {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  width: 14px;
+  height: 10px;
+  border: 2.5px solid rgba(64, 158, 255, .45);
+  border-top: 0;
+  border-radius: 0 0 7px 7px;
+  transform: translateX(-50%);
+  content: '';
+}
+
+.empty-mic::after {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  width: 2.5px;
+  height: 8px;
+  background: rgba(64, 158, 255, .45);
+  transform: translateX(-50%);
+  content: '';
+}
+
+.empty-bubble {
+  position: absolute;
+  right: 8px;
+  bottom: 14px;
+  width: 44px;
+  height: 32px;
+  border: 2px solid rgba(103, 194, 58, .35);
+  border-radius: 8px;
+  background: rgba(103, 194, 58, .06);
+}
+
+.empty-bubble::before {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 26px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(103, 194, 58, .35);
+  box-shadow: 0 8px 0 rgba(103, 194, 58, .35);
+  content: '';
+}
+
+.empty-bubble::after {
+  position: absolute;
+  bottom: -6px;
+  left: 10px;
+  width: 8px;
+  height: 8px;
+  border-bottom: 2px solid rgba(103, 194, 58, .35);
+  border-left: 2px solid rgba(103, 194, 58, .35);
+  border-radius: 0 0 0 4px;
+  transform: rotate(-45deg);
+  content: '';
+}
+
+@keyframes rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
 </style>

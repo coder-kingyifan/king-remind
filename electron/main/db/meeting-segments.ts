@@ -7,6 +7,8 @@ export interface MeetingSegmentRow {
     content: string
     speaker: string
     sort_order: number
+    start_time: number  // 秒，相对于录音开始
+    end_time: number    // 秒，相对于录音开始
     created_at: string
 }
 
@@ -46,17 +48,21 @@ export const meetingSegmentsDb = {
         content: string
         speaker?: string
         sort_order?: number
+        start_time?: number
+        end_time?: number
     }): MeetingSegmentRow {
         const db = getDatabase()
         run(`
-            INSERT INTO meeting_segments (meeting_id, segment_type, content, speaker, sort_order)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO meeting_segments (meeting_id, segment_type, content, speaker, sort_order, start_time, end_time)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         `, [
             data.meeting_id,
             data.segment_type,
             data.content,
             data.speaker || '',
-            data.sort_order || 0
+            data.sort_order || 0,
+            data.start_time || 0,
+            data.end_time || 0
         ])
         const idResult = db.exec('SELECT last_insert_rowid() as id')
         const id = idResult[0].values[0][0] as number
@@ -71,6 +77,8 @@ export const meetingSegmentsDb = {
         content: string
         speaker?: string
         sort_order?: number
+        start_time?: number
+        end_time?: number
     }>): MeetingSegmentRow[] {
         const results: MeetingSegmentRow[] = []
         for (let i = 0; i < segments.length; i++) {
@@ -88,6 +96,8 @@ export const meetingSegmentsDb = {
         content: string
         speaker: string
         sort_order: number
+        start_time: number
+        end_time: number
     }>): MeetingSegmentRow | undefined {
         const fields: string[] = []
         const params: any[] = []
@@ -95,6 +105,8 @@ export const meetingSegmentsDb = {
         if (data.content !== undefined) { fields.push('content = ?'); params.push(data.content) }
         if (data.speaker !== undefined) { fields.push('speaker = ?'); params.push(data.speaker) }
         if (data.sort_order !== undefined) { fields.push('sort_order = ?'); params.push(data.sort_order) }
+        if (data.start_time !== undefined) { fields.push('start_time = ?'); params.push(data.start_time) }
+        if (data.end_time !== undefined) { fields.push('end_time = ?'); params.push(data.end_time) }
         if (fields.length === 0) return undefined
         params.push(id)
         run(`UPDATE meeting_segments SET ${fields.join(', ')} WHERE id = ?`, params)

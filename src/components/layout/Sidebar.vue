@@ -58,9 +58,9 @@ const aiNavItems = [
   {path: '/', title: '对话', icon: ChatDotRound},
   {path: '/dashboard', title: '导览', icon: Odometer},
   {path: '/reminders', title: '提醒', icon: Bell},
+  {path: '/skills', title: '技能中心', icon: MagicStick},
   {path: '/todos', title: '待办', icon: List},
-  {path: '/meetings', title: '会议', icon: Memo},
-  {path: '/skills', title: '技能中心', icon: MagicStick}
+  {path: '/meetings', title: '会议', icon: Memo}
 ]
 
 // 普通模式 - 简洁导航

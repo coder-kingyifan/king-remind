@@ -55,14 +55,20 @@
       </div>
 
       <div class="composer-tools">
-        <button class="tool-btn" type="button">
-          <el-icon :size="14"><User /></el-icon>
-          <span>本人</span>
-        </button>
-        <button class="tool-btn" :class="{ active: newDueDate }" type="button" @click.stop="showDatePicker = !showDatePicker">
+        <button class="tool-btn" :class="{ active: newDueDate }" type="button" @click="cycleDueDate">
           <el-icon :size="14"><Calendar /></el-icon>
-          <span>{{ fmtDate(newDueDate) }}</span>
+          <span>{{ dueDateLabel }}</span>
         </button>
+        <el-date-picker
+          ref="datePickerRef"
+          v-model="customDate"
+          type="date"
+          value-format="YYYY-MM-DD"
+          size="small"
+          style="position: absolute; visibility: hidden; width: 0; height: 0"
+          :disabled-date="disablePastDate"
+          @change="onCustomDate"
+        />
         <button class="tool-btn" :class="{ active: showDescription || newDescription.trim() }" type="button" @click="showDescription = !showDescription">
           <el-icon :size="14"><Document /></el-icon>
           <span>描述</span>
@@ -72,35 +78,6 @@
           <span>{{ priLabel(newPriority) }}</span>
         </button>
       </div>
-
-      <transition name="fade">
-        <div v-if="showDatePicker" class="date-popup" @click.self="showDatePicker = false">
-          <div class="date-list">
-            <button
-              v-for="opt in dueOptions"
-              :key="opt.value"
-              class="date-item"
-              :class="{ active: newDueDate === opt.value }"
-              type="button"
-              @click="selectNewDueDate(opt.value)"
-            >
-              {{ opt.label }}
-            </button>
-            <div class="date-picker-wrap">
-              <el-date-picker
-                v-model="customDate"
-                type="date"
-                value-format="YYYY-MM-DD"
-                placeholder="选日期"
-                size="small"
-                style="width: 128px"
-                :disabled-date="disablePastDate"
-                @change="onCustomDate"
-              />
-            </div>
-          </div>
-        </div>
-      </transition>
     </section>
 
     <section class="todo-panel">
@@ -301,8 +278,7 @@ import {
   Flag,
   Loading,
   Picture,
-  Refresh,
-  User
+  Refresh
 } from '@element-plus/icons-vue'
 import {ElImageViewer, ElMessageBox} from 'element-plus'
 import type {Todo} from '@/types/todo'
@@ -314,10 +290,11 @@ const newTitle = ref('')
 const newDescription = ref('')
 const newPriority = ref<'normal' | 'high' | 'urgent'>('normal')
 const newDueDate = ref(dayStr(0))
+const dueDateStep = ref(0) // 0=今天 1=明天 2=后天 3=选日期
 const customDate = ref('')
+const datePickerRef = ref<any>()
 const pasteImages = ref<string[]>([])
 const statusFilter = ref<'all' | 'pending' | 'completed'>('all')
-const showDatePicker = ref(false)
 const showDescription = ref(false)
 const showCompleted = ref(false)
 const editVisible = ref(false)
@@ -415,11 +392,16 @@ const visibleTodoCount = computed(() => visibleGroups.value.reduce((sum, group) 
 function dayStr(offset: number): string {
   const date = new Date()
   date.setDate(date.getDate() + offset)
-  return date.toISOString().slice(0, 10)
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 function disablePastDate(date: Date): boolean {
-  return date.getTime() < new Date(new Date().toDateString()).getTime()
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return date.getTime() < today.getTime()
 }
 
 function cyclePriority() {
@@ -428,15 +410,33 @@ function cyclePriority() {
   newPriority.value = order[(currentIndex + 1) % order.length]
 }
 
-function selectNewDueDate(value: string) {
-  newDueDate.value = value
-  showDatePicker.value = false
+const dueDateLabel = computed(() => {
+  if (dueDateStep.value < 3) return ['今天', '明天', '后天'][dueDateStep.value]
+  return fmtDate(newDueDate.value)
+})
+
+function cycleDueDate() {
+  // 已选了具体日期，再次点击重新打开日期选择器
+  if (dueDateStep.value === 3) {
+    nextTick(() => datePickerRef.value?.handleOpen?.())
+    return
+  }
+  const nextStep = dueDateStep.value + 1
+  if (nextStep === 3) {
+    // 到"选日期"步骤，弹出日期选择器
+    dueDateStep.value = 3
+    nextTick(() => datePickerRef.value?.handleOpen?.())
+    return
+  }
+  dueDateStep.value = nextStep
+  newDueDate.value = dayStr(nextStep)
 }
 
 function onCustomDate(value: string) {
   if (!value) return
   newDueDate.value = value
-  showDatePicker.value = false
+  dueDateStep.value = 3
+  customDate.value = ''
 }
 
 const imgCache = new Map<string, string>()
@@ -514,7 +514,7 @@ async function handleAdd() {
   newDescription.value = ''
   newPriority.value = 'normal'
   newDueDate.value = dayStr(0)
-  customDate.value = ''
+  dueDateStep.value = 0
   pasteImages.value = []
   showDescription.value = false
   await handleFilterChange()
@@ -602,10 +602,14 @@ function fmtDate(date: string | null): string {
   if (date === today) return '今天'
   if (date === dayStr(1)) return '明天'
   if (date === dayStr(2)) return '后天'
-  const diff = Math.floor((new Date(date).getTime() - new Date(today).getTime()) / 86400000)
+  const [ty, tm, td] = today.split('-').map(Number)
+  const [dy, dm, dd] = date.split('-').map(Number)
+  const todayMs = new Date(ty, tm - 1, td).getTime()
+  const dateMs = new Date(dy, dm - 1, dd).getTime()
+  const diff = Math.round((dateMs - todayMs) / 86400000)
   if (diff < 0) return `${Math.abs(diff)}天前`
   if (diff <= 7) return `${diff}天后`
-  return new Date(date).toLocaleDateString('zh-CN', {month: 'short', day: 'numeric'})
+  return new Date(dy, dm - 1, dd).toLocaleDateString('zh-CN', {month: 'short', day: 'numeric'})
 }
 
 function priLabel(priority: string): string {
@@ -830,44 +834,6 @@ watch(newTitle, () => nextTick(resizeAddInput))
 
 .priority-btn.urgent {
   color: var(--color-danger);
-}
-
-.date-popup {
-  position: absolute;
-  left: 128px;
-  bottom: -150px;
-  z-index: 12;
-}
-
-.date-list {
-  display: grid;
-  gap: 2px;
-  width: 156px;
-  padding: 6px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  background: var(--bg-card);
-  box-shadow: var(--shadow-lg);
-}
-
-.date-item {
-  height: 30px;
-  padding: 0 10px;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text-secondary);
-  text-align: left;
-  font-size: 13px;
-}
-
-.date-item:hover,
-.date-item.active {
-  background: var(--bg-hover);
-  color: var(--color-primary);
-}
-
-.date-picker-wrap {
-  padding: 5px 4px 2px;
 }
 
 .paste-row {
@@ -1256,14 +1222,9 @@ watch(newTitle, () => nextTick(resizeAddInput))
 }
 
 .completed-toggle-row {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
   display: flex;
   justify-content: center;
-  padding: 18px 16px 20px;
-  background: linear-gradient(to top, var(--bg-card) 70%, transparent);
+  padding: 12px 16px 16px;
 }
 
 .completed-toggle {
@@ -1415,11 +1376,6 @@ watch(newTitle, () => nextTick(resizeAddInput))
 
   .todo-panel {
     min-height: 500px;
-  }
-
-  .date-popup {
-    left: 16px;
-    right: auto;
   }
 }
 </style>

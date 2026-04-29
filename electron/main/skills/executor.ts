@@ -3,6 +3,13 @@ import {skillsDb} from '../db/skills'
 import {modelConfigsDb} from '../db/model-configs'
 import {callSearchAPI, hasTextModelConfigured, simpleLLMCall} from '../llm'
 
+function getLocalDateStr(date: Date = new Date()): string {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+}
+
 // ======================== AI Mode Helper ========================
 
 const STRUCTURED_FORMAT_INSTRUCTION = `\n\n请严格按照以下 JSON 格式返回，不要返回其他内容：\n{"title": "简短标题（不超过20字）", "content": "正文内容"}\n如果无法严格 JSON，请确保输出包含明确的标题和正文。`
@@ -104,7 +111,7 @@ async function executeAiPrompt(actionConfig: Record<string, any>, userConfig: Re
         prompt = prompt.replace(`{{${key}}}`, String(value))
     }
     const now = new Date()
-    prompt = prompt.replace('{{date}}', now.toISOString().slice(0, 10))
+    prompt = prompt.replace('{{date}}', getLocalDateStr(now))
     prompt = prompt.replace('{{time}}', now.toLocaleTimeString('zh-CN'))
 
     try {
@@ -139,7 +146,7 @@ async function executeSearchAndSummarize(actionConfig: Record<string, any>, user
         query = query.replace(`{{${key}}}`, String(value))
     }
     const now = new Date()
-    query = query.replace('{{date}}', now.toISOString().slice(0, 10))
+    query = query.replace('{{date}}', getLocalDateStr(now))
     query = query.replace('{{time}}', now.toLocaleTimeString('zh-CN'))
 
     const searchConfig = modelConfigsDb.get(searchModelId)!

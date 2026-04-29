@@ -1157,7 +1157,12 @@ async function checkUpdate() {
       ElMessage.success('已是最新版本')
     }
   } catch (e: any) {
-    ElMessage.error('检查更新失败: ' + (e.message || '未知错误'))
+    const msg = e.message || '未知错误'
+    if (msg.includes('ENOTFOUND') || msg.includes('ECONNREFUSED') || msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT') || msg.includes('ERR_NETWORK') || msg.includes('状态码')) {
+      ElMessage.error('无法访问 GitHub，请检查网络连接')
+    } else {
+      ElMessage.error('检查更新失败: ' + msg)
+    }
   } finally {
     checkingUpdate.value = false
   }
