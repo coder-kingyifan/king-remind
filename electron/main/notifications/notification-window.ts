@@ -274,7 +274,7 @@ function getNotificationHTML(data: { title: string; body: string; icon: string; 
   <div class="card">
     <div class="icon-wrap">${escHtml(icon)}</div>
     <div class="content">
-      <div class="app-label"><span class="app-dot"></span> king提醒助手</div>
+      <div class="app-label"><span class="app-dot"></span> King Mate</div>
       <div class="title">${escHtml(title)}</div>
       <div class="body">${escHtml(body)}</div>
     </div>

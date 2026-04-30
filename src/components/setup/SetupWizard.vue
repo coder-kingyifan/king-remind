@@ -14,7 +14,7 @@
       <!-- 步骤1: 欢迎与称呼 -->
       <div v-if="currentStep === 0" class="setup-content">
         <div class="setup-icon">👋</div>
-        <h2 class="setup-title">欢迎使用 King 提醒助手</h2>
+        <h2 class="setup-title">欢迎使用 King Mate</h2>
         <p class="setup-desc">让我们快速完成初始设置，开始你的提醒之旅</p>
         <div class="setup-form">
           <div class="setup-field">
@@ -131,7 +131,7 @@
       <div v-if="currentStep === 3" class="setup-content">
         <div class="setup-icon">🎉</div>
         <h2 class="setup-title">设置完成！</h2>
-        <p class="setup-desc">一切就绪，开始使用 King 提醒助手吧</p>
+        <p class="setup-desc">一切就绪，开始使用 King Mate 吧</p>
         <div class="setup-summary">
           <div class="summary-item">
             <span class="summary-label">称呼</span>

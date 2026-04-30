@@ -17,7 +17,7 @@ export class DiscordNotifier implements NotificationChannel {
 
         const payload: any = {
             content,
-            username: config.username || 'king提醒助手'
+            username: config.username || 'King Mate'
         }
 
         if (config.avatar_url) {

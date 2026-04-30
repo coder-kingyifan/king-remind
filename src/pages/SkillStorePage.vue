@@ -6,9 +6,9 @@
         <p class="page-subtitle">浏览和安装社区技能，扩展你的提醒能力</p>
       </div>
       <div class="header-actions">
-        <el-button @click="router.push('/skills')">
+        <el-button @click="router.push('/reminders')">
           <el-icon><ArrowLeft/></el-icon>
-          返回技能中心
+          返回提醒管理
         </el-button>
         <el-button @click="loadStoreData" :loading="skillStoreStore.fetching">
           <el-icon><Refresh/></el-icon>

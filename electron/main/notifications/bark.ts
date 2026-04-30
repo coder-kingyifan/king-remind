@@ -22,7 +22,7 @@ export class BarkNotifier implements NotificationChannel {
             body,
             icon: vars.icon,
             sound: config.sound || 'alarm',
-            group: config.group || 'king-remind',
+            group: config.group || 'king-mate',
             url: config.url || ''
         }
 

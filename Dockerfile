@@ -46,7 +46,7 @@ ENV DB_DIR=/app/data
 ENV ELECTRON_ENABLE_LOGGING=true
 ENV ELECTRON_DISABLE_GPU=1
 
-# ========== king-remind 配置环境变量 ==========
+# ========== king-mate 配置环境变量 ==========
 # 通用设置
 ENV KING_API_ENABLED=true
 ENV KING_API_PORT=33333

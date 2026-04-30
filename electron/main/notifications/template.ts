@@ -15,7 +15,7 @@ export function buildTemplateVars(message: NotificationMessage): TemplateVars {
         body: message.body,
         icon: message.icon || '🔔',
         time: new Date().toLocaleString('zh-CN'),
-        app_name: 'king提醒助手'
+        app_name: 'King Mate'
     }
 }
 

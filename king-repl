@@ -1,11 +1,11 @@
 #!/bin/sh
 # ============================================================
-# king-remind REPL 客户端
+# king-mate REPL 客户端
 # 通过 HTTP API 连接主进程，提供与终端 REPL 相同的交互体验
 #
 # 用法:
-#   docker compose exec king-remind king-repl
-#   docker compose exec king-remind king-repl /status
+#   docker compose exec king-mate king-repl
+#   docker compose exec king-mate king-repl /status
 # ============================================================
 
 # ANSI 颜色
@@ -257,7 +257,7 @@ except: print('(解析失败)')
 print_banner() {
     printf "\n"
     printf "${C_CYAN}${C_BOLD}===============================================${C_RESET}\n"
-    printf "${C_CYAN}${C_BOLD}  欢迎使用 King 提醒工具!${C_RESET}\n"
+    printf "${C_CYAN}${C_BOLD}  欢迎使用 King Mate!${C_RESET}\n"
     printf "${C_CYAN}${C_BOLD}===============================================${C_RESET}\n"
     printf "\n"
     printf "  ${C_YELLOW}可用命令:${C_RESET}\n"
@@ -312,7 +312,7 @@ fi
 print_banner
 
 while true; do
-    printf "${C_CYAN}king-remind> ${C_RESET}"
+    printf "${C_CYAN}king-mate> ${C_RESET}"
     read -r input
 
     # 空行跳过

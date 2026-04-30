@@ -80,7 +80,7 @@
           <span class="metric-val">{{ dashStats.modelCount }}</span>
           <span class="metric-lbl">模型配置</span>
         </div>
-        <div class="metric" @click="router.push('/skills')">
+        <div class="metric" @click="router.push('/reminders')">
           <span class="metric-val">{{ dashStats.skillCount }}</span>
           <span class="metric-lbl">技能</span>
         </div>

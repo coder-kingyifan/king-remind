@@ -46,7 +46,7 @@
 import {computed} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {useSettingsStore} from '@/stores/settings'
-import {Bell, ChatDotRound, MagicStick, Moon, Odometer, Setting, Sunny, HomeFilled, List, Memo} from '@element-plus/icons-vue'
+import {Bell, ChatDotRound, Moon, Odometer, Setting, Sunny, HomeFilled, List, Memo} from '@element-plus/icons-vue'
 import logoIcon from '../../../resources/icon.png'
 
 const route = useRoute()
@@ -58,7 +58,6 @@ const aiNavItems = [
   {path: '/', title: '对话', icon: ChatDotRound},
   {path: '/dashboard', title: '导览', icon: Odometer},
   {path: '/reminders', title: '提醒', icon: Bell},
-  {path: '/skills', title: '技能中心', icon: MagicStick},
   {path: '/todos', title: '待办', icon: List},
   {path: '/meetings', title: '会议', icon: Memo}
 ]

@@ -3,7 +3,7 @@ const path = require('path')
 const fs = require('fs')
 
 const ROOT = path.resolve(__dirname, '..')
-const EXE_PATH = path.join(ROOT, 'dist', 'win-unpacked', 'king-remind.exe')
+const EXE_PATH = path.join(ROOT, 'dist', 'win-unpacked', 'king-mate.exe')
 // 强烈建议使用 .ico 文件
 const ICON_PATH = path.join(ROOT, 'build', 'icon.ico')
 
@@ -25,7 +25,7 @@ function main() {
     // 1. 尝试强制结束可能占用的进程
     try {
         console.log('正在检查并清理残留进程...')
-        execSync('taskkill /F /IM king-remind.exe /T', { stdio: 'ignore' })
+        execSync('taskkill /F /IM king-mate.exe /T', { stdio: 'ignore' })
     } catch (e) {
         // 进程不存在会报错，直接忽略即可
     }
@@ -41,12 +41,12 @@ function main() {
 
     const args = [
         EXE_PATH,
-        '--set-version-string', 'FileDescription', pkg.description || 'king提醒助手',
-        '--set-version-string', 'ProductName', 'king-remind',
+        '--set-version-string', 'FileDescription', pkg.description || 'King Mate',
+        '--set-version-string', 'ProductName', 'king-mate',
         '--set-version-string', 'LegalCopyright', 'Copyright (c) 2026 kingyifan',
         '--set-file-version', pkg.version,
         '--set-product-version', pkg.version + '.0',
-        '--set-version-string', 'InternalName', 'king-remind',
+        '--set-version-string', 'InternalName', 'king-mate',
         '--set-version-string', 'CompanyName', 'kingyifan',
         '--set-icon', ICON_PATH
     ]

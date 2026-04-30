@@ -574,7 +574,7 @@
                 <el-input v-model="barkConfig.sound" placeholder="alarm"/>
               </el-form-item>
               <el-form-item label="消息分组">
-                <el-input v-model="barkConfig.group" placeholder="king-remind"/>
+                <el-input v-model="barkConfig.group" placeholder="king-mate"/>
               </el-form-item>
             </div>
             <el-form-item label="点击跳转 URL（可选）">
@@ -606,7 +606,7 @@
             </el-form-item>
             <div class="config-row">
               <el-form-item label="机器人名称">
-                <el-input v-model="discordConfig.username" placeholder="king提醒助手"/>
+                <el-input v-model="discordConfig.username" placeholder="King Mate"/>
               </el-form-item>
               <el-form-item label="头像 URL（可选）">
                 <el-input v-model="discordConfig.avatar_url" placeholder="https://..."/>
@@ -758,8 +758,8 @@ const feishuConfig = ref({
   msg_type: 'text',
   message_template: ''
 })
-const barkConfig = ref({server_url: '', sound: 'alarm', group: 'king-remind', url: '', message_template: ''})
-const discordConfig = ref({webhook_url: '', username: 'king提醒助手', avatar_url: '', message_template: ''})
+const barkConfig = ref({server_url: '', sound: 'alarm', group: 'king-mate', url: '', message_template: ''})
+const discordConfig = ref({webhook_url: '', username: 'King Mate', avatar_url: '', message_template: ''})
 const wechatTestConfig = ref({
   app_id: '',
   app_secret: '',

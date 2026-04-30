@@ -116,7 +116,7 @@ export class NotificationDispatcher {
 
         const testMessage: NotificationMessage = {
             title: '测试通知',
-            body: '这是一条来自 king提醒助手的测试通知，如果您收到此消息，说明该通知渠道配置成功！',
+            body: '这是一条来自 King Mate 的测试通知，如果您收到此消息，说明该通知渠道配置成功！',
             icon: '🔔',
             reminderId: 0
         }

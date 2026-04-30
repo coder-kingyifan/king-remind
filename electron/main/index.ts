@@ -174,7 +174,7 @@ if (!gotTheLock) {
     })
 
     app.whenReady().then(async () => {
-        app.setAppUserModelId('com.kingyifan.king-remind')
+        app.setAppUserModelId('com.kingyifan.king-mate')
 
         try {
             // 自动加载加密密钥（从 remind.key 文件读取，无需用户输入）

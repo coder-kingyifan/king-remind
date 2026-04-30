@@ -377,17 +377,274 @@ const sttLoading = ref(false)
 const realtimeSttSessionId = ref('')
 const realtimeSttStatus = ref<'idle' | 'connecting' | 'ready' | 'closed' | 'error' | 'recording_only'>('idle')
 const realtimePartialText = ref('')
+const realtimeBaseText = ref('')
+const realtimeFinalText = ref('')
+type RealtimeTranscriptLine = {
+  line: string
+  key: string
+  speaker: string
+  text: string
+  start_time?: number
+  end_time?: number
+  received_at: number
+}
+
+const realtimeTranscriptLines = ref<RealtimeTranscriptLine[]>([])
+const realtimeLastAppendedLines = ref<RealtimeTranscriptLine[]>([])
 const realtimeError = ref('')
 const recordingStartTime = ref(0) // 录音开始时间戳（ms），用于计算分段相对时间
+const isStoppingRecording = ref(false) // 正在停止录音标记，防止closed事件触发重连
 const isAnyRecording = computed(() => isRecording.value || isSegmentRecording.value)
-const liveTranscript = computed(() => {
-  // 从分段中拼接所有已确认的文本，加上当前 partial
-  const finalText = segments.value
+
+function cleanTranscriptText(text?: string | null): string {
+  return String(text || '').replace(/\r\n/g, '\n').trim()
+}
+
+function transcriptLineKey(text: string): string {
+  return cleanTranscriptText(text).replace(/[：]/g, ':').replace(/\s+/g, '').toLowerCase()
+}
+
+function trimEndingPunctuation(text: string): string {
+  return cleanTranscriptText(text).replace(/[。！？.!?,，、；;：:\s]+$/u, '')
+}
+
+function getIncrementalText(previous: string, current: string): string {
+  const prev = cleanTranscriptText(previous)
+  const next = cleanTranscriptText(current)
+  if (!prev || !next || prev === next) return ''
+  if (next.startsWith(prev)) return cleanTranscriptText(next.slice(prev.length))
+
+  const prevCore = trimEndingPunctuation(prev)
+  if (prevCore && next.startsWith(prevCore)) {
+    return cleanTranscriptText(next.slice(prevCore.length))
+  }
+
+  return ''
+}
+
+function mergeTranscriptText(existing: string, incoming: string): string {
+  const left = cleanTranscriptText(existing)
+  const right = cleanTranscriptText(incoming)
+  if (!left) return right
+  if (!right) return left
+  if (left === right || left.includes(right)) return left
+  if (right.includes(left)) return right
+
+  const leftLines = left.split('\n').map(line => line.trim()).filter(Boolean)
+  const rightLines = right.split('\n').map(line => line.trim()).filter(Boolean)
+  const leftKeys = new Set(leftLines.map(transcriptLineKey))
+  const rightKeys = new Set(rightLines.map(transcriptLineKey))
+
+  if (leftLines.length > 0 && leftLines.every(line => rightKeys.has(transcriptLineKey(line)))) {
+    return right
+  }
+
+  const merged = [...leftLines]
+  for (const line of rightLines) {
+    const key = transcriptLineKey(line)
+    if (!leftKeys.has(key)) {
+      merged.push(line)
+      leftKeys.add(key)
+    }
+  }
+  return merged.join('\n')
+}
+
+function textSegmentsTranscript(): string {
+  return segments.value
     .filter(s => s.segment_type === 'text' && s.content?.trim())
     .map(s => s.speaker ? `${s.speaker}：${s.content.trim()}` : s.content.trim())
     .join('\n')
-  const partialText = realtimePartialText.value.trim()
-  return `${finalText}${finalText && partialText ? '\n' : ''}${partialText}`.trim()
+}
+
+function currentSavedTranscript(): string {
+  const formText = cleanTranscriptText(editForm.stt_text || editForm.minutes)
+  return mergeTranscriptText(formText, textSegmentsTranscript())
+}
+
+function parseTranscriptLine(line: string): { line: string; speaker: string; text: string; key: string } | null {
+  const cleaned = cleanTranscriptText(line)
+  if (!cleaned) return null
+  const match = cleaned.match(/^(.{1,24}?)[：:]\s*(.+)$/)
+  const speaker = match ? cleanTranscriptText(match[1]) : ''
+  const text = match ? cleanTranscriptText(match[2]) : cleaned
+  if (!text) return null
+  const formatted = speaker ? `${speaker}：${text}` : text
+  return {line: formatted, speaker, text, key: transcriptLineKey(formatted)}
+}
+
+function parseTranscriptText(text?: string): Array<{ line: string; speaker: string; text: string; key: string }> {
+  return cleanTranscriptText(text)
+    .split('\n')
+    .map(parseTranscriptLine)
+    .filter((item): item is { line: string; speaker: string; text: string; key: string } => !!item)
+}
+
+function appendRealtimeTranscriptLine(
+  item: {line?: string; speaker?: string; text?: string; start_time?: number; end_time?: number},
+  options: {skipExisting?: boolean} = {}
+): RealtimeTranscriptLine | null {
+  let parsed = item.line
+    ? parseTranscriptLine(item.line)
+    : parseTranscriptLine(item.speaker ? `${item.speaker}：${item.text || ''}` : item.text || '')
+  if (!parsed) return null
+
+  const now = Date.now()
+  const last = realtimeTranscriptLines.value[realtimeTranscriptLines.value.length - 1]
+  if (last?.key === parsed.key && now - last.received_at < 1500) return null
+  if (options.skipExisting && realtimeTranscriptLines.value.some(line => line.key === parsed.key)) return null
+
+  if (last && last.speaker === parsed.speaker) {
+    const suffix = getIncrementalText(last.text, parsed.text)
+    if (suffix) {
+      parsed = {
+        speaker: parsed.speaker,
+        text: suffix,
+        line: parsed.speaker ? `${parsed.speaker}：${suffix}` : suffix,
+        key: transcriptLineKey(parsed.speaker ? `${parsed.speaker}：${suffix}` : suffix)
+      }
+    }
+  }
+
+  const appended: RealtimeTranscriptLine = {
+    ...parsed,
+    start_time: item.start_time,
+    end_time: item.end_time,
+    received_at: now
+  }
+  realtimeTranscriptLines.value.push(appended)
+  realtimeFinalText.value = realtimeTranscriptLines.value.map(item => item.line).join('\n')
+  console.log(`[前端STT] 追加final行: "${parsed.line}", final_count=${realtimeTranscriptLines.value.length}`)
+  return appended
+}
+
+function appendRealtimeTranscriptText(text?: string, options: {skipExisting?: boolean} = {}): number {
+  let count = 0
+  for (const item of parseTranscriptText(text)) {
+    if (appendRealtimeTranscriptLine(item, options)) count++
+  }
+  return count
+}
+
+function hasTranscriptOverlap(previous: string, incoming: string): boolean {
+  const prev = parseTranscriptText(previous)
+  const next = parseTranscriptText(incoming)
+  if (!prev.length || !next.length) return false
+  const prevLast = prev[prev.length - 1]
+  return next.some(item =>
+    item.key === prevLast.key ||
+    !!getIncrementalText(prevLast.text, item.text) ||
+    !!getIncrementalText(item.text, prevLast.text)
+  )
+}
+
+function promoteRealtimePartial(reason: string): RealtimeTranscriptLine[] {
+  const partial = cleanTranscriptText(realtimePartialText.value)
+  if (!partial) return []
+  const before = realtimeTranscriptLines.value.length
+  appendRealtimeTranscriptText(pendingRealtimePartialText(partial))
+  const appended = realtimeTranscriptLines.value.slice(before)
+  if (appended.length) {
+    realtimeLastAppendedLines.value = appended
+    console.log(`[前端STT] 固化partial(${reason}): "${partial.slice(0, 80)}"`)
+  }
+  realtimePartialText.value = ''
+  return appended
+}
+
+function realtimeTranscriptText(): string {
+  return realtimeFinalText.value
+}
+
+function formatRealtimeEventUtterances(utterances: any[]): string {
+  return utterances
+    .map(utt => {
+      const text = cleanTranscriptText(utt?.text)
+      if (!text) return ''
+      const speaker = cleanTranscriptText(utt?.speaker)
+      return speaker ? `${speaker}：${text}` : text
+    })
+    .filter(Boolean)
+    .join('\n')
+}
+
+function rememberRealtimeFinalEvent(event: any): number {
+  realtimeLastAppendedLines.value = []
+  const deltaUtterances = Array.isArray(event?.delta_utterances) ? event.delta_utterances : []
+  const deltaText = cleanTranscriptText(event?.delta_text)
+  if (deltaUtterances.length) {
+    let count = 0
+    for (const utt of deltaUtterances) {
+      const appended = appendRealtimeTranscriptLine({
+        speaker: cleanTranscriptText(utt?.speaker),
+        text: cleanTranscriptText(utt?.text),
+        start_time: utt?.start_time,
+        end_time: utt?.end_time
+      })
+      if (appended) {
+        realtimeLastAppendedLines.value.push(appended)
+        count++
+      }
+    }
+    return count
+  }
+
+  if (deltaText) {
+    const before = realtimeTranscriptLines.value.length
+    const count = appendRealtimeTranscriptText(deltaText)
+    realtimeLastAppendedLines.value = realtimeTranscriptLines.value.slice(before)
+    return count
+  }
+
+  const currentText = cleanTranscriptText(event?.text)
+  if (currentText) {
+    const lines = parseTranscriptText(currentText)
+    const before = realtimeTranscriptLines.value.length
+    const count = appendRealtimeTranscriptText(currentText, {skipExisting: lines.length > 1})
+    realtimeLastAppendedLines.value = realtimeTranscriptLines.value.slice(before)
+    return count
+  }
+
+  const before = realtimeTranscriptLines.value.length
+  const count = appendRealtimeTranscriptText(event?.full_text, {skipExisting: true})
+  realtimeLastAppendedLines.value = realtimeTranscriptLines.value.slice(before)
+  return count
+}
+
+function composeRealtimeTranscript(includePartial = true): string {
+  let text = mergeTranscriptText(realtimeBaseText.value, realtimeFinalText.value)
+  if (includePartial) {
+    text = mergeTranscriptText(text, realtimePartialText.value)
+  }
+  return text || currentSavedTranscript()
+}
+
+function pendingRealtimePartialText(text: string): string {
+  const partial = cleanTranscriptText(text)
+  const known = mergeTranscriptText(realtimeBaseText.value, realtimeTranscriptText())
+  if (!partial || !known) return partial
+  if (partial.startsWith(known)) {
+    return cleanTranscriptText(partial.slice(known.length).replace(/^\n+/, ''))
+  }
+
+  const knownKeys = new Set(known.split('\n').map(transcriptLineKey))
+  return partial
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line && !knownKeys.has(transcriptLineKey(line)))
+    .join('\n')
+}
+
+function syncRealtimeTranscriptToForm(status: 'pending' | 'done' = 'pending'): void {
+  const text = composeRealtimeTranscript(false)
+  if (!text) return
+  editForm.stt_text = text
+  editForm.minutes = text
+  editForm.stt_status = status
+}
+
+const liveTranscript = computed(() => {
+  return composeRealtimeTranscript(true)
 })
 const realtimeStatusLabel = computed(() => {
   return ({
@@ -531,6 +788,10 @@ function resetRealtimeTranscript() {
   realtimeSttSessionId.value = ''
   realtimeSttStatus.value = 'idle'
   realtimePartialText.value = ''
+  realtimeBaseText.value = ''
+  realtimeFinalText.value = ''
+  realtimeTranscriptLines.value = []
+  realtimeLastAppendedLines.value = []
   realtimeError.value = ''
 }
 
@@ -580,6 +841,62 @@ async function startRealtimePipeline(stream: MediaStream): Promise<boolean> {
 }
 
 async function stopRealtimePipeline() {
+  // 先保存未确认的partial文本
+  const partialSnapshot = cleanTranscriptText(realtimePartialText.value)
+  const partialText = pendingRealtimePartialText(partialSnapshot)
+  appendRealtimeTranscriptText(partialText)
+  if (partialText) {
+    const now = Date.now()
+    const elapsed = recordingStartTime.value ? (now - recordingStartTime.value) / 1000 : 0
+    const existingTexts = new Set(
+      segments.value.filter(s => s.segment_type === 'text').map(s => s.content?.trim()).filter(Boolean)
+    )
+    if (!existingTexts.has(partialText)) {
+      const startTime = Math.max(0, elapsed - 5)
+      const endTime = elapsed
+      if (editForm.id) {
+        try {
+          const saved = await window.electronAPI.meetings.segments.add({
+            meeting_id: editForm.id,
+            segment_type: 'text',
+            content: partialText,
+            speaker: '',
+            sort_order: segments.value.length,
+            start_time: startTime,
+            end_time: endTime
+          })
+          segments.value.push(saved)
+        } catch (e) {
+          segments.value.push({
+            id: -(Date.now()),
+            meeting_id: editForm.id,
+            segment_type: 'text',
+            content: partialText,
+            speaker: '',
+            sort_order: segments.value.length,
+            start_time: startTime,
+            end_time: endTime,
+            created_at: getLocalDateTimeStr()
+          })
+        }
+      } else {
+        segments.value.push({
+          id: -(Date.now()),
+          meeting_id: 0,
+          segment_type: 'text',
+          content: partialText,
+          speaker: '',
+          sort_order: segments.value.length,
+          start_time: startTime,
+          end_time: endTime,
+          created_at: getLocalDateTimeStr()
+        })
+      }
+      console.log(`[前端STT] stopPipeline保存partial: "${partialText.slice(0, 50)}"`)
+    }
+  }
+  realtimePartialText.value = ''
+
   audioProcessor.value?.disconnect()
   audioSource.value?.disconnect()
   audioGain.value?.disconnect()
@@ -593,84 +910,128 @@ async function stopRealtimePipeline() {
 
   if (realtimeSttSessionId.value) {
     try {
-      await window.electronAPI.meetings.stopRealtimeStt(realtimeSttSessionId.value)
+      const result = await window.electronAPI.meetings.stopRealtimeStt(realtimeSttSessionId.value)
+      appendRealtimeTranscriptText(result?.full_text, {skipExisting: true})
     } catch {}
   }
+  syncRealtimeTranscriptToForm('done')
   realtimeSttSessionId.value = ''
 }
 
+async function saveRealtimeLinesAsSegments(lines: RealtimeTranscriptLine[], elapsed: number) {
+  if (!lines.length) return
+  const existingTexts = new Set(
+    segments.value.filter(s => s.segment_type === 'text').map(s => s.content?.trim()).filter(Boolean)
+  )
+  for (const line of lines) {
+    const text = line.text?.trim()
+    if (!text || existingTexts.has(text)) continue
+    const speaker = line.speaker || ''
+    const startTime = line.start_time ?? Math.max(0, elapsed - 5)
+    const endTime = line.end_time ?? elapsed
+    if (editForm.id) {
+      try {
+        const saved = await window.electronAPI.meetings.segments.add({
+          meeting_id: editForm.id,
+          segment_type: 'text',
+          content: text,
+          speaker,
+          sort_order: segments.value.length,
+          start_time: startTime,
+          end_time: endTime
+        })
+        segments.value.push(saved)
+      } catch (e) {
+        console.error('保存分段失败:', e)
+        segments.value.push({
+          id: -(Date.now()),
+          meeting_id: editForm.id,
+          segment_type: 'text',
+          content: text,
+          speaker,
+          sort_order: segments.value.length,
+          start_time: startTime,
+          end_time: endTime,
+          created_at: getLocalDateTimeStr()
+        })
+      }
+    } else {
+      segments.value.push({
+        id: -(Date.now()),
+        meeting_id: 0,
+        segment_type: 'text',
+        content: text,
+        speaker,
+        sort_order: segments.value.length,
+        start_time: startTime,
+        end_time: endTime,
+        created_at: getLocalDateTimeStr()
+      })
+    }
+    existingTexts.add(text)
+  }
+}
+
 async function handleRealtimeSttEvent(event: any) {
-  if (!event || event.sessionId !== realtimeSttSessionId.value) return
+  if (!event) return
+  if (event.sessionId !== realtimeSttSessionId.value) {
+    console.log(`[前端STT] 忽略旧会话事件: event.sessionId=${event.sessionId}, current=${realtimeSttSessionId.value}, type=${event.type}`)
+    return
+  }
   if (event.type === 'ready') {
     realtimeSttStatus.value = 'ready'
     editForm.stt_status = 'pending'
     return
   }
   if (event.type === 'partial') {
-    realtimePartialText.value = event.text || ''
+    const partialText = cleanTranscriptText(event.text || '')
+    const nextPartial = partialText || cleanTranscriptText(event.full_text || '')
+    if (realtimePartialText.value && nextPartial && !hasTranscriptOverlap(realtimePartialText.value, nextPartial)) {
+      const promoted = promoteRealtimePartial('partial-switch')
+      const now = Date.now()
+      const elapsed = recordingStartTime.value ? (now - recordingStartTime.value) / 1000 : 0
+      await saveRealtimeLinesAsSegments(promoted, elapsed)
+    }
+    realtimePartialText.value = pendingRealtimePartialText(nextPartial)
     return
   }
   if (event.type === 'final') {
+    let promotedBeforeFinal: RealtimeTranscriptLine[] = []
+    if (realtimePartialText.value) {
+      const incomingFinalText = cleanTranscriptText(event.delta_text || event.text || event.full_text || '')
+      if (incomingFinalText && !hasTranscriptOverlap(realtimePartialText.value, incomingFinalText)) {
+        promotedBeforeFinal = promoteRealtimePartial('final-switch')
+      }
+    }
+    const appendedCount = rememberRealtimeFinalEvent(event)
     realtimePartialText.value = ''
     const now = Date.now()
     const elapsed = recordingStartTime.value ? (now - recordingStartTime.value) / 1000 : 0
-    console.log(`[前端STT] final事件: delta_utterances=${event.delta_utterances?.length}, delta_text="${event.delta_text?.slice(0, 50)}", segments当前=${segments.value.length}`)
+    console.log(`[前端STT] final事件: appended=${appendedCount}, final_text="${realtimeFinalText.value.slice(0, 100)}", delta_utterances=${event.delta_utterances?.length}, delta_text="${event.delta_text?.slice(0, 50)}", segments当前=${segments.value.length}`)
 
-    // 使用增量话语保存分段
-    const deltaUtterances = event.delta_utterances || []
-    if (deltaUtterances.length > 0) {
-      // 有增量话语，逐句保存到数据库
-      for (const utt of deltaUtterances) {
-        const text = utt.text?.trim()
-        if (!text) continue
-        const speaker = utt.speaker || ''
-        const startTime = utt.start_time ?? Math.max(0, elapsed - 5)
-        const endTime = utt.end_time ?? elapsed
-        if (editForm.id) {
-          try {
-            const saved = await window.electronAPI.meetings.segments.add({
-              meeting_id: editForm.id,
-              segment_type: 'text',
-              content: text,
-              speaker,
-              sort_order: segments.value.length,
-              start_time: startTime,
-              end_time: endTime
-            })
-            segments.value.push(saved)
-          } catch (e) {
-            console.error('保存分段失败:', e)
-            segments.value.push({
-              id: -(Date.now()),
-              meeting_id: editForm.id,
-              segment_type: 'text',
-              content: text,
-              speaker,
-              sort_order: segments.value.length,
-              start_time: startTime,
-              end_time: endTime,
-              created_at: getLocalDateTimeStr()
-            })
-          }
-        } else {
-          // 新会议尚未保存，本地暂存
-          segments.value.push({
-            id: -(Date.now()),
-            meeting_id: 0,
-            segment_type: 'text',
-            content: text,
-            speaker,
-            sort_order: segments.value.length,
-            start_time: startTime,
-            end_time: endTime,
-            created_at: getLocalDateTimeStr()
-          })
-        }
-      }
-    } else {
-      // 没有增量话语信息，使用 delta_text 保存
-      const deltaText = (event.delta_text || '').trim()
-      if (deltaText) {
+    // 使用实际追加到实时日志的新行保存分段，避免服务端把同一句改写变长时重复保存整句
+    await saveRealtimeLinesAsSegments([...promotedBeforeFinal, ...realtimeLastAppendedLines.value], elapsed)
+    // 从分段和实时会话缓存重建完整文本
+    const allText = mergeTranscriptText(textSegmentsTranscript(), composeRealtimeTranscript(false))
+    console.log(`[前端STT] 保存后: segments总数=${segments.value.length}, 文本段=${segments.value.filter(s => s.segment_type === 'text').length}, allText="${allText.slice(0, 80)}"`)
+    editForm.stt_text = allText
+    editForm.minutes = allText
+    editForm.stt_status = 'pending'
+    return
+  }
+  if (event.type === 'closed') {
+    appendRealtimeTranscriptText(event.full_text, {skipExisting: true})
+    // WS断开：先将未确认的partial文本保存为分段，防止丢失
+    const partialSnapshot = cleanTranscriptText(realtimePartialText.value)
+    const partialText = pendingRealtimePartialText(partialSnapshot)
+    appendRealtimeTranscriptText(partialText)
+    if (partialText) {
+      const now = Date.now()
+      const elapsed = recordingStartTime.value ? (now - recordingStartTime.value) / 1000 : 0
+      const existingTexts = new Set(
+        segments.value.filter(s => s.segment_type === 'text').map(s => s.content?.trim()).filter(Boolean)
+      )
+      if (!existingTexts.has(partialText)) {
         const speaker = event.speaker || ''
         const startTime = Math.max(0, elapsed - 5)
         const endTime = elapsed
@@ -679,7 +1040,7 @@ async function handleRealtimeSttEvent(event: any) {
             const saved = await window.electronAPI.meetings.segments.add({
               meeting_id: editForm.id,
               segment_type: 'text',
-              content: deltaText,
+              content: partialText,
               speaker,
               sort_order: segments.value.length,
               start_time: startTime,
@@ -687,12 +1048,12 @@ async function handleRealtimeSttEvent(event: any) {
             })
             segments.value.push(saved)
           } catch (e) {
-            console.error('保存分段失败:', e)
+            console.error('保存partial分段失败:', e)
             segments.value.push({
               id: -(Date.now()),
               meeting_id: editForm.id,
               segment_type: 'text',
-              content: deltaText,
+              content: partialText,
               speaker,
               sort_order: segments.value.length,
               start_time: startTime,
@@ -705,7 +1066,7 @@ async function handleRealtimeSttEvent(event: any) {
             id: -(Date.now()),
             meeting_id: 0,
             segment_type: 'text',
-            content: deltaText,
+            content: partialText,
             speaker,
             sort_order: segments.value.length,
             start_time: startTime,
@@ -713,31 +1074,71 @@ async function handleRealtimeSttEvent(event: any) {
             created_at: getLocalDateTimeStr()
           })
         }
+        console.log(`[前端STT] closed时保存partial: "${partialText.slice(0, 50)}"`)
       }
     }
-    // 从分段重建完整文本
-    const allText = segments.value
-      .filter(s => s.segment_type === 'text' && s.content?.trim())
-      .map(s => s.speaker ? `${s.speaker}：${s.content.trim()}` : s.content.trim())
-      .join('\n')
-    editForm.stt_text = allText
-    editForm.minutes = allText
-    editForm.stt_status = 'pending'
-    return
-  }
-  if (event.type === 'closed') {
-    realtimeSttStatus.value = 'closed'
-    if (liveTranscript.value) {
-      editForm.stt_text = liveTranscript.value
-      editForm.minutes = liveTranscript.value
-      editForm.stt_status = 'done'
+    realtimePartialText.value = ''
+
+    // 如果仍在录音且不是正在停止，自动重连继续转写（保留已有分段）
+    if (isAnyRecording.value && !isStoppingRecording.value && audioContext.value && audioSource.value) {
+      console.log('[前端STT] WS断开但仍在录音，自动重连...')
+      realtimeSttStatus.value = 'connecting'
+      try {
+        // 先停止旧会话（清理后端资源）
+        if (realtimeSttSessionId.value) {
+          try { await window.electronAPI.meetings.stopRealtimeStt(realtimeSttSessionId.value) } catch {}
+        }
+        const session = await window.electronAPI.meetings.startRealtimeStt()
+        realtimeSttSessionId.value = session.sessionId
+        realtimeSttStatus.value = 'ready'
+        console.log('[前端STT] 重连成功, 新sessionId=' + session.sessionId)
+      } catch (e) {
+        console.error('[前端STT] 重连失败:', e)
+        realtimeSttStatus.value = 'recording_only'
+        realtimeSttSessionId.value = ''
+      }
+    } else {
+      // 录音已结束或正在停止，正常关闭
+      realtimeSttStatus.value = 'closed'
+      // 从分段和实时会话缓存重建完整文本
+      const allText = mergeTranscriptText(textSegmentsTranscript(), composeRealtimeTranscript(false))
+      if (allText) {
+        editForm.stt_text = allText
+        editForm.minutes = allText
+        editForm.stt_status = 'done'
+      }
     }
     return
   }
   if (event.type === 'error') {
-    realtimeSttStatus.value = 'error'
-    realtimeError.value = event.message || '实时转写连接异常'
-    editForm.stt_status = 'error'
+    console.error('[前端STT] 错误:', event.message)
+    // 如果仍在录音且不是正在停止，尝试重连
+    if (isAnyRecording.value && !isStoppingRecording.value && audioContext.value) {
+      console.log('[前端STT] 错误但仍在录音，3秒后重连...')
+      realtimeSttStatus.value = 'connecting'
+      realtimeError.value = event.message || '实时转写连接异常'
+      setTimeout(async () => {
+        if (!isAnyRecording.value || isStoppingRecording.value) return
+        try {
+          // 先停止旧会话
+          if (realtimeSttSessionId.value) {
+            try { await window.electronAPI.meetings.stopRealtimeStt(realtimeSttSessionId.value) } catch {}
+          }
+          const session = await window.electronAPI.meetings.startRealtimeStt()
+          realtimeSttSessionId.value = session.sessionId
+          realtimeSttStatus.value = 'ready'
+          realtimeError.value = ''
+          console.log('[前端STT] 错误后重连成功')
+        } catch (e) {
+          console.error('[前端STT] 错误后重连失败:', e)
+          realtimeSttStatus.value = 'recording_only'
+        }
+      }, 3000)
+    } else {
+      realtimeSttStatus.value = 'error'
+      realtimeError.value = event.message || '实时转写连接异常'
+      editForm.stt_status = 'error'
+    }
   }
 }
 
@@ -745,6 +1146,11 @@ async function startRealtimeRecording(target: 'quick' | 'meeting' | 'segment') {
   if (isAnyRecording.value) return
   let stream: MediaStream | null = null
   try {
+    realtimeBaseText.value = target === 'quick' ? '' : currentSavedTranscript()
+    realtimeFinalText.value = ''
+    realtimeTranscriptLines.value = []
+    realtimeLastAppendedLines.value = []
+    realtimePartialText.value = ''
     stream = await navigator.mediaDevices.getUserMedia({audio: true})
     await startRealtimePipeline(stream)
     recordingTarget.value = target
@@ -769,9 +1175,10 @@ async function startRealtimeRecording(target: 'quick' | 'meeting' | 'segment') {
         const path = await window.electronAPI.meetings.saveRecording(dataUrl, editForm.id || undefined)
         if (path) {
           recordingUrl.value = dataUrl
+          const transcript = composeRealtimeTranscript(false)
           if (target === 'segment') {
             await appendAudioSegment(path, dataUrl)
-            ElMessage.success(liveTranscript.value ? '录音和转写已插入' : '录音已插入')
+            ElMessage.success(transcript ? '录音和转写已插入' : '录音已插入')
           } else if (target === 'quick') {
             pendingRecordingPath.value = path
             openCreateWithRecording(path, dataUrl)
@@ -779,15 +1186,15 @@ async function startRealtimeRecording(target: 'quick' | 'meeting' | 'segment') {
           } else {
             editForm.recording_path = path
             editForm.has_recording = 1
-            if (editForm.id && liveTranscript.value) {
+            if (editForm.id && transcript) {
               await window.electronAPI.meetings.update(editForm.id, {
-                stt_text: liveTranscript.value,
+                stt_text: transcript,
                 stt_status: 'done',
-                minutes: liveTranscript.value
+                minutes: transcript
               })
               await handleFilterChange()
             }
-            ElMessage.success(liveTranscript.value ? '录音和实时转写已保存' : '录音已保存')
+            ElMessage.success(transcript ? '录音和实时转写已保存' : '录音已保存')
           }
         }
       } catch (e: any) {
@@ -957,6 +1364,7 @@ async function startPlainRecording(target: 'quick' | 'detail' | 'segment') {
 }
 
 async function stopCurrentRecording() {
+  isStoppingRecording.value = true
   if (!isSimpleMode.value) {
     await stopRealtimePipeline()
   }
@@ -970,16 +1378,18 @@ async function stopCurrentRecording() {
     recordingTimer.value = null
   }
   realtimeSttStatus.value = 'idle'
+  isStoppingRecording.value = false
 }
 
 function openCreateWithRecording(recordingPath: string, dataUrl: string) {
   editingMeeting.value = null
+  const transcript = composeRealtimeTranscript(false)
   Object.assign(editForm, {
     id: 0, title: '', description: '', meeting_type: 'regular', status: 'ongoing',
     start_time: new Date().toLocaleString('sv-SE', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',', ''),
-    end_time: '', location: '', participants: [], minutes: liveTranscript.value,
+    end_time: '', location: '', participants: [], minutes: transcript,
     attachments: [], recording_path: recordingPath, has_recording: 1, todo_ids: [],
-    stt_text: liveTranscript.value, stt_status: liveTranscript.value ? 'done' : 'none'
+    stt_text: transcript, stt_status: transcript ? 'done' : 'none'
   })
   recordingUrl.value = dataUrl
   aiSummary.value = null
@@ -1032,9 +1442,10 @@ async function appendAudioSegment(path: string, dataUrl: string) {
   }
   segAudioUrls.value[path] = dataUrl
   // 文本分段已由 handleRealtimeSttEvent 逐句保存，无需再重复添加
-  if (liveTranscript.value) {
-    editForm.stt_text = liveTranscript.value
-    editForm.minutes = liveTranscript.value
+  const transcript = composeRealtimeTranscript(false)
+  if (transcript) {
+    editForm.stt_text = transcript
+    editForm.minutes = transcript
     editForm.stt_status = 'done'
   }
 }
@@ -1250,13 +1661,10 @@ async function loadSegments(meetingId: number) {
 
 async function handleSave() {
   // 保存前从分段同步完整文本
-  const segmentsText = segments.value
-    .filter(s => s.segment_type === 'text' && s.content?.trim())
-    .map(s => s.speaker ? `${s.speaker}：${s.content.trim()}` : s.content.trim())
-    .join('\n')
-  if (segmentsText) {
-    editForm.stt_text = segmentsText
-    editForm.minutes = segmentsText
+  const transcriptText = mergeTranscriptText(currentSavedTranscript(), composeRealtimeTranscript(false))
+  if (transcriptText) {
+    editForm.stt_text = transcriptText
+    editForm.minutes = transcriptText
   }
   if (!editForm.title.trim()) {
     ElMessage.warning('请输入会议标题')

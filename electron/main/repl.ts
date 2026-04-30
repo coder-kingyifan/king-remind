@@ -51,7 +51,7 @@ function printBanner(): void {
     const host = settingsDb.get('api_host') || '0.0.0.0'
     log('')
     log(`${C.cyan}${C.bold}===============================================${C.reset}`)
-    log(`${C.cyan}${C.bold}  欢迎使用 King 提醒工具!${C.reset}`)
+    log(`${C.cyan}${C.bold}  欢迎使用 King Mate!${C.reset}`)
     log(`${C.cyan}${C.bold}===============================================${C.reset}`)
     log('')
     log(`  ${C.yellow}可用命令:${C.reset}`)
@@ -613,7 +613,7 @@ export async function startRepl(scheduler: ReminderScheduler | null): Promise<vo
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
-        prompt: `${C.cyan}king-remind> ${C.reset}`
+        prompt: `${C.cyan}king-mate> ${C.reset}`
     })
 
     printBanner()
@@ -720,14 +720,14 @@ export async function continueHeadlessInit(): Promise<void> {
     const host = settingsDb.get('api_host') || '0.0.0.0'
     console.log('')
     console.log('===============================================')
-    console.log('  欢迎使用 King 提醒工具!')
+    console.log('  欢迎使用 King Mate!')
     console.log('===============================================')
     console.log('')
     console.log(`  API 服务已启动: http://${host}:${port}`)
     console.log(`  健康检查:       http://${host}:${port}/api/ping`)
     console.log('')
-    console.log('  进入容器交互:   docker compose exec king-remind king-repl')
-    console.log('  执行单条命令:   docker compose exec king-remind king-repl /status')
+    console.log('  进入容器交互:   docker compose exec king-mate king-repl')
+    console.log('  执行单条命令:   docker compose exec king-mate king-repl /status')
     console.log('  查看实时日志:   docker compose logs -f')
     console.log('  查看通知配置:   curl http://localhost:' + port + '/api/notifications/configs')
     console.log('  查看系统设置:   curl http://localhost:' + port + '/api/settings')

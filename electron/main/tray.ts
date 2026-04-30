@@ -19,7 +19,7 @@ function buildContextMenu(): Menu {
     return Menu.buildFromTemplate([
         ...(mainWindowRef ? [
             {
-                label: '打开 king提醒助手',
+                label: '打开 King Mate',
                 click: () => {
                     mainWindowRef!.show()
                     mainWindowRef!.focus()
@@ -65,7 +65,7 @@ export function createTray(mainWindow: BrowserWindow | null): Tray {
     tray = new Tray(icon)
 
     const contextMenu = buildContextMenu()
-    tray.setToolTip('king提醒助手')
+    tray.setToolTip('King Mate')
     tray.setContextMenu(contextMenu)
 
     tray.on('click', () => {

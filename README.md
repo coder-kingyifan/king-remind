@@ -1,12 +1,11 @@
 <p align="center">
-  <img src="./resources/icon.png" width="96" alt="King提醒助手" />
+  <img src="./resources/icon.png" width="96" alt="King Mate" />
 </p>
 
-<h1 align="center">King 提醒助手</h1>
+<h1 align="center">King Mate</h1>
 
 <p align="center">
-  <b>功能丰富的桌面提醒应用，支持多渠道通知、AI 对话、技能商店、农历提醒与外部 API 集成</b>
-</p>
+  <b>功能丰富的桌面提醒应用，支持多渠道通知、AI 对话、技能商店、农历提醒与外部 API 集成</b></p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Electron-33-47848F?logo=electron&logoColor=white" alt="Electron" />
@@ -152,7 +151,7 @@
 > **真正重要的不是提醒本身，而是那些被记住的瞬间所承载的价值** ——
 > 一杯水的关怀，一句生日祝福的温暖，一次健身的坚持，一份纪念日的仪式感。
 
-**King 提醒助手** 由此诞生。
+**King Mate** 由此诞生。
 
 它不只是一个冷冰冰的工具，而是你生活中的**数字管家**、**习惯教练**和**情感守护者**
 。它将那些容易被遗忘的琐碎编织成一张温柔的守护网，让你在繁忙中不错过健康，在匆忙中不遗漏关爱，在忙碌中不失约自己。
@@ -328,8 +327,8 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/coder-kingyifan/king-remind.git
-cd king-remind
+git clone https://github.com/coder-kingyifan/king-mate.git
+cd king-mate
 
 # 安装依赖（建议设置国内镜像源）
 npm config set registry https://registry.npmmirror.com
@@ -359,8 +358,8 @@ npm run pack:dir    # 打包为免安装目录
 
 产物输出到 `dist/` 目录：
 
-- `king-remind-{version}-setup.exe` — NSIS 安装程序
-- `king-remind-{version}-portable.exe` — 免安装便携版
+- `king-mate-{version}-setup.exe` — NSIS 安装程序
+- `king-mate-{version}-portable.exe` — 免安装便携版
 
 **macOS：**
 
@@ -427,8 +426,8 @@ npx electron-builder --linux --config
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/coder-kingyifan/king-remind.git
-cd king-remind
+git clone https://github.com/coder-kingyifan/king-mate.git
+cd king-mate
 
 # 2. 复制环境变量模板并配置通知渠道
 cp .env.example .env
@@ -445,13 +444,13 @@ docker compose logs -f
 
 ```
 ===============================================
-  欢迎使用 King 提醒工具!
+  欢迎使用 King Mate!
 ===============================================
 
   API 服务已启动: http://0.0.0.0:33333
   健康检查:       http://0.0.0.0:33333/api/ping
 
-  进入容器交互:   docker compose exec king-remind ...
+  进入容器交互:   docker compose exec king-mate ...
   查看实时日志:   docker compose logs -f
   查看通知配置:   curl http://localhost:33333/api/notifications/configs
   查看系统设置:   curl http://localhost:33333/api/settings
@@ -468,26 +467,26 @@ docker compose logs -f
 
 ```bash
 # 进入交互 REPL（最常用，支持所有命令）
-docker compose exec king-remind king-repl
+docker compose exec king-mate king-repl
 
 # 单条命令执行
-docker compose exec king-remind king-repl /status
-docker compose exec king-remind king-repl /reminders
-docker compose exec king-remind king-repl /help
-docker compose exec king-remind king-repl "明天下午3点提醒我开会"
+docker compose exec king-mate king-repl /status
+docker compose exec king-mate king-repl /reminders
+docker compose exec king-mate king-repl /help
+docker compose exec king-mate king-repl "明天下午3点提醒我开会"
 
 # 进入容器 Shell
-docker compose exec king-remind sh
+docker compose exec king-mate sh
 
 # 查看容器内的数据库文件
-docker compose exec king-remind ls -la /app/data/
+docker compose exec king-mate ls -la /app/data/
 ```
 
 交互模式界面：
 
 ```
 ===============================================
-  欢迎使用 King 提醒工具!
+  欢迎使用 King Mate!
 ===============================================
 
   可用命令:
@@ -505,7 +504,7 @@ docker compose exec king-remind ls -la /app/data/
   提示: 直接输入文字即可与 AI 对话
 ===============================================
 
-king-remind> /status
+king-mate> /status
 ```
 
 ### 终端 REPL 交互
@@ -514,14 +513,14 @@ king-remind> /status
 
 ```bash
 # 交互模式启动（进入终端 REPL）
-docker compose run --rm king-remind
+docker compose run --rm king-mate
 ```
 
 交互模式下提供完整的终端命令行界面：
 
 ```
 ===============================================
-  欢迎使用 King 提醒工具!
+  欢迎使用 King Mate!
 ===============================================
 
   可用命令:
@@ -700,7 +699,7 @@ KING_API_PORT=30000 docker compose up -d
 如需备份数据库：
 
 ```bash
-docker cp king-remind:/app/data/remind.db ./remind.db.bak
+docker cp king-mate:/app/data/remind.db ./remind.db.bak
 ```
 
 ### 环境变量
@@ -729,16 +728,16 @@ docker cp king-remind:/app/data/remind.db ./remind.db.bak
 
 ```bash
 # 桌面应用
-King提醒助手.exe --headless
+King Mate.exe --headless
 
 # Docker 后台模式（仅 API，推荐生产使用）
 docker compose up -d
 
 # 进入容器交互 REPL（后台启动后使用）
-docker compose exec king-remind king-repl
+docker compose exec king-mate king-repl
 
 # Docker 交互模式（前台启动，直接进入 REPL）
-docker compose run --rm king-remind
+docker compose run --rm king-mate
 ```
 
 <br />
@@ -802,7 +801,7 @@ curl -X PUT http://127.0.0.1:33333/api/settings \
 ## 项目结构
 
 ```
-king-remind/
+king-mate/
 ├── electron/
 │   ├── main/                  # 主进程
 │   │   ├── index.ts           # 入口，窗口 / 托盘 / 调度器初始化
@@ -929,7 +928,7 @@ king-remind/
 3. 关注页面上的测试号二维码，获取用户的 **OpenID**（多个用逗号分隔）
 4. 选择消息格式：
    - **客服消息（文本）**：直接发送文本内容，支持自定义消息模板
-   - **模板消息**：需先在测试号页面点击"新增测试模板"，模板标题填 `king提醒助手`，模板内容示例：
+   - **模板消息**：需先在测试号页面点击"新增测试模板"，模板标题填 `King Mate`，模板内容示例：
 
 ```
 {{title.DATA}}
@@ -962,7 +961,7 @@ king-remind/
 &nbsp;&middot;&nbsp;
 [GitHub](https://github.com/coder-kingyifan)
 &nbsp;&middot;&nbsp;
-[Issues](https://github.com/coder-kingyifan/king-remind/issues)
+[Issues](https://github.com/coder-kingyifan/king-mate/issues)
 
 ## 打赏
 
@@ -990,7 +989,7 @@ king-remind/
 </p>
 
 <p align="center">
-  <a href="https://www.star-history.com/#coder-kingyifan/king-remind&type=date&legend=top-left">
-    <img src="https://api.star-history.com/svg?repos=coder-kingyifan/king-remind&type=date&legend=top-left" width="600" alt="Star History" />
+  <a href="https://www.star-history.com/#coder-kingyifan/king-mate&type=date&legend=top-left">
+    <img src="https://api.star-history.com/svg?repos=coder-kingyifan/king-mate&type=date&legend=top-left" width="600" alt="Star History" />
   </a>
 </p>

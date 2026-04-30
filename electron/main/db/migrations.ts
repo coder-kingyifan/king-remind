@@ -652,16 +652,16 @@ export function runMigrations(): void {
                 INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
           ('feishu', 0, '{"webhook_url": "", "msg_type": "text"}');
                 INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
-          ('bark', 0, '{"server_url": "", "sound": "alarm", "group": "king-remind"}');
+          ('bark', 0, '{"server_url": "", "sound": "alarm", "group": "king-mate"}');
                 INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
-          ('discord', 0, '{"webhook_url": "", "username": "king提醒助手"}');
+          ('discord', 0, '{"webhook_url": "", "username": "King Mate"}');
             `
         },
         {
             version: 24,
             sql: `
                 UPDATE settings SET value = 'on' WHERE key = 'notification_sound' AND value = 'true';
-                UPDATE notification_configs SET config_json = '{"server_url": "", "sound": "alarm", "group": "king-remind"}' WHERE channel = 'bark' AND config_json LIKE '%api.day.app%';
+                UPDATE notification_configs SET config_json = '{"server_url": "", "sound": "alarm", "group": "king-mate"}' WHERE channel = 'bark' AND config_json LIKE '%api.day.app%';
             `
         },
         {

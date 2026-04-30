@@ -1,4 +1,4 @@
-# King 提醒助手 - 本地 HTTP API 文档
+# King Mate - 本地 HTTP API 文档
 
 ## 概述
 
@@ -408,7 +408,7 @@ Authorization: Bearer your_token
 {
   "success": true,
   "data": {
-    "reply": "你好！我是 King 提醒助手，有什么可以帮你的吗？"
+    "reply": "你好！我是 King Mate，有什么可以帮你的吗？"
   }
 }
 ```

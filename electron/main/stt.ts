@@ -153,7 +153,7 @@ function resolveDoubaoAuth(config: SttConfig, sessionId: string): Record<string,
 function buildDoubaoFullClientRequest(config: SttConfig, sessionId: string): Buffer {
     const payload = {
         user: {
-            uid: 'king-remind'
+            uid: 'king-mate'
         },
         audio: {
             format: 'pcm',
@@ -310,16 +310,57 @@ function normalizeRealtimeUtterances(data: any): RealtimeSttUtterance[] {
 }
 
 function formatRealtimeUtterances(utterances: RealtimeSttUtterance[]): string {
-    const merged: RealtimeSttUtterance[] = []
-    for (const item of utterances) {
-        const last = merged[merged.length - 1]
-        if (last && last.speaker === item.speaker) {
-            last.text += item.text
-        } else {
-            merged.push({...item})
+    return utterances.map(item => `${item.speaker}：${item.text}`).join('\n')
+}
+
+function normalizeTranscriptLine(text: string): string {
+    return text.replace(/[：]/g, ':').replace(/\s+/g, '').trim().toLowerCase()
+}
+
+function trimEndingPunctuation(text: string): string {
+    return text.replace(/[。！？.!?,，、；;：:\s]+$/u, '')
+}
+
+function getIncrementalText(previous: string, current: string): string {
+    const prev = (previous || '').trim()
+    const next = (current || '').trim()
+    if (!prev || !next || prev === next) return ''
+    if (next.startsWith(prev)) return next.slice(prev.length).trim()
+
+    const prevCore = trimEndingPunctuation(prev)
+    if (prevCore && next.startsWith(prevCore)) {
+        return next.slice(prevCore.length).trim()
+    }
+
+    return ''
+}
+
+function mergeRealtimeText(existing: string, incoming: string): string {
+    const left = (existing || '').replace(/\r\n/g, '\n').trim()
+    const right = (incoming || '').replace(/\r\n/g, '\n').trim()
+    if (!left) return right
+    if (!right) return left
+    if (left === right || left.includes(right)) return left
+    if (right.includes(left)) return right
+
+    const leftLines = left.split('\n').map(line => line.trim()).filter(Boolean)
+    const rightLines = right.split('\n').map(line => line.trim()).filter(Boolean)
+    const leftKeys = new Set(leftLines.map(normalizeTranscriptLine))
+    const rightKeys = new Set(rightLines.map(normalizeTranscriptLine))
+
+    if (leftLines.length > 0 && leftLines.every(line => rightKeys.has(normalizeTranscriptLine(line)))) {
+        return right
+    }
+
+    const merged = [...leftLines]
+    for (const line of rightLines) {
+        const key = normalizeTranscriptLine(line)
+        if (!leftKeys.has(key)) {
+            merged.push(line)
+            leftKeys.add(key)
         }
     }
-    return merged.map(item => `${item.speaker}：${item.text}`).join('\n')
+    return merged.join('\n')
 }
 
 function extractRealtimeText(data: any): { text: string; final: boolean; speaker?: string; utterances?: RealtimeSttUtterance[] } {
@@ -398,6 +439,7 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
     const sessionId = `stt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const pendingAudio: Buffer[] = []
     const sentUtterances: RealtimeSttUtterance[] = [] // 已发送的话语，用于计算增量
+    let accumulatedText = ''
     const sessionStartTime = Date.now() // 会话开始时间，用于计算相对时间戳
     const doubaoBigModel = isDoubaoBigModelRealtime(config)
     let opened = false
@@ -469,25 +511,31 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
             // 计算增量话语
             let deltaUtterances: RealtimeSttUtterance[] = []
             if (parsed.utterances && parsed.utterances.length > 0) {
-                if (parsed.utterances.length > sentUtterances.length) {
-                    // 累积模式：话语数量增加，取新增部分
-                    deltaUtterances = parsed.utterances.slice(sentUtterances.length)
-                    sentUtterances.length = 0
-                    sentUtterances.push(...parsed.utterances)
-                } else {
-                    // single模式或话语数量未增加：每帧只含当前句
-                    // 用内容去重判断是否为新话语
-                    for (const utt of parsed.utterances) {
-                        // 检查是否已存在于已发送列表中
-                        const exists = sentUtterances.some(s =>
-                            s.text === utt.text && s.speaker === utt.speaker
-                        )
-                        if (!exists) {
-                            deltaUtterances.push(utt)
-                            sentUtterances.push(utt)
+                for (let index = 0; index < parsed.utterances.length; index++) {
+                    const utt = parsed.utterances[index]
+                    const previous = sentUtterances[index]
+
+                    if (previous && previous.speaker === utt.speaker) {
+                        const suffix = getIncrementalText(previous.text, utt.text)
+                        if (suffix) {
+                            deltaUtterances.push({
+                                ...utt,
+                                text: suffix,
+                                start_time: previous.end_time ?? utt.start_time
+                            })
+                            sentUtterances[index] = utt
+                            continue
                         }
+                        if (previous.text === utt.text) continue
                     }
-                    // 如果所有话语都已存在（内容完全相同），可能是同一句的重复final，跳过
+
+                    const exists = sentUtterances.some(s =>
+                        s.text === utt.text && s.speaker === utt.speaker
+                    )
+                    if (!exists) {
+                        deltaUtterances.push(utt)
+                        sentUtterances.push(utt)
+                    }
                 }
             }
 
@@ -510,12 +558,12 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
             }
             // 如果有 utterances 但没有新增的（deltaUtterances 为空），deltaText 保持为空，不重复保存
 
+            accumulatedText = mergeRealtimeText(accumulatedText, deltaText)
+            accumulatedText = mergeRealtimeText(accumulatedText, parsed.text.trim())
             console.log(`[STT] 增量结果: delta_utterances=${deltaUtterances.length}, delta_text="${deltaText?.slice(0, 50)}", sent_total=${sentUtterances.length}`)
 
-            // 完整文本：从所有已发送话语重建
-            const fullText = sentUtterances.length > 0
-                ? formatRealtimeUtterances(sentUtterances)
-                : parsed.text.trim()
+            // 完整文本以追加式累计缓存为准，避免服务端停顿后只返回最后一句时覆盖前文。
+            const fullText = mergeRealtimeText(accumulatedText, formatRealtimeUtterances(sentUtterances))
 
             onEvent({
                 type: 'final',
@@ -529,12 +577,7 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
             })
         } else {
             // partial 事件：从已确认话语 + 当前 partial 拼接
-            const baseText = sentUtterances.length > 0
-                ? formatRealtimeUtterances(sentUtterances)
-                : ''
-            const fullText = baseText
-                ? `${baseText}\n${parsed.text}`
-                : parsed.text
+            const fullText = mergeRealtimeText(accumulatedText, parsed.text)
             onEvent({
                 type: 'partial',
                 text: parsed.text,
@@ -549,9 +592,7 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
     ws.on('close', () => {
         if (endTimer) clearTimeout(endTimer)
         closed = true
-        const fullText = sentUtterances.length > 0
-            ? formatRealtimeUtterances(sentUtterances)
-            : ''
+        const fullText = mergeRealtimeText(accumulatedText, formatRealtimeUtterances(sentUtterances))
         onEvent({type: 'closed', full_text: fullText})
         if (stopResolver) {
             stopResolver(fullText)
@@ -562,7 +603,7 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
     ws.on('error', (error) => {
         onEvent({type: 'error', message: error.message})
         if (stopResolver) {
-            stopResolver(sentUtterances.length > 0 ? formatRealtimeUtterances(sentUtterances) : '')
+            stopResolver(mergeRealtimeText(accumulatedText, formatRealtimeUtterances(sentUtterances)))
             stopResolver = null
         }
     })
@@ -579,7 +620,7 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
         },
         stop() {
             return new Promise<string>((resolve) => {
-                const getFullText = () => sentUtterances.length > 0 ? formatRealtimeUtterances(sentUtterances) : ''
+                const getFullText = () => mergeRealtimeText(accumulatedText, formatRealtimeUtterances(sentUtterances))
                 if (closed || ws.readyState === WebSocket.CLOSED) {
                     resolve(getFullText())
                     return

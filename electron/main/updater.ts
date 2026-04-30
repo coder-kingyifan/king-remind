@@ -1,7 +1,7 @@
 import {app, net} from 'electron'
 
 const GITHUB_OWNER = 'coder-kingyifan'
-const GITHUB_REPO = 'king-remind'
+const GITHUB_REPO = 'king-mate'
 const GITHUB_RELEASES_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases`
 
 export interface UpdateInfo {

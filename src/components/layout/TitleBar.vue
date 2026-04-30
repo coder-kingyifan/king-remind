@@ -1,7 +1,7 @@
 <template>
   <div class="title-bar">
     <div class="title-bar-drag">
-      <span class="title-text">king提醒助手</span>
+      <span class="title-text">King Mate</span>
     </div>
     <div class="title-bar-controls">
       <div class="control-btn" :class="{ active: isAlwaysOnTop }" @click="toggleAlwaysOnTop" :title="isAlwaysOnTop ? '取消置顶' : '置顶'">

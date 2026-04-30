@@ -420,7 +420,7 @@ function getLLMConfig(configId?: number, modelOverride?: string) {
 
 // ======================== 工具定义 ========================
 
-const SYSTEM_PROMPT_TEMPLATE = `你是 King 提醒助手的 AI 助手。你可以帮助用户通过自然语言创建提醒。
+const SYSTEM_PROMPT_TEMPLATE = `你是 King Mate 的 AI 助手。你可以帮助用户通过自然语言创建提醒。
 
 当前时间: {{current_time}}
 

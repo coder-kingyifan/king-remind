@@ -74,7 +74,7 @@
         <div class="setting-item">
           <div class="setting-info">
             <div class="setting-label">开机自启动</div>
-            <div class="setting-desc">Windows 启动时自动打开 king提醒助手</div>
+            <div class="setting-desc">Windows 启动时自动打开 King Mate</div>
           </div>
           <el-switch
               :model-value="settingsStore.settings.launch_at_startup === 'true'"
@@ -709,7 +709,7 @@ print(resp.json())</pre>
         <div class="about-info">
           <div class="about-row">
             <span class="about-label">应用名称</span>
-            <span class="about-value">king提醒助手</span>
+            <span class="about-value">King Mate</span>
           </div>
           <div class="about-row">
             <span class="about-label">版本</span>
@@ -726,11 +726,11 @@ print(resp.json())</pre>
           <div class="about-row">
             <span class="about-label">Github</span>
             <span class="about-value"><a target="_blank"
-                                         href="https://github.com/coder-kingyifan/king-remind">https://github.com/coder-kingyifan/king-remind</a></span>
+                                         href="https://github.com/coder-kingyifan/king-mate">https://github.com/coder-kingyifan/king-mate</a></span>
           </div>
           <div class="about-row">
             <span class="about-label">Gitee(码云)</span>
-            <span class="about-value">  <a target="_blank" href="https://gitee.com/kingyifan/king-remind">https://gitee.com/kingyifan/king-remind</a>
+            <span class="about-value">  <a target="_blank" href="https://gitee.com/kingyifan/king-mate">https://gitee.com/kingyifan/king-mate</a>
               </span>
           </div>
         </div>
