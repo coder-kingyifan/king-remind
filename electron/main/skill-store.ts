@@ -2,7 +2,7 @@ import axios from 'axios'
 import {skillsDb} from './db/skills'
 
 // 技能商店 URL（GitHub 仓库 raw 文件地址）
-const STORE_URL = 'https://raw.githubusercontent.com/coder-kingyifan/king-mate-skill-store/main/skill-store.json'
+const STORE_URL = 'https://raw.githubusercontent.com/coder-kingyifan/king-remind-skill-store/main/skill-store.json'
 
 export interface StoreSkill {
     skill_key: string
