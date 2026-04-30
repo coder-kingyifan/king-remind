@@ -26,7 +26,7 @@
         <span class="rt-state" :class="realtimeSttStatus" v-if="!isSimpleMode">{{ realtimeStatusLabel }}</span>
         <el-button type="danger" size="small" round @click="stopCurrentRecording">停止</el-button>
       </div>
-      <div v-if="liveTranscript && !isSimpleMode" class="recording-live">{{ liveTranscript }}</div>
+      <div v-if="liveTranscript && !isSimpleMode" ref="recordingLiveRef" class="recording-live">{{ liveTranscript }}</div>
     </div>
 
     <!-- 筛选 -->
@@ -199,7 +199,7 @@
           <label>实时转写</label>
           <span class="stt-status" :class="realtimeSttStatus">{{ realtimeStatusLabel }}</span>
         </div>
-        <div v-if="liveTranscript" class="stt-text live">
+        <div v-if="liveTranscript" ref="liveTranscriptRef" class="stt-text live">
           <p>{{ liveTranscript }}</p>
         </div>
         <p v-if="realtimeError" class="stt-error">{{ realtimeError }}</p>
@@ -286,7 +286,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onActivated, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue'
+import {computed, nextTick, onActivated, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue'
 import {useMeetingsStore} from '@/stores/meetings'
 import {ArrowDown, ArrowUp, Location, Microphone, Plus, Upload, Document, MagicStick, User, EditPen, Delete} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
@@ -308,6 +308,8 @@ const settingsStore = useSettingsStore()
 const isSimpleMode = computed(() => settingsStore.settings.app_mode === 'simple')
 const pageRef = ref<HTMLElement>()
 const fileInputRef = ref<HTMLInputElement>()
+const recordingLiveRef = ref<HTMLElement>()
+const liveTranscriptRef = ref<HTMLElement>()
 
 // 筛选
 const statusFilter = ref('all')
@@ -841,59 +843,10 @@ async function startRealtimePipeline(stream: MediaStream): Promise<boolean> {
 }
 
 async function stopRealtimePipeline() {
-  // 先保存未确认的partial文本
-  const partialSnapshot = cleanTranscriptText(realtimePartialText.value)
-  const partialText = pendingRealtimePartialText(partialSnapshot)
-  appendRealtimeTranscriptText(partialText)
-  if (partialText) {
-    const now = Date.now()
-    const elapsed = recordingStartTime.value ? (now - recordingStartTime.value) / 1000 : 0
-    const existingTexts = new Set(
-      segments.value.filter(s => s.segment_type === 'text').map(s => s.content?.trim()).filter(Boolean)
-    )
-    if (!existingTexts.has(partialText)) {
-      const startTime = Math.max(0, elapsed - 5)
-      const endTime = elapsed
-      if (editForm.id) {
-        try {
-          const saved = await window.electronAPI.meetings.segments.add({
-            meeting_id: editForm.id,
-            segment_type: 'text',
-            content: partialText,
-            speaker: '',
-            sort_order: segments.value.length,
-            start_time: startTime,
-            end_time: endTime
-          })
-          segments.value.push(saved)
-        } catch (e) {
-          segments.value.push({
-            id: -(Date.now()),
-            meeting_id: editForm.id,
-            segment_type: 'text',
-            content: partialText,
-            speaker: '',
-            sort_order: segments.value.length,
-            start_time: startTime,
-            end_time: endTime,
-            created_at: getLocalDateTimeStr()
-          })
-        }
-      } else {
-        segments.value.push({
-          id: -(Date.now()),
-          meeting_id: 0,
-          segment_type: 'text',
-          content: partialText,
-          speaker: '',
-          sort_order: segments.value.length,
-          start_time: startTime,
-          end_time: endTime,
-          created_at: getLocalDateTimeStr()
-        })
-      }
-      console.log(`[前端STT] stopPipeline保存partial: "${partialText.slice(0, 50)}"`)
-    }
+  const promotedPartial = promoteRealtimePartial('stop')
+  if (promotedPartial.length) {
+    const elapsed = recordingStartTime.value ? (Date.now() - recordingStartTime.value) / 1000 : 0
+    await saveRealtimeLinesAsSegments(promotedPartial, elapsed)
   }
   realtimePartialText.value = ''
 
@@ -1021,61 +974,10 @@ async function handleRealtimeSttEvent(event: any) {
   }
   if (event.type === 'closed') {
     appendRealtimeTranscriptText(event.full_text, {skipExisting: true})
-    // WS断开：先将未确认的partial文本保存为分段，防止丢失
-    const partialSnapshot = cleanTranscriptText(realtimePartialText.value)
-    const partialText = pendingRealtimePartialText(partialSnapshot)
-    appendRealtimeTranscriptText(partialText)
-    if (partialText) {
-      const now = Date.now()
-      const elapsed = recordingStartTime.value ? (now - recordingStartTime.value) / 1000 : 0
-      const existingTexts = new Set(
-        segments.value.filter(s => s.segment_type === 'text').map(s => s.content?.trim()).filter(Boolean)
-      )
-      if (!existingTexts.has(partialText)) {
-        const speaker = event.speaker || ''
-        const startTime = Math.max(0, elapsed - 5)
-        const endTime = elapsed
-        if (editForm.id) {
-          try {
-            const saved = await window.electronAPI.meetings.segments.add({
-              meeting_id: editForm.id,
-              segment_type: 'text',
-              content: partialText,
-              speaker,
-              sort_order: segments.value.length,
-              start_time: startTime,
-              end_time: endTime
-            })
-            segments.value.push(saved)
-          } catch (e) {
-            console.error('保存partial分段失败:', e)
-            segments.value.push({
-              id: -(Date.now()),
-              meeting_id: editForm.id,
-              segment_type: 'text',
-              content: partialText,
-              speaker,
-              sort_order: segments.value.length,
-              start_time: startTime,
-              end_time: endTime,
-              created_at: getLocalDateTimeStr()
-            })
-          }
-        } else {
-          segments.value.push({
-            id: -(Date.now()),
-            meeting_id: 0,
-            segment_type: 'text',
-            content: partialText,
-            speaker,
-            sort_order: segments.value.length,
-            start_time: startTime,
-            end_time: endTime,
-            created_at: getLocalDateTimeStr()
-          })
-        }
-        console.log(`[前端STT] closed时保存partial: "${partialText.slice(0, 50)}"`)
-      }
+    const promotedPartial = promoteRealtimePartial('closed')
+    if (promotedPartial.length) {
+      const elapsed = recordingStartTime.value ? (Date.now() - recordingStartTime.value) / 1000 : 0
+      await saveRealtimeLinesAsSegments(promotedPartial, elapsed)
     }
     realtimePartialText.value = ''
 
@@ -1830,6 +1732,13 @@ watch(detailVisible, (v) => {
     if (isAnyRecording.value) stopCurrentRecording()
   }
 })
+
+watch(liveTranscript, async () => {
+  await nextTick()
+  for (const el of [recordingLiveRef.value, liveTranscriptRef.value]) {
+    if (el) el.scrollTop = el.scrollHeight
+  }
+})
 </script>
 
 <style scoped>
@@ -1940,10 +1849,11 @@ watch(detailVisible, (v) => {
 .segment-item.audio { border-left: 3px solid #409EFF; }
 .segment-item.text { border-left: 3px solid #67C23A; }
 .seg-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.seg-time { flex: 0 0 72px; min-width: 72px; white-space: nowrap; font-size: 12px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
 .seg-type-badge { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 500; }
 .seg-type-badge.audio { background: rgba(64,158,255,.1); color: #409EFF; }
 .seg-type-badge.text { background: rgba(103,194,58,.1); color: #67C23A; }
-.seg-speaker { width: 80px; border: 1px solid var(--border-color-light); border-radius: 3px; padding: 1px 4px; font-size: 11px; color: var(--text-primary); background: transparent; outline: none; font-family: inherit; }
+.seg-speaker { flex: 0 0 80px; width: 80px; border: 1px solid var(--border-color-light); border-radius: 3px; padding: 1px 4px; font-size: 11px; color: var(--text-primary); background: transparent; outline: none; font-family: inherit; }
 .seg-speaker:focus { border-color: var(--color-primary); }
 .seg-rename-all { cursor: pointer; font-size: 12px; color: var(--text-placeholder); margin-left: 2px; }
 .seg-rename-all:hover { color: var(--color-primary); }
@@ -1970,7 +1880,7 @@ watch(detailVisible, (v) => {
 .stt-status.done { background: rgba(103,194,58,.1); color: #67C23A; }
 .stt-status.pending { background: rgba(230,162,60,.1); color: #E6A23C; }
 .stt-text { margin-top: 8px; padding: 8px; background: var(--bg-tertiary); border-radius: 4px; font-size: 13px; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; }
-.stt-text.live { border: 1px solid rgba(64,158,255,.18); background: var(--color-primary-bg); }
+.stt-text.live { max-height: 140px; overflow: auto; border: 1px solid rgba(64,158,255,.18); background: var(--color-primary-bg); }
 .stt-error { margin-top: 6px; color: var(--color-danger); font-size: 12px; }
 
 /* 附件 */
