@@ -646,6 +646,11 @@ function syncRealtimeTranscriptToForm(status: 'pending' | 'done' = 'pending'): v
 }
 
 const liveTranscript = computed(() => {
+  // 录音中：显示完整实时转写内容
+  // 录音结束后：清空显示（内容已保存到分段中）
+  if (!isAnyRecording.value && realtimeSttStatus.value !== 'ready' && realtimeSttStatus.value !== 'connecting') {
+    return ''
+  }
   return composeRealtimeTranscript(true)
 })
 const realtimeStatusLabel = computed(() => {
@@ -876,12 +881,28 @@ async function saveRealtimeLinesAsSegments(lines: RealtimeTranscriptLine[], elap
   const existingTexts = new Set(
     segments.value.filter(s => s.segment_type === 'text').map(s => s.content?.trim()).filter(Boolean)
   )
-  for (const line of lines) {
+  // 计算已有分段的最后结束时间，用于避免时间戳重叠
+  const lastEndTime = segments.value.length > 0
+    ? Math.max(...segments.value.map(s => s.end_time || 0))
+    : 0
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
     const text = line.text?.trim()
     if (!text || existingTexts.has(text)) continue
     const speaker = line.speaker || ''
-    const startTime = line.start_time ?? Math.max(0, elapsed - 5)
-    const endTime = line.end_time ?? elapsed
+    // 优先使用火山引擎返回的时间戳；否则基于已有分段末尾递增估算，避免重叠
+    let startTime: number, endTime: number
+    if (line.start_time != null && line.end_time != null) {
+      startTime = line.start_time
+      endTime = line.end_time
+    } else if (line.start_time != null) {
+      startTime = line.start_time
+      endTime = line.end_time ?? Math.max(startTime + 2, elapsed)
+    } else {
+      // 无时间戳：从上一段结束时间开始，每段估算约3秒
+      startTime = Math.max(lastEndTime, i > 0 ? (lines[i - 1]?.end_time ?? lastEndTime) : lastEndTime)
+      endTime = Math.max(startTime + 2, elapsed)
+    }
     if (editForm.id) {
       try {
         const saved = await window.electronAPI.meetings.segments.add({
@@ -1730,6 +1751,8 @@ onBeforeUnmount(() => {
 watch(detailVisible, (v) => {
   if (!v) {
     if (isAnyRecording.value) stopCurrentRecording()
+    // 关闭编辑框时清空实时转写状态，避免下次打开时残留上次内容
+    resetRealtimeTranscript()
   }
 })
 

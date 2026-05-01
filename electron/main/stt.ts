@@ -253,6 +253,8 @@ function getSpeakerLabel(data: any, fallbackIndex = 1): string {
     const value =
         data?.speaker_id ??
         data?.speakerId ??
+        data?.spk ??
+        data?.spk_id ??
         data?.speaker ??
         data?.user_id ??
         data?.userId ??
@@ -263,8 +265,14 @@ function getSpeakerLabel(data: any, fallbackIndex = 1): string {
     if (value === undefined || value === null || value === '') return ''
     const text = String(value).trim()
     if (!text) return ''
+    // 火山引擎返回的 speaker_id 为数字编号（如 "0", "1"），映射为 "说话人1", "说话人2"
     if (/^(用户|说话人|speaker|user)/i.test(text)) return text
-    return `用户${text.length > 0 ? text : fallbackIndex}`
+    // 纯数字编号：转为 "说话人N"（编号从0开始则+1）
+    if (/^\d+$/.test(text)) {
+        const num = parseInt(text, 10)
+        return `说话人${num + 1}`
+    }
+    return `说话人${fallbackIndex}`
 }
 
 function getRealtimeUtteranceItems(data: any): any[] {
@@ -300,7 +308,7 @@ function normalizeRealtimeUtterances(data: any): RealtimeSttUtterance[] {
                 : item?.end != null ? Number(item.end) / 1000
                 : undefined
             return {
-                speaker: getSpeakerLabel(item, index + 1) || '用户1',
+                speaker: getSpeakerLabel(item, index + 1) || '说话人1',
                 text,
                 start_time: startTime,
                 end_time: endTime
