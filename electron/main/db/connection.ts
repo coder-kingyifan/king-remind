@@ -1,7 +1,7 @@
 import initSqlJs, {Database as SqlJsDatabase} from 'sql.js'
 import {app} from 'electron'
 import {dirname, join} from 'path'
-import {existsSync, readFileSync, unlinkSync, writeFileSync} from 'fs'
+import {copyFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync} from 'fs'
 import {createCipheriv, createDecipheriv, pbkdf2Sync, randomBytes} from 'crypto'
 
 let db: SqlJsDatabase | null = null
@@ -9,12 +9,12 @@ let dbPath: string = ''
 let encryptionPassword: string = ''
 let saveTimer: NodeJS.Timeout | null = null
 
-// AES-256-GCM constants
+const DB_FILE = 'remind.db'
+const KEY_FILE = 'remind.key'
 const SALT_LENGTH = 32
 const IV_LENGTH = 16
 const AUTH_TAG_LENGTH = 16
 const PBKDF2_ITERATIONS = 100000
-const KEY_FILE = 'remind.key'
 
 // ======================== Encryption helpers ========================
 
@@ -29,7 +29,6 @@ function encryptBuffer(buffer: Buffer, password: string): Buffer {
     const cipher = createCipheriv('aes-256-gcm', key, iv)
     const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()])
     const authTag = cipher.getAuthTag()
-    // Layout: salt(32) + iv(16) + authTag(16) + ciphertext
     return Buffer.concat([salt, iv, authTag, encrypted])
 }
 
@@ -44,76 +43,135 @@ function decryptBuffer(buffer: Buffer, password: string): Buffer {
     return Buffer.concat([decipher.update(encrypted), decipher.final()])
 }
 
-function hashPassword(password: string): string {
-    const salt = randomBytes(16)
-    const hash = pbkdf2Sync(password, salt, PBKDF2_ITERATIONS, 32, 'sha256')
-    return salt.toString('hex') + ':' + hash.toString('hex')
-}
-
-function verifyPasswordHash(password: string, stored: string): boolean {
-    const [saltHex, hashHex] = stored.split(':')
-    const salt = Buffer.from(saltHex, 'hex')
-    const hash = pbkdf2Sync(password, salt, PBKDF2_ITERATIONS, 32, 'sha256')
-    return hash.toString('hex') === hashHex
-}
-
 function getDbDir(): string {
-    return process.env['DB_DIR'] || process.cwd()
+    return process.env['DB_DIR'] || app.getPath('userData')
+}
+
+function getLegacyDbDir(): string {
+    return process.cwd()
+}
+
+function isUsingCustomDbDir(): boolean {
+    return Boolean(process.env['DB_DIR'])
+}
+
+function ensureDbDir(): void {
+    mkdirSync(getDbDir(), {recursive: true})
+}
+
+function getDbFilePath(dbDir = getDbDir()): string {
+    return join(dbDir, DB_FILE)
+}
+
+function getEncryptedFilePath(dbDir = getDbDir()): string {
+    return join(dbDir, `${DB_FILE}.enc`)
+}
+
+function getKeyFilePath(dbDir = getDbDir()): string {
+    return join(dbDir, KEY_FILE)
 }
 
 function getEncryptedPath(): string {
-    return dbPath + '.enc'
+    return dbPath ? `${dbPath}.enc` : getEncryptedFilePath()
 }
 
-function getKeyFilePath(): string {
-    return join(getDbDir(), KEY_FILE)
+function hasPrimaryDatabase(): boolean {
+    return existsSync(getDbFilePath()) || existsSync(getEncryptedFilePath())
+}
+
+function getReadableKeyFilePath(): string {
+    const keyFilePath = getKeyFilePath()
+    if (existsSync(keyFilePath)) return keyFilePath
+
+    if (!isUsingCustomDbDir()) {
+        const legacyKeyFilePath = getKeyFilePath(getLegacyDbDir())
+        if (legacyKeyFilePath !== keyFilePath && existsSync(legacyKeyFilePath)) {
+            return legacyKeyFilePath
+        }
+    }
+
+    return keyFilePath
+}
+
+function getReadableEncryptedPath(): string {
+    const encPath = getEncryptedPath()
+    if (existsSync(encPath)) return encPath
+
+    if (!isUsingCustomDbDir() && !hasPrimaryDatabase()) {
+        const legacyEncPath = getEncryptedFilePath(getLegacyDbDir())
+        if (legacyEncPath !== encPath && existsSync(legacyEncPath)) {
+            return legacyEncPath
+        }
+    }
+
+    return encPath
+}
+
+function copyLegacyPlainDbIfNeeded(): void {
+    if (isUsingCustomDbDir() || existsSync(dbPath) || existsSync(getEncryptedPath())) return
+
+    const legacyDbDir = getLegacyDbDir()
+    const legacyDbPath = getDbFilePath(legacyDbDir)
+    const legacyEncPath = getEncryptedFilePath(legacyDbDir)
+    if (legacyDbPath === dbPath || !existsSync(legacyDbPath) || existsSync(legacyEncPath)) return
+
+    copyFileSync(legacyDbPath, dbPath)
 }
 
 // ======================== Public encryption API ========================
 
 export function isDatabaseEncrypted(): boolean {
-    const dbDir = getDbDir()
-    const encPath = join(dbDir, 'remind.db.enc')
-    return existsSync(encPath)
+    const encPath = getEncryptedFilePath()
+    if (existsSync(encPath)) return true
+
+    if (!isUsingCustomDbDir() && !existsSync(getDbFilePath())) {
+        const legacyEncPath = getEncryptedFilePath(getLegacyDbDir())
+        return legacyEncPath !== encPath && existsSync(legacyEncPath)
+    }
+
+    return false
 }
 
 export function setEncryptionPassword(password: string | null): void {
     if (password) {
         encryptionPassword = password
-        // 存储密钥到 remind.key 文件（base64 编码）
-        // 启动时自动读取，无需用户输入密码
+        ensureDbDir()
         writeFileSync(getKeyFilePath(), Buffer.from(password, 'utf-8').toString('base64'))
     } else {
         encryptionPassword = ''
     }
 }
 
-/**
- * 自动从 remind.key 文件加载密钥并解密数据库
- * 返回 true 表示成功加载或不需要加密，false 表示加载失败
- */
 export function loadEncryptionKey(): boolean {
     if (!isDatabaseEncrypted()) return true
 
-    const keyFilePath = getKeyFilePath()
+    const keyFilePath = getReadableKeyFilePath()
     if (!existsSync(keyFilePath)) {
-        console.error('[数据库] 数据库已加密，但密钥文件不存在')
+        console.error('[database] encrypted database exists, but remind.key was not found')
         return false
     }
 
     try {
         const encoded = readFileSync(keyFilePath, 'utf-8').trim()
         encryptionPassword = Buffer.from(encoded, 'base64').toString('utf-8')
+
+        const primaryKeyFilePath = getKeyFilePath()
+        if (keyFilePath !== primaryKeyFilePath && !existsSync(primaryKeyFilePath)) {
+            ensureDbDir()
+            writeFileSync(primaryKeyFilePath, encoded)
+        }
+
         return true
     } catch {
-        console.error('[数据库] 读取密钥文件失败')
+        console.error('[database] failed to read remind.key')
         return false
     }
 }
 
 export function verifyEncryptionPassword(password: string): boolean {
-    const keyFilePath = getKeyFilePath()
+    const keyFilePath = getReadableKeyFilePath()
     if (!existsSync(keyFilePath)) return false
+
     try {
         const encoded = readFileSync(keyFilePath, 'utf-8').trim()
         const storedPassword = Buffer.from(encoded, 'base64').toString('utf-8')
@@ -123,25 +181,25 @@ export function verifyEncryptionPassword(password: string): boolean {
     }
 }
 
-/** Remove encryption: decrypt and save as plain .db, remove .enc and .key files */
 export function removeEncryption(): void {
     if (!encryptionPassword) return
-    // Save as plain .db
+
+    ensureDbDir()
     if (db) {
         const data = db.export()
-        const buffer = Buffer.from(data)
-        writeFileSync(dbPath, buffer)
+        writeFileSync(dbPath, Buffer.from(data))
     }
-    // Remove encrypted file
+
     const encPath = getEncryptedPath()
     if (existsSync(encPath)) {
         unlinkSync(encPath)
     }
-    // Remove key file
+
     const keyFilePath = getKeyFilePath()
     if (existsSync(keyFilePath)) {
         unlinkSync(keyFilePath)
     }
+
     encryptionPassword = ''
 }
 
@@ -150,18 +208,16 @@ export function removeEncryption(): void {
 export async function initDatabase(): Promise<SqlJsDatabase> {
     if (db) return db
 
-    console.log('[数据库] 正在加载 sql.js...')
+    console.log('[database] loading sql.js...')
 
-    // 查找 sql-wasm.wasm 文件路径
-    let wasmPath: string
     const possiblePaths = [
         join(dirname(require.resolve('sql.js')), 'sql-wasm.wasm'),
         join(__dirname, '../../node_modules/sql.js/dist/sql-wasm.wasm'),
         join(app.getAppPath(), 'node_modules/sql.js/dist/sql-wasm.wasm')
     ]
 
-    wasmPath = possiblePaths.find(p => existsSync(p)) || possiblePaths[0]
-    console.log('[数据库] WASM路径:', wasmPath, '存在:', existsSync(wasmPath))
+    const wasmPath = possiblePaths.find(p => existsSync(p)) || possiblePaths[0]
+    console.log('[database] wasm path:', wasmPath, 'exists:', existsSync(wasmPath))
 
     let SQL: Awaited<ReturnType<typeof initSqlJs>>
     if (existsSync(wasmPath)) {
@@ -170,53 +226,46 @@ export async function initDatabase(): Promise<SqlJsDatabase> {
     } else {
         SQL = await initSqlJs()
     }
-    console.log('[数据库] sql.js 加载成功')
+    console.log('[database] sql.js loaded')
 
-    // 数据库路径
-    const customDbDir = process.env['DB_DIR']
-    if (customDbDir) {
-        dbPath = join(customDbDir, 'remind.db')
-    } else {
-        dbPath = join(process.cwd(), 'remind.db')
-    }
-    console.log('[数据库] 路径:', dbPath)
+    ensureDbDir()
+    dbPath = getDbFilePath()
+    copyLegacyPlainDbIfNeeded()
+    console.log('[database] path:', dbPath)
 
-    const encPath = getEncryptedPath()
-
+    const encPath = getReadableEncryptedPath()
     if (existsSync(encPath)) {
-        // Encrypted database - need password
         if (!encryptionPassword) {
             throw new Error('ENCRYPTION_PASSWORD_REQUIRED')
         }
-        console.log('[数据库] 读取加密数据库文件')
+
+        console.log('[database] reading encrypted database')
         const encBuffer = readFileSync(encPath)
         const decBuffer = decryptBuffer(encBuffer, encryptionPassword)
         db = new SQL.Database(decBuffer)
     } else if (existsSync(dbPath)) {
-        console.log('[数据库] 读取已有数据库文件')
+        console.log('[database] reading existing database')
         const buffer = readFileSync(dbPath)
         db = new SQL.Database(buffer)
     } else {
-        console.log('[数据库] 创建新数据库')
+        console.log('[database] creating new database')
         db = new SQL.Database()
     }
 
-    // 开启 WAL 模式
     db.run('PRAGMA journal_mode = WAL')
     db.run('PRAGMA foreign_keys = ON')
 
-    console.log('[数据库] 初始化完成')
+    console.log('[database] initialized')
     return db
 }
 
 export function getDatabase(): SqlJsDatabase {
     if (!db) {
-        throw new Error('数据库尚未初始化，请先调用 initDatabase()')
+        throw new Error('Database is not initialized. Call initDatabase() first.')
     }
     return db
 }
 
-// 保存数据库到磁盘（防抖，避免频繁写入）
 export function saveDatabase(): void {
     if (!db) return
 
@@ -226,12 +275,12 @@ export function saveDatabase(): void {
     }, 1000)
 }
 
-// 立即保存并关闭数据库
 export function closeDatabase(): void {
     if (saveTimer) {
         clearTimeout(saveTimer)
         saveTimer = null
     }
+
     if (db) {
         doSave()
         db.close()
@@ -241,15 +290,16 @@ export function closeDatabase(): void {
 
 function doSave(): void {
     if (!db) return
+
     try {
+        ensureDbDir()
         const data = db.export()
         const buffer = Buffer.from(data)
 
         if (encryptionPassword) {
-            // Encrypt and write to .enc file
             const encrypted = encryptBuffer(buffer, encryptionPassword)
             writeFileSync(getEncryptedPath(), encrypted)
-            // Remove the plain .db file for security
+
             if (existsSync(dbPath)) {
                 unlinkSync(dbPath)
             }
@@ -257,6 +307,6 @@ function doSave(): void {
             writeFileSync(dbPath, buffer)
         }
     } catch (err) {
-        console.error('[数据库] 保存失败:', err)
+        console.error('[database] save failed:', err)
     }
 }

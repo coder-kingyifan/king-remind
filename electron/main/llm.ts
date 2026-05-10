@@ -48,9 +48,9 @@ export const PROVIDERS: ProviderPreset[] = [
         name: 'DeepSeek',
         baseUrl: 'https://api.deepseek.com',
         apiKeyRequired: true,
-        defaultModel: 'deepseek-chat',
+        defaultModel: 'deepseek-v4-pro',
         protocol: 'openai',
-        models: ['deepseek-chat', 'deepseek-reasoner']
+        models: ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-chat', 'deepseek-reasoner']
     },
     {
         id: 'qwen',
@@ -893,6 +893,13 @@ function extractTextContent(content: any): string {
     return ''
 }
 
+function isDeepSeekConfig(config: ReturnType<typeof getLLMConfig>): boolean {
+    const providerId = String(config.provider?.id || '').toLowerCase()
+    const baseUrl = String(config.baseUrl || '').toLowerCase()
+    const model = String(config.model || '').toLowerCase()
+    return providerId === 'deepseek' || baseUrl.includes('api.deepseek.com') || model.includes('deepseek')
+}
+
 function buildResult(
     allMessages: Array<Record<string, any>>,
     lastReply: string
@@ -953,10 +960,14 @@ async function chatOpenAIStream(
         onEvent({type: 'status', text: iterations > 1 ? '继续处理中...' : '正在思考...'})
 
         // Build request messages: convert for strict VL models
+        const preserveReasoningContent = isDeepSeekConfig(config)
         const requestMessages = allMessages.map((m: any) => {
-            if ((isStrictVL || vlStrictDetected) && m.role !== 'tool') {
-                let role = m.role
-                let content = m.content
+            const message = {...m}
+            if (!preserveReasoningContent) delete message.reasoning_content
+
+            if ((isStrictVL || vlStrictDetected) && message.role !== 'tool') {
+                let role = message.role
+                let content = message.content
                 // Convert assistant to user for strict VL models
                 if (role === 'assistant') {
                     role = 'user'
@@ -967,12 +978,13 @@ async function chatOpenAIStream(
                 } else if (typeof content === 'string') {
                     content = content ? [{type: 'text', text: content}] : []
                 }
-                return {...m, role, content}
+                return {...message, role, content}
             }
-            return m
+            return message
         })
 
-        const isReasoningModel = config.model.includes('o1') || config.model.includes('o3') || config.model.includes('reasoner') || config.model.toLowerCase().includes('r1')
+        const isDeepSeek = isDeepSeekConfig(config)
+        const isReasoningModel = !isDeepSeek && (config.model.includes('o1') || config.model.includes('o3') || config.model.includes('reasoner') || config.model.toLowerCase().includes('r1'))
 
         const body: any = {
             model: config.model,
@@ -1011,6 +1023,7 @@ async function chatOpenAIStream(
 
         let buffer = ''
         let content = ''
+        let reasoningContent = ''
         const toolCallsMap = new Map<number, { id: string; name: string; arguments: string }>()
         const stream: any = res.data
 
@@ -1043,6 +1056,16 @@ async function chatOpenAIStream(
                         const delta = parsed.choices?.[0]?.delta || parsed.output?.choices?.[0]?.delta
                         if (!delta) continue
 
+                        const reasoningDelta = typeof delta.reasoning_content === 'string'
+                            ? delta.reasoning_content
+                            : typeof delta.reasoning === 'string'
+                                ? delta.reasoning
+                                : ''
+                        if (reasoningDelta) {
+                            reasoningContent += reasoningDelta
+                            onEvent({type: 'thinking', text: reasoningDelta})
+                        }
+
                         if (delta.content) {
                             content += delta.content
                             onEvent({type: 'chunk', text: delta.content})
@@ -1060,7 +1083,8 @@ async function chatOpenAIStream(
                                 if (tc.function?.arguments) existing.arguments += tc.function.arguments
                             }
                         }
-                    } catch {
+                    } catch (parseError: any) {
+                        if (!(parseError instanceof SyntaxError)) throw parseError
                     }
                 }
             }
@@ -1082,6 +1106,12 @@ async function chatOpenAIStream(
                 const choice = parsed.choices?.[0]?.message
                 if (choice) {
                     content = choice.content || ''
+                    reasoningContent = typeof choice.reasoning_content === 'string'
+                        ? choice.reasoning_content
+                        : typeof choice.reasoning === 'string'
+                            ? choice.reasoning
+                            : ''
+                    if (reasoningContent) onEvent({type: 'thinking', text: reasoningContent})
                     if (choice.tool_calls) {
                         for (const tc of choice.tool_calls) {
                             toolCallsMap.set(tc.index ?? 0, {
@@ -1097,6 +1127,7 @@ async function chatOpenAIStream(
 
         // Build assistant message
         const assistantMsg: any = {role: 'assistant', content: content || ''}
+        if (reasoningContent) assistantMsg.reasoning_content = reasoningContent
         if (toolCallsMap.size > 0) {
             assistantMsg.tool_calls = Array.from(toolCallsMap.values()).map(tc => ({
                 id: tc.id, type: 'function' as const, function: {name: tc.name, arguments: tc.arguments}
