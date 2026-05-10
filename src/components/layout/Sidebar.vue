@@ -23,6 +23,15 @@
     <div class="sidebar-bottom">
       <div
         class="nav-item"
+        :class="{ active: route.path === '/thanks' }"
+        @click="router.push('/thanks')"
+      >
+        <el-tooltip content="鸣谢" placement="right" :show-after="400">
+          <el-icon :size="20"><GoldMedal/></el-icon>
+        </el-tooltip>
+      </div>
+      <div
+        class="nav-item"
         :class="{ active: route.path.startsWith('/settings') || route.path === '/model-config' || route.path === '/notifications' }"
         @click="router.push('/settings')"
       >
@@ -46,7 +55,7 @@
 import {computed} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {useSettingsStore} from '@/stores/settings'
-import {Bell, ChatDotRound, Moon, Odometer, Setting, Sunny, HomeFilled, List, Memo} from '@element-plus/icons-vue'
+import {Bell, ChatDotRound, GoldMedal, Moon, Odometer, Setting, Sunny, HomeFilled, List, Memo} from '@element-plus/icons-vue'
 import logoIcon from '../../../resources/icon.png'
 
 const route = useRoute()

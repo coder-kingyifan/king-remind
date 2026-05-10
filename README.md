@@ -5,7 +5,7 @@
 <h1 align="center">King Mate</h1>
 
 <p align="center">
-  <b>开源桌面效率助手 — 提醒 / 待办 / 会议 / AI 对话 / 语音转写 / 多渠道通知</b>
+  <b>开源桌面效率助手 — 日程 / 待办 / 会议 / AI 对话 / 技能 / 多渠道通知</b>
 </p>
 
 <p align="center">
@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white" alt="Vue" />
   <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Element%20Plus-2.9-409EFF?logo=element&logoColor=white" alt="Element Plus" />
-  <img src="https://img.shields.io/badge/Version-2.0.1-blue" alt="Version" />
+  <img src="https://img.shields.io/badge/Version-V2.0.1-blue" alt="Version V2.0.1" />
   <img src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-orange" alt="License" />
 </p>
 
@@ -61,13 +61,13 @@
 </details>
 
 <details>
-<summary><b>数据概览 & 提醒管理</b></summary>
+<summary><b>数据概览 & 日程管理</b></summary>
 <br/>
 <p align="center">
   <img src="./docs/readme/数据概览.jpg" width="600" alt="数据概览"/>
 </p>
 <p align="center">
-  <img src="./docs/readme/提醒管理.jpg" width="600" alt="提醒管理"/>
+  <img src="./docs/readme/%E6%8F%90%E9%86%92%E7%AE%A1%E7%90%86.jpg" width="600" alt="日程管理"/>
 </p>
 </details>
 
@@ -89,7 +89,7 @@
 <summary><b>微信通知</b></summary>
 <br/>
 <p align="center">
-  <img src="./docs/readme/微信-创建提醒.jpg" width="600" alt="微信创建提醒"/>
+  <img src="./docs/readme/%E5%BE%AE%E4%BF%A1-%E5%88%9B%E5%BB%BA%E6%8F%90%E9%86%92.jpg" width="600" alt="微信创建事项"/>
 </p>
 <p align="center">
   <img src="./docs/readme/微信-创建技能.jpg" width="600" alt="微信创建技能"/>
@@ -131,67 +131,61 @@
 
 ## 为什么做 King Mate
 
-现代生活节奏越来越快，**遗忘**这个人类与生俱来的弱点在数字时代被无限放大——忘记喝水、错过纪念日、健身计划一次次搁置、灵感稍纵即逝……
+工作、生活、会议、临时想法和各种通知常常散落在不同地方。King Mate 希望把这些入口收拢到一个本地桌面应用里：日程事项、待办清单、会议记录、AI 对话、技能扩展和多渠道通知都能在同一个工作流里完成。
 
-King Mate 不只是一个提醒工具，它是一个**开源桌面效率助手**，把提醒、待办、会议、AI 对话、语音转写整合在一起，帮你：
-
-- **不错过** — 多渠道通知确保重要时刻不被遗忘
-- **不遗漏** — 待办与会议管理让工作生活井井有条
-- **不费力** — AI 自然语言交互，一句话创建提醒/待办
-- **不盲从** — 完全开源，数据本地存储，可选加密
+- **安排更快** — 用表单或自然语言创建日程、待办和会议
+- **处理更清楚** — 数据概览、分组列表、状态筛选和通知记录集中展示
+- **扩展更灵活** — 技能可调用 API、AI 提示词或联网搜索，把动态内容带进通知
+- **数据更可控** — 本地数据库存储，可选加密，也支持本地 HTTP API 和 Docker Headless 模式
 
 <br />
 
 ## 核心功能
 
-### 提醒管理
+### 日程管理
 
-- **循环提醒** — 按分钟 / 小时 / 天 / 月 / 年周期触发
-- **定时提醒** — 指定日期时间一次性触发，触发后自动停用
-- **农历提醒** — 支持按农历日期设置，每年自动换算阳历
+- **循环任务** — 按分钟 / 小时 / 天 / 月 / 年周期触发
+- **定时事项** — 指定日期时间一次性触发，触发后自动停用
+- **农历事项** — 支持按农历日期设置，每年自动换算阳历
 - **星期筛选** — 周循环模式下指定星期几触发
 - **工作日 / 节假日模式** — 内置中国法定节假日数据，可仅在工作日或节假日触发
 - **活跃时段** — 设定每日生效时间范围（如 09:00–18:00）
-- **结束时间** — 可选设置提醒截止日期，到期自动停用
-- **自定义图标 / 颜色** — 每条提醒可选独立 emoji 图标和颜色标识
-- **托盘暂停** — 系统托盘一键暂停 / 恢复所有提醒
+- **结束时间** — 可选设置截止日期，到期自动停用
+- **自定义图标 / 颜色** — 每条事项可选独立 emoji 图标和颜色标识
+- **托盘暂停** — 系统托盘一键暂停 / 恢复所有计划
+- **技能绑定** — AI 模式下可为事项绑定技能，触发前自动获取动态内容
 
 ### 待办事项
 
-- **快速添加** — 输入内容回车即添加，支持设置日期、优先级
-- **分类管理** — 默认工作 / 学习 / 生活分类，可自定义
+- **快速添加** — 输入内容回车即添加，支持描述、日期和优先级
 - **按天分组** — 自动按逾期 / 今天 / 明天 / 即将到来分组
 - **优先级排序** — 紧急 > 重要 > 普通，高优先级置顶
 - **图片支持** — Ctrl+V 粘贴图片关联待办
-- **逾期提醒** — 前一天未完成的待办自动归入逾期组
-- **API 接口** — 支持通过 HTTP API 和 AI 对话创建/管理待办
+- **完成折叠** — 已完成事项可隐藏或展开，列表保持清爽
+- **逾期跟进** — 前一天未完成的待办自动归入逾期组
+- **定时通知** — 可配置截止日通知和每日待办总结，通知渠道可自选
 
 ### 会议管理
 
 - **会议记录** — 创建会议并记录标题、描述、参与者、地点
-- **录音转写** — 会议录音自动语音转文字，支持说话人分离
-- **AI 纪要** — 基于转写内容自动生成会议纪要
-- **附件管理** — 上传会议相关附件
+- **分段内容** — 支持文本段、音频段和录音片段，方便整理会议材料
+- **AI 摘要** — 基于会议记录生成总结、议题、决议、行动项和要点
+- **AI 问答** — 可直接围绕会议内容追问
+- **附件管理** — 支持拖拽上传文档、图片和音频附件
 - **状态追踪** — 待开始 / 进行中 / 已完成
-
-### 语音转写
-
-- **实时转写** — 通过 WSS 连接实时语音转文字，边说边出文字
-- **文件转写** — 上传音频文件批量转写，支持说话人分离
-- **多引擎支持** — 火山引擎、讯飞、阿里云、百度、OpenAI Whisper、SiliconFlow、Groq 等
-- **会议集成** — 转写结果直接关联会议记录
 
 ### AI 智能对话
 
-内置 AI 助手，支持自然语言创建和管理提醒、待办，无需手动填写表单。
+内置 AI 助手，支持自然语言创建和管理日程、待办、技能，也可以作为日常对话入口。
 
-- **自然语言操作** — "明天下午3点提醒我开会"、"添加待办：完成报告"
+- **自然语言操作** — "明天下午3点开会"、"添加待办：完成报告"
 - **多会话管理** — 多个对话独立上下文，历史记录持久化
 - **多轮对话** — 连续对话上下文关联
-- **图片识别** — 发送图片，AI 识别后可创建相关提醒
+- **图片识别** — 发送图片，AI 识别后可创建相关事项
 - **思维链展示** — 支持 DeepSeek-R1、qwq 等推理模型的推理过程
-- **技能调用** — AI 自动调用技能获取动态内容（如天气）并绑定到提醒
+- **技能调用** — AI 自动调用技能获取动态内容（如天气）并绑定到事项
 - **联网搜索** — AI 对话可调用联网搜索技能，获取实时信息
+- **微信连接** — 扫码连接后，微信消息可交给 AI 助手处理并回复
 
 **支持的 AI 服务商：**
 
@@ -226,7 +220,7 @@ King Mate 不只是一个提醒工具，它是一个**开源桌面效率助手**
 
 ### 技能系统
 
-提醒可绑定技能，每次触发时自动执行获取动态内容。
+技能可以独立执行，也可以绑定到日程事项，每次触发时自动获取动态内容。
 
 **内置技能：**
 
@@ -235,7 +229,7 @@ King Mate 不只是一个提醒工具，它是一个**开源桌面效率助手**
 | 天气查询 | 实时天气信息 |
 | 每日一言 | 励志名言 / 哲理金句 / 唯美句子 |
 | 倒计时 | 日期倒计时计算 |
-| 喝水提醒 | 按时间段推荐饮水量 |
+| 喝水助手 | 按时间段推荐饮水量 |
 | 诗词推荐 | 古典诗词赏析 |
 | 健康贴士 | 按时段健康建议（早/午/晚） |
 | 运动推荐 | 室内/户外/轻量运动推荐 |
@@ -243,15 +237,15 @@ King Mate 不只是一个提醒工具，它是一个**开源桌面效率助手**
 | 每日一笑 | 笑话 / 段子 |
 | 星座运势 | 每日星座运势 |
 | 农历信息 | 农历日期展示 |
-| 工作汇报 | 工作总结提醒 |
+| 工作汇报 | 工作总结素材 |
 
-**自定义技能类型：** API 调用 / AI 提示词 / 搜索总结
+**自定义技能类型：** API 调用 / AI 提示词 / 联网搜索 + AI 总结
 
-**技能商店：** 内置社区技能商店，一键浏览、安装和更新社区技能，无需手动配置。
+**技能商店：** 内置社区技能商店，一键浏览、安装和更新社区技能，无需手动配置；支持按分类搜索和查看安装状态。
 
 ### 多渠道通知
 
-每个提醒可同时启用多个通知渠道，均支持独立配置和发送测试。
+每个事项可同时启用多个通知渠道，均支持独立配置和发送测试。
 
 | 渠道 | 说明 |
 |:--|:--|
@@ -268,13 +262,22 @@ King Mate 不只是一个提醒工具，它是一个**开源桌面效率助手**
 | Discord | Webhook 推送 |
 | Webhook | 自定义 HTTP 请求（GET/POST/PUT/PATCH），支持自定义 Header 和模板变量 |
 
+### 模型与系统
+
+- **模型配置** — 支持对话模型与联网搜索模型分组管理，可配置多模型、默认模型和多模态标记
+- **应用模式** — 支持 AI 模式和普通模式，按使用习惯隐藏或展示 AI 相关入口
+- **外观主题** — 支持亮色、暗色和跟随系统
+- **托盘行为** — 支持开机自启动、关闭时最小化到托盘、置顶窗口等桌面行为
+- **提示音** — 支持内置音效、系统提示音、自定义音乐或静音
+- **API 服务** — 可启用本地 HTTP API，配置监听地址、端口和 Bearer Token
+- **自动更新** — 系统设置中可检查新版本
+
 ### 数据安全
 
 - **AES-256-GCM 加密** — 数据库文件可选加密，密钥独立存储
 - **密钥分离** — 加密数据库（`remind.db.enc`）与密钥文件（`remind.key`）分开存放
 - **透明加解密** — 应用启动自动加载密钥，无需手动输入密码
-
-<br />
+- **本地优先** — 应用数据默认保存在本机，真实凭据通过本地配置或环境变量提供
 
 ## 技术栈
 
@@ -286,9 +289,9 @@ King Mate 不只是一个提醒工具，它是一个**开源桌面效率助手**
 | UI | Element Plus |
 | 状态管理 | Pinia |
 | 数据库 | sql.js（SQLite），支持 AES-256-GCM 加密 |
-| 语音转写 | WebSocket 实时转写 + 多引擎文件转写 |
 | 节假日 | chinese-days |
 | 邮件 | Nodemailer |
+| 通信 | 本地 HTTP API |
 | HTTP | Axios |
 | 样式 | SCSS |
 | 打包 | electron-builder |
@@ -334,7 +337,7 @@ npm run pack        # 打包 Windows 安装程序 (NSIS) + 便携版
 npm run pack:dir    # 打包为免安装目录
 ```
 
-产物输出到 `dist/` 目录：`king-mate-{version}-setup.exe`（安装程序）、`king-mate-{version}-portable.exe`（便携版）
+产物输出到 `dist/` 目录：`king-mate-V2.0.1-setup.exe`（安装程序）、`king-mate-V2.0.1-portable.exe`（便携版）
 
 **macOS / Linux：**
 
@@ -382,7 +385,7 @@ docker compose exec king-mate king-repl
 
 # 单条命令执行
 docker compose exec king-mate king-repl /status
-docker compose exec king-mate king-repl "明天下午3点提醒我开会"
+docker compose exec king-mate king-repl "明天下午3点开会"
 
 # 交互模式启动（前台 REPL）
 docker compose run --rm king-mate
@@ -448,11 +451,24 @@ docker compose down             # 停止并移除容器
 
 应用启动后在本地开启 REST API（默认端口 `33333`），支持可选 Bearer Token 认证。
 
+接口分组：
+
+| 分组 | 接口 |
+|:--|:--|
+| 健康检查 | `GET /api/ping` |
+| 日程事项 | `POST /api/reminders`、`GET /api/reminders`、`GET /api/reminders/:id`、`DELETE /api/reminders/:id` |
+| 待办 | `POST /api/todo`、`GET /api/todo`、`GET /api/todo/stats`、`GET /api/todo/:id`、`PUT /api/todo/:id`、`DELETE /api/todo/:id`、`POST /api/todo/:id/toggle` |
+| AI 对话 | `POST /api/chat` |
+| 模型配置 | `GET /api/models` |
+| 通知配置 | `GET /api/notifications/configs`、`PUT /api/notifications/configs/:channel`、`POST /api/notifications/test/:channel` |
+| 系统设置 | `GET /api/settings`、`PUT /api/settings` |
+| 微信机器人 | `GET /api/wechat-bot/qrcode`、`GET /api/wechat-bot/status`、`POST /api/wechat-bot/login`、`POST /api/wechat-bot/logout`、`POST /api/wechat-bot/toggle` |
+
 ```bash
 # 健康检查
 curl http://127.0.0.1:33333/api/ping
 
-# 创建提醒
+# 创建事项
 curl -X POST http://127.0.0.1:33333/api/reminders \
   -H "Content-Type: application/json" \
   -d '{"title":"喝水","remind_type":"interval","start_time":"2025-06-01T09:00:00","interval_value":30,"interval_unit":"minutes","channels":["desktop"]}'
@@ -460,9 +476,9 @@ curl -X POST http://127.0.0.1:33333/api/reminders \
 # AI 对话
 curl -X POST http://127.0.0.1:33333/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"message":"明天下午3点提醒我开会"}'
+  -d '{"message":"明天下午3点开会"}'
 
-# 获取提醒列表
+# 获取事项列表
 curl http://127.0.0.1:33333/api/reminders?is_active=1
 ```
 
@@ -478,14 +494,15 @@ king-mate/
 │   ├── main/                  # 主进程
 │   │   ├── index.ts           # 入口，窗口 / 托盘 / 调度器初始化
 │   │   ├── repl.ts            # 终端 REPL 交互模式
-│   │   ├── stt.ts             # 语音转写（实时 + 文件）
-│   │   ├── scheduler.ts       # 提醒调度器（含农历 / 工作日判定）
+│   │   ├── scheduler.ts       # 任务调度器（含农历 / 工作日判定）
 │   │   ├── llm.ts             # LLM 集成（多服务商 / 流式 / 工具调用 / 联网搜索）
 │   │   ├── skill-store.ts     # 技能商店（远程清单 / 安装 / 更新 / 卸载）
 │   │   ├── api-server.ts      # 本地 HTTP API 服务
+│   │   ├── env-config.ts      # Headless / Docker 环境变量预配置
+│   │   ├── updater.ts         # 更新检查
 │   │   ├── db/                # 数据库层
 │   │   │   ├── connection.ts  # SQLite 连接 / 加密
-│   │   │   ├── reminders.ts   # 提醒 CRUD
+│   │   │   ├── reminders.ts   # 事项 CRUD
 │   │   │   ├── todos.ts       # 待办 CRUD
 │   │   │   ├── meetings.ts    # 会议管理
 │   │   │   ├── skills.ts      # 技能 CRUD
@@ -494,11 +511,12 @@ king-mate/
 │   │   └── skills/            # 技能执行器
 │   └── preload/               # 预加载脚本
 ├── src/
-│   ├── pages/                 # 页面：AI 对话 / 仪表盘 / 提醒 / 待办 / 会议 / 技能 / 通知 / 设置
-│   ├── components/            # 布局组件 / 提醒表单 / 聊天 / 设置向导
+│   ├── pages/                 # 页面：AI 对话 / 数据概览 / 日程 / 待办 / 会议 / 设置 / 技能 / 技能商店 / 鸣谢
+│   ├── components/            # 布局组件 / 事项表单 / 聊天 / 技能 / 设置向导
 │   ├── stores/                # Pinia 状态管理
 │   └── assets/                # SCSS 样式 / 静态资源
 ├── resources/                 # 应用图标 / 提示音
+├── docs/acknowledgements.json # 鸣谢页本地数据
 ├── API.md                     # HTTP API 文档
 ├── Dockerfile                 # Docker 构建文件
 └── docker-compose.yml         # Docker Compose 配置
@@ -552,7 +570,7 @@ king-mate/
 1. 在应用「微信机器人」页面点击获取二维码，使用微信扫码登录
 2. 登录成功后，在微信中给机器人发一条消息完成绑定
 3. 绑定完成后，在「通知渠道 → 微信」中启用该渠道
-4. 提醒触发时自动通过微信机器人发送消息
+4. 事项触发时自动通过微信机器人发送消息
 
 > 需先完成绑定才能启用微信通知渠道。断开连接后需重新绑定。
 
@@ -566,8 +584,8 @@ king-mate/
 
 ```json
 {
-  "title": "提醒标题",
-  "body": "提醒内容",
+  "title": "事项标题",
+  "body": "事项内容",
   "icon": "🔔",
   "reminderId": 42
 }
@@ -594,6 +612,12 @@ king-mate/
 [GitHub](https://github.com/coder-kingyifan)
 &nbsp;&middot;&nbsp;
 [Issues](https://github.com/coder-kingyifan/king-mate/issues)
+
+如果您有好的想法和建议可以关注公众号联系作者：
+
+<p align="center">
+  <img src="./docs/gzhqcode.jpg" width="180" alt="公众号二维码" />
+</p>
 
 ## 打赏
 

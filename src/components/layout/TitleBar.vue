@@ -2,6 +2,7 @@
   <div class="title-bar">
     <div class="title-bar-drag">
       <span class="title-text">King Mate</span>
+      <span class="slogan-text">您的专属搭子</span>
     </div>
     <div class="title-bar-controls">
       <div class="control-btn" :class="{ active: isAlwaysOnTop }" @click="toggleAlwaysOnTop" :title="isAlwaysOnTop ? '取消置顶' : '置顶'">
@@ -70,6 +71,8 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .title-text {
@@ -77,6 +80,29 @@ onUnmounted(() => {
   font-weight: 500;
   color: var(--text-tertiary);
   user-select: none;
+  flex-shrink: 0;
+}
+
+.slogan-text {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+  line-height: 1;
+  user-select: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: min(180px, 32vw);
+}
+
+.slogan-text::before {
+  content: '';
+  display: inline-block;
+  width: 1px;
+  height: 10px;
+  margin: 0 10px 0 0;
+  background: var(--border-color);
+  vertical-align: -1px;
 }
 
 .title-bar-controls {

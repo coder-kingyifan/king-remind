@@ -10,7 +10,7 @@
       </div>
       <div class="header-actions">
         <el-button size="small" round @click="startQuickRecord" :disabled="isAnyRecording" class="rec-btn">
-          <el-icon style="margin-right:4px"><Microphone/></el-icon>{{ isSimpleMode ? '录音' : '实时录音' }}
+          <el-icon style="margin-right:4px"><Microphone/></el-icon>录音
         </el-button>
         <el-button type="primary" size="small" round @click="openCreate">
           <el-icon style="margin-right:4px"><Plus/></el-icon>新建会议
@@ -23,10 +23,8 @@
       <div class="recording-float-main">
         <span class="rec-dot"></span>
         <span class="rec-time">{{ formatDuration(recordingDuration) }}</span>
-        <span class="rt-state" :class="realtimeSttStatus" v-if="!isSimpleMode">{{ realtimeStatusLabel }}</span>
         <el-button type="danger" size="small" round @click="stopCurrentRecording">停止</el-button>
       </div>
-      <div v-if="liveTranscript && !isSimpleMode" ref="recordingLiveRef" class="recording-live">{{ liveTranscript }}</div>
     </div>
 
     <!-- 筛选 -->
@@ -53,7 +51,6 @@
           <span v-if="meeting.location" class="meta-item"><el-icon :size="12"><Location/></el-icon>{{ meeting.location }}</span>
           <span v-if="parseParticipants(meeting.participants).length" class="meta-item"><el-icon :size="12"><User/></el-icon>{{ parseParticipants(meeting.participants).length }}人</span>
           <span v-if="meeting.has_recording" class="meta-item recording"><el-icon :size="12"><Microphone/></el-icon>有录音</span>
-          <span v-if="(meeting as any).stt_status === 'done' && !isSimpleMode" class="meta-item stt"><el-icon :size="12"><Document/></el-icon>已转写</span>
         </div>
         <el-icon :size="14" class="card-del" @click.stop="handleDelete(meeting)"><Delete/></el-icon>
       </div>
@@ -65,16 +62,16 @@
           <div class="empty-bubble"></div>
         </div>
         <strong>记录会议，留存关键信息</strong>
-        <p>可以新建会议或直接录音，支持实时转写和 AI 摘要。</p>
+        <p>可以新建会议或直接录音，记录关键信息并生成 AI 摘要。</p>
       </div>
 
     <!-- 新建/编辑弹窗 -->
     <el-dialog v-model="detailVisible" width="680px" :close-on-click-modal="false" destroy-on-close top="4vh">
       <div class="detail-header">
-        <input v-model="editForm.title" class="detail-title" placeholder="会议标题"/>
+        <input v-model="editForm.title" class="detail-title" placeholder="输入会议主题，例如：产品周会 / 客户复盘"/>
         <div class="detail-status-row">
           <span class="card-status" :class="editForm.status" @click="cycleStatus" style="cursor:pointer">{{ statusLabel(editForm.status) }}</span>
-          <el-date-picker v-model="editForm.start_time" type="datetime" value-format="YYYY-MM-DD HH:mm" placeholder="会议时间" size="small" style="width:180px"/>
+          <el-date-picker v-model="editForm.start_time" type="datetime" value-format="YYYY-MM-DD HH:mm" placeholder="开始时间" size="small" style="width:180px"/>
         </div>
       </div>
 
@@ -82,92 +79,58 @@
       <div class="more-options">
         <div class="more-toggle" @click="showMoreOptions = !showMoreOptions">
           <el-icon :size="12"><component :is="showMoreOptions ? ArrowUp : ArrowDown"/></el-icon>
-          <span>{{ showMoreOptions ? '收起更多选项' : '更多选项' }}</span>
+          <span>{{ showMoreOptions ? '收起补充信息' : '补充信息' }}</span>
         </div>
         <div v-if="showMoreOptions" class="more-fields">
           <div class="field-row">
-            <label>类型</label>
+            <label>会议类型</label>
             <div class="type-chips">
               <span v-for="t in typeFilters" :key="t.value" class="chip" :class="{active: editForm.meeting_type === t.value}" @click="editForm.meeting_type = t.value as any">{{ t.label }}</span>
             </div>
           </div>
           <div class="field-row">
             <label>结束时间</label>
-            <el-date-picker v-model="editForm.end_time" type="datetime" value-format="YYYY-MM-DD HH:mm" placeholder="可选" size="small" style="width:100%"/>
+            <el-date-picker v-model="editForm.end_time" type="datetime" value-format="YYYY-MM-DD HH:mm" placeholder="选择结束时间" size="small" style="width:100%"/>
           </div>
           <div class="field-row">
             <label>地点</label>
-            <input v-model="editForm.location" class="field-input" placeholder="可选"/>
+            <input v-model="editForm.location" class="field-input" placeholder="会议室、线上链接或客户现场"/>
           </div>
           <div class="field-row">
             <label>参会人</label>
             <div class="participant-input">
               <span v-for="(p, i) in editForm.participants" :key="i" class="p-tag">{{ p }}<span @click="editForm.participants.splice(i, 1)">&times;</span></span>
-              <input v-model="newParticipant" class="p-input" placeholder="回车添加" @keydown.enter.prevent="addParticipant"/>
+              <input v-model="newParticipant" class="p-input" placeholder="输入姓名后回车" @keydown.enter.prevent="addParticipant"/>
             </div>
           </div>
           <div class="field-row">
-            <label>描述</label>
-            <textarea v-model="editForm.description" class="field-textarea" placeholder="可选" rows="2"/>
+            <label>会议背景</label>
+            <textarea v-model="editForm.description" class="field-textarea" placeholder="这次会议要解决什么问题？" rows="2"/>
           </div>
         </div>
       </div>
 
-      <!-- 会议记录 - 分段编辑器 -->
+      <!-- 会议纪要 -->
       <div class="detail-section">
-        <div class="section-head">
-          <label>会议记录</label>
-          <div class="section-actions">
-            <el-button size="small" text @click="addTextSegment"><el-icon><EditPen/></el-icon>文本</el-button>
-            <el-button size="small" text @click="addAudioSegment"><el-icon><Upload/></el-icon>音频</el-button>
-            <el-button size="small" text @click="startSegmentRecord" v-if="!isSegmentRecording"><el-icon><Microphone/></el-icon>{{ isSimpleMode ? '录音' : '实时录音' }}</el-button>
-            <el-button size="small" text type="danger" @click="stopSegmentRecord" v-else><span class="rec-dot-sm"></span>停止</el-button>
-          </div>
-        </div>
-
-        <!-- 分段列表 -->
-        <div class="segments-list" v-if="segments.length">
-          <div v-for="(seg, i) in segments" :key="seg.id || i" class="segment-item" :class="seg.segment_type">
-            <div class="seg-header">
-              <span v-if="seg.start_time > 0 || seg.end_time > 0" class="seg-time">{{ formatSegmentTime(seg.start_time) }} - {{ formatSegmentTime(seg.end_time) }}</span>
-              <span class="seg-type-badge" :class="seg.segment_type">{{ seg.segment_type === 'audio' ? '语音' : '文本' }}</span>
-              <input v-model="seg.speaker" class="seg-speaker" placeholder="说话人" @change="updateSegment(seg)"/>
-              <span v-if="segments.filter(s => s.speaker && s.speaker === seg.speaker).length > 1" class="seg-rename-all" @click="renameAllSpeaker(seg.speaker)" title="重命名所有同名说话人">⇄</span>
-              <div class="seg-actions">
-                <span v-if="i > 0" class="seg-move" @click="moveSegment(i, -1)" title="上移">&uarr;</span>
-                <span v-if="i < segments.length - 1" class="seg-move" @click="moveSegment(i, 1)" title="下移">&darr;</span>
-                <span class="seg-del" @click="deleteSegment(seg, i)">&times;</span>
-              </div>
-            </div>
-            <!-- 文本段 -->
-            <textarea v-if="seg.segment_type === 'text'" v-model="seg.content" class="seg-textarea" placeholder="输入内容..." rows="3" @change="updateSegment(seg)"/>
-            <!-- 音频段 -->
-            <div v-else class="seg-audio">
-              <audio v-if="segAudioUrls[seg.content]" :src="segAudioUrls[seg.content]" controls style="width:100%;height:32px"/>
-              <span v-else class="seg-audio-path">{{ seg.content.split('/').pop() }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 兼容旧版会议记录 -->
-        <div v-if="!segments.length" class="legacy-minutes">
-          <textarea v-model="editForm.minutes" class="detail-textarea" placeholder="输入或粘贴会议记录..." rows="4"/>
-        </div>
+        <label>会议纪要</label>
+        <textarea v-model="editForm.minutes" class="detail-textarea" placeholder="可以这样写：
+- 讨论事项：
+- 会议结论：
+- 后续待办：" rows="6"/>
       </div>
 
       <!-- 录音 -->
       <div class="detail-section">
-        <label>会议录音</label>
+        <label>录音</label>
         <div class="recording-area">
           <template v-if="isRecording">
             <span class="rec-dot"></span>
             <span class="rec-time">{{ formatDuration(recordingDuration) }}</span>
             <el-button type="danger" size="small" round @click="stopCurrentRecording">停止录音</el-button>
-            <span class="rt-state" :class="realtimeSttStatus" v-if="!isSimpleMode">{{ realtimeStatusLabel }}</span>
           </template>
           <template v-else>
             <el-button size="small" round @click="startRecording">
-              <el-icon style="margin-right:4px"><Microphone/></el-icon>{{ isSimpleMode && editForm.has_recording ? '继续录音' : (isSimpleMode ? '开始录音' : '开始实时录音') }}
+              <el-icon style="margin-right:4px"><Microphone/></el-icon>{{ editForm.recording_path ? '继续录音' : '开始录音' }}
             </el-button>
           </template>
           <div v-if="editForm.recording_path" class="recording-play">
@@ -175,34 +138,6 @@
             <span v-else>已有录音</span>
           </div>
         </div>
-      </div>
-
-      <!-- 语音转文字 -->
-      <div class="detail-section" v-if="!isSimpleMode && editForm.id && (editForm.has_recording || segments.some(s => s.segment_type === 'audio'))">
-        <div class="section-head">
-          <label>语音转文字</label>
-          <span v-if="(editForm as any).stt_status === 'done'" class="stt-status done">已转写</span>
-          <span v-else-if="(editForm as any).stt_status === 'pending'" class="stt-status pending">转写中...</span>
-        </div>
-        <div class="stt-area">
-          <el-button size="small" round @click="doStt" :loading="sttLoading" :disabled="(editForm as any).stt_status === 'pending'">
-            <el-icon style="margin-right:4px"><MagicStick/></el-icon>批量转写录音（说话人分离）
-          </el-button>
-          <div v-if="(editForm as any).stt_text" class="stt-text">
-            <p>{{ (editForm as any).stt_text }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="detail-section" v-if="!isSimpleMode && (liveTranscript || realtimeError)">
-        <div class="section-head">
-          <label>实时转写</label>
-          <span class="stt-status" :class="realtimeSttStatus">{{ realtimeStatusLabel }}</span>
-        </div>
-        <div v-if="liveTranscript" ref="liveTranscriptRef" class="stt-text live">
-          <p>{{ liveTranscript }}</p>
-        </div>
-        <p v-if="realtimeError" class="stt-error">{{ realtimeError }}</p>
       </div>
 
       <!-- 附件 -->
@@ -228,7 +163,7 @@
       <div class="detail-section" v-if="editForm.id && !isSimpleMode">
         <label>AI 摘要</label>
         <div class="ai-area">
-          <el-button size="small" round @click="generateSummary" :loading="summarizing" :disabled="!editForm.minutes && !segments.length && !(editForm as any).stt_text">
+          <el-button size="small" round @click="generateSummary" :loading="summarizing" :disabled="!editForm.minutes && !(editForm as any).stt_text">
             <el-icon style="margin-right:4px"><MagicStick/></el-icon>生成摘要
           </el-button>
           <div v-if="aiSummary" class="summary-content">
@@ -286,7 +221,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, nextTick, onActivated, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue'
+import {computed, onActivated, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue'
 import {useMeetingsStore} from '@/stores/meetings'
 import {ArrowDown, ArrowUp, Location, Microphone, Plus, Upload, Document, MagicStick, User, EditPen, Delete} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
@@ -306,10 +241,11 @@ function getLocalDateTimeStr(date: Date = new Date()): string {
 const meetingsStore = useMeetingsStore()
 const settingsStore = useSettingsStore()
 const isSimpleMode = computed(() => settingsStore.settings.app_mode === 'simple')
+const realtimeSttConfigured = ref(false)
+const fileSttConfigured = ref(false)
+const useRealtimeRecording = computed(() => !isSimpleMode.value && realtimeSttConfigured.value)
 const pageRef = ref<HTMLElement>()
 const fileInputRef = ref<HTMLInputElement>()
-const recordingLiveRef = ref<HTMLElement>()
-const liveTranscriptRef = ref<HTMLElement>()
 
 // 筛选
 const statusFilter = ref('all')
@@ -390,9 +326,16 @@ type RealtimeTranscriptLine = {
   end_time?: number
   received_at: number
 }
+type TranscriptDisplayItem = {
+  key: string
+  speaker: string
+  time: string
+  text: string
+}
 
 const realtimeTranscriptLines = ref<RealtimeTranscriptLine[]>([])
 const realtimeLastAppendedLines = ref<RealtimeTranscriptLine[]>([])
+const realtimeFallbackSpeakerIndex = ref(1)
 const realtimeError = ref('')
 const recordingStartTime = ref(0) // 录音开始时间戳（ms），用于计算分段相对时间
 const isStoppingRecording = ref(false) // 正在停止录音标记，防止closed事件触发重连
@@ -422,6 +365,49 @@ function getIncrementalText(previous: string, current: string): string {
   }
 
   return ''
+}
+
+function normalizedTranscriptText(text: string): string {
+  return cleanTranscriptText(text).replace(/[，。！？、；;:：,.!?]/g, '').replace(/\s+/g, '')
+}
+
+function commonPrefixLength(a: string, b: string): number {
+  const left = normalizedTranscriptText(a)
+  const right = normalizedTranscriptText(b)
+  let length = 0
+  while (length < left.length && length < right.length && left[length] === right[length]) {
+    length++
+  }
+  return length
+}
+
+function isTextRevision(previous: string, current: string): boolean {
+  const prev = normalizedTranscriptText(previous)
+  const next = normalizedTranscriptText(current)
+  if (!prev || !next || prev === next) return false
+  if (prev.includes(next) || next.includes(prev)) return true
+  return commonPrefixLength(prev, next) >= 6
+}
+
+function safeSeconds(value: unknown): number {
+  const num = Number(value)
+  return Number.isFinite(num) ? Math.max(0, num) : 0
+}
+
+function nextFallbackSpeaker(previous?: RealtimeTranscriptLine | null, text = '', startTime?: number): string {
+  if (!previous) {
+    realtimeFallbackSpeakerIndex.value = 1
+    return '用户1'
+  }
+  if (isTextRevision(previous.text, text)) {
+    return previous.speaker || `用户${realtimeFallbackSpeakerIndex.value}`
+  }
+  const gap = safeSeconds(startTime) - safeSeconds(previous.end_time ?? previous.start_time)
+  if (gap > 2) {
+    realtimeFallbackSpeakerIndex.value = realtimeFallbackSpeakerIndex.value === 1 ? 2 : 1
+    return `用户${realtimeFallbackSpeakerIndex.value}`
+  }
+  return previous.speaker || `用户${realtimeFallbackSpeakerIndex.value}`
 }
 
 function mergeTranscriptText(existing: string, incoming: string): string {
@@ -493,20 +479,28 @@ function appendRealtimeTranscriptLine(
 
   const now = Date.now()
   const last = realtimeTranscriptLines.value[realtimeTranscriptLines.value.length - 1]
+  if (last && isTextRevision(last.text, parsed.text)) {
+    last.text = parsed.text
+    last.line = `${last.speaker || parsed.speaker}：${parsed.text}`
+    last.key = transcriptLineKey(last.line)
+    last.start_time = safeSeconds(last.start_time ?? item.start_time)
+    last.end_time = Math.max(last.start_time, safeSeconds(item.end_time ?? last.end_time))
+    last.received_at = now
+    realtimeFinalText.value = realtimeTranscriptLines.value.map(item => item.line).join('\n')
+    realtimeLastAppendedLines.value = [last]
+    console.log(`[前端STT] 修订final行: "${last.line}", final_count=${realtimeTranscriptLines.value.length}`)
+    return last
+  }
+  if (!parsed.speaker) {
+    parsed = {
+      ...parsed,
+      speaker: nextFallbackSpeaker(last, parsed.text, item.start_time ?? item.end_time)
+    }
+    parsed.line = `${parsed.speaker}：${parsed.text}`
+    parsed.key = transcriptLineKey(parsed.line)
+  }
   if (last?.key === parsed.key && now - last.received_at < 1500) return null
   if (options.skipExisting && realtimeTranscriptLines.value.some(line => line.key === parsed.key)) return null
-
-  if (last && last.speaker === parsed.speaker) {
-    const suffix = getIncrementalText(last.text, parsed.text)
-    if (suffix) {
-      parsed = {
-        speaker: parsed.speaker,
-        text: suffix,
-        line: parsed.speaker ? `${parsed.speaker}：${suffix}` : suffix,
-        key: transcriptLineKey(parsed.speaker ? `${parsed.speaker}：${suffix}` : suffix)
-      }
-    }
-  }
 
   const appended: RealtimeTranscriptLine = {
     ...parsed,
@@ -526,6 +520,26 @@ function appendRealtimeTranscriptText(text?: string, options: {skipExisting?: bo
     if (appendRealtimeTranscriptLine(item, options)) count++
   }
   return count
+}
+
+function replaceRealtimeTranscriptText(text?: string) {
+  const lines = parseTranscriptText(text)
+  const nextLines: RealtimeTranscriptLine[] = []
+  realtimeFallbackSpeakerIndex.value = 1
+  for (const item of lines) {
+    const previous = nextLines[nextLines.length - 1]
+    const speaker = item.speaker || nextFallbackSpeaker(previous, item.text)
+    const line = speaker ? `${speaker}：${item.text}` : item.text
+    nextLines.push({
+      ...item,
+      speaker,
+      line,
+      key: transcriptLineKey(line),
+      received_at: Date.now()
+    })
+  }
+  realtimeTranscriptLines.value = nextLines
+  realtimeFinalText.value = realtimeTranscriptLines.value.map(item => item.line).join('\n')
 }
 
 function hasTranscriptOverlap(previous: string, incoming: string): boolean {
@@ -598,6 +612,11 @@ function rememberRealtimeFinalEvent(event: any): number {
     return count
   }
 
+  if (Array.isArray(event?.utterances) && event.utterances.length) {
+    replaceRealtimeTranscriptText(event?.full_text || formatRealtimeEventUtterances(event.utterances))
+    return 0
+  }
+
   const currentText = cleanTranscriptText(event?.text)
   if (currentText) {
     const lines = parseTranscriptText(currentText)
@@ -618,7 +637,7 @@ function composeRealtimeTranscript(includePartial = true): string {
   if (includePartial) {
     text = mergeTranscriptText(text, realtimePartialText.value)
   }
-  return text || currentSavedTranscript()
+  return text
 }
 
 function pendingRealtimePartialText(text: string): string {
@@ -725,22 +744,20 @@ function handleFilterChange() {
   meetingsStore.fetchMeetings(f)
 }
 
+async function refreshSttCapabilities() {
+  realtimeSttConfigured.value = false
+  fileSttConfigured.value = false
+}
+
 // ========== 详情页录音入口 ==========
 async function startRecording() {
-  if (isSimpleMode.value) {
-    await startPlainRecording('detail')
-  } else {
-    await startRealtimeRecording('detail')
-  }
+  await startPlainRecording('detail')
 }
 
 // ========== 快速录音 ==========
 async function startQuickRecord() {
-  if (isSimpleMode.value) {
-    await startPlainRecording('quick')
-  } else {
-    await startRealtimeRecording('quick')
-  }
+  prepareQuickRecordingDraft()
+  await startPlainRecording('quick')
 }
 
 function stopQuickRecord() {
@@ -799,7 +816,60 @@ function resetRealtimeTranscript() {
   realtimeFinalText.value = ''
   realtimeTranscriptLines.value = []
   realtimeLastAppendedLines.value = []
+  realtimeFallbackSpeakerIndex.value = 1
   realtimeError.value = ''
+}
+
+function resetMeetingDraft() {
+  editingMeeting.value = null
+  Object.assign(editForm, {
+    id: 0, title: '', description: '', meeting_type: 'regular', status: 'pending',
+    start_time: '', end_time: '', location: '', participants: [], minutes: '',
+    attachments: [], recording_path: '', has_recording: 0, todo_ids: [],
+    stt_text: '', stt_status: 'none'
+  })
+  aiSummary.value = null
+  aiChatHistory.value = []
+  recordingUrl.value = ''
+  pendingRecordingPath.value = ''
+  segments.value = []
+  segAudioUrls.value = {}
+}
+
+function prepareQuickRecordingDraft() {
+  resetMeetingDraft()
+  resetRealtimeTranscript()
+}
+
+function createDraftTextSegment(): MeetingSegment {
+  return {
+    id: -(Date.now() + Math.floor(Math.random() * 1000)),
+    meeting_id: editForm.id || 0,
+    segment_type: 'text',
+    content: '',
+    speaker: '',
+    sort_order: segments.value.length,
+    start_time: 0,
+    end_time: 0,
+    created_at: getLocalDateTimeStr()
+  }
+}
+
+function addLegacyRecordingSegment(meeting: Meeting) {
+  if (!meeting.recording_path) return
+  const exists = segments.value.some(seg => seg.segment_type === 'audio' && seg.content === meeting.recording_path)
+  if (exists) return
+  segments.value.unshift({
+    id: -(Date.now() + Math.floor(Math.random() * 1000)),
+    meeting_id: meeting.id,
+    segment_type: 'audio',
+    content: meeting.recording_path,
+    speaker: '',
+    sort_order: 0,
+    start_time: 0,
+    end_time: 0,
+    created_at: meeting.created_at || getLocalDateTimeStr()
+  })
 }
 
 async function startRealtimePipeline(stream: MediaStream): Promise<boolean> {
@@ -890,18 +960,34 @@ async function saveRealtimeLinesAsSegments(lines: RealtimeTranscriptLine[], elap
     const text = line.text?.trim()
     if (!text || existingTexts.has(text)) continue
     const speaker = line.speaker || ''
+    const lastTextSegment = [...segments.value].reverse().find(s => s.segment_type === 'text')
+    if (lastTextSegment && isTextRevision(lastTextSegment.content, text)) {
+      lastTextSegment.content = text
+      lastTextSegment.start_time = safeSeconds(lastTextSegment.start_time)
+      lastTextSegment.end_time = Math.max(lastTextSegment.start_time, safeSeconds(line.end_time ?? lastTextSegment.end_time))
+      if (lastTextSegment.id > 0) {
+        await window.electronAPI.meetings.segments.update(lastTextSegment.id, {
+          content: text,
+          speaker: lastTextSegment.speaker,
+          start_time: lastTextSegment.start_time,
+          end_time: lastTextSegment.end_time
+        })
+      }
+      existingTexts.add(text)
+      continue
+    }
     // 优先使用火山引擎返回的时间戳；否则基于已有分段末尾递增估算，避免重叠
     let startTime: number, endTime: number
     if (line.start_time != null && line.end_time != null) {
-      startTime = line.start_time
-      endTime = line.end_time
+      startTime = safeSeconds(line.start_time)
+      endTime = Math.max(startTime, safeSeconds(line.end_time))
     } else if (line.start_time != null) {
-      startTime = line.start_time
-      endTime = line.end_time ?? Math.max(startTime + 2, elapsed)
+      startTime = safeSeconds(line.start_time)
+      endTime = Math.max(startTime + 1, safeSeconds(line.end_time ?? elapsed))
     } else {
       // 无时间戳：从上一段结束时间开始，每段估算约3秒
-      startTime = Math.max(lastEndTime, i > 0 ? (lines[i - 1]?.end_time ?? lastEndTime) : lastEndTime)
-      endTime = Math.max(startTime + 2, elapsed)
+      startTime = Math.max(safeSeconds(lastEndTime), safeSeconds(i > 0 ? (lines[i - 1]?.end_time ?? lastEndTime) : lastEndTime))
+      endTime = Math.max(startTime + 1, safeSeconds(line.end_time ?? elapsed))
     }
     if (editForm.id) {
       try {
@@ -1073,6 +1159,7 @@ async function startRealtimeRecording(target: 'quick' | 'meeting' | 'segment') {
     realtimeFinalText.value = ''
     realtimeTranscriptLines.value = []
     realtimeLastAppendedLines.value = []
+    realtimeFallbackSpeakerIndex.value = 1
     realtimePartialText.value = ''
     stream = await navigator.mediaDevices.getUserMedia({audio: true})
     await startRealtimePipeline(stream)
@@ -1117,7 +1204,8 @@ async function startRealtimeRecording(target: 'quick' | 'meeting' | 'segment') {
               })
               await handleFilterChange()
             }
-            ElMessage.success(transcript ? '录音和实时转写已保存' : '录音已保存')
+            const refined = editForm.id ? await refineMeetingTranscript(editForm.id) : false
+            ElMessage.success(refined ? '录音已保存，转写已更新' : (transcript ? '录音和转写已保存' : '录音已保存'))
           }
         }
       } catch (e: any) {
@@ -1208,20 +1296,32 @@ async function startPlainRecording(target: 'quick' | 'detail' | 'segment') {
   try {
     stream = await navigator.mediaDevices.getUserMedia({audio: true})
     recordingTarget.value = target
+    recordingStartTime.value = Date.now()
     mediaRecorder.value = new MediaRecorder(stream, {mimeType: recorderMimeType()})
     recordingChunks.value = []
 
-    // 普通模式继续录音：先加载已有录音数据用于合并
+    // 继续录音：先加载已有录音数据用于合并，避免保存时覆盖原录音。
+    // 当前界面已将录音统一为会议记录条目，这里仅保留旧入口的保护逻辑。
     existingRecordingChunks.value = []
-    if (isSimpleMode.value && target === 'detail' && editForm.has_recording && editForm.recording_path) {
+    const isContinuingRecording = target === 'detail' && !!editForm.has_recording && !!editForm.recording_path
+    let existingRecordingReady = false
+    if (isContinuingRecording) {
       try {
         const urls = await window.electronAPI.meetings.resolveFiles([editForm.recording_path])
         if (urls?.[0]) {
           const resp = await fetch(urls[0])
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
           const existingBlob = await resp.blob()
           existingRecordingChunks.value = [existingBlob]
+          existingRecordingReady = true
         }
-      } catch { /* ignore */ }
+      } catch (e) {
+        existingRecordingChunks.value = []
+        console.error('读取已有录音失败:', e)
+      }
+      if (!existingRecordingReady) {
+        throw new Error('继续录音失败：未能读取原录音，已保留原录音')
+      }
     }
 
     mediaRecorder.value.ondataavailable = (e) => {
@@ -1232,14 +1332,21 @@ async function startPlainRecording(target: 'quick' | 'detail' | 'segment') {
       stream!.getTracks().forEach(t => t.stop())
       const newBlob = new Blob(recordingChunks.value, {type: 'audio/webm'})
 
-      // 普通模式继续录音：合并已有录音 + 新录音
+      // 继续录音：合并已有录音 + 新录音
       let finalBlob: Blob
-      if (existingRecordingChunks.value.length > 0) {
+      if (isContinuingRecording) {
+        if (!existingRecordingReady || existingRecordingChunks.value.length === 0) {
+          existingRecordingChunks.value = []
+          ElMessage.error('继续录音失败：未能读取原录音，已保留原录音')
+          return
+        }
         try {
           finalBlob = await mergeAudioBlobs(existingRecordingChunks.value[0], newBlob)
-        } catch {
-          // 合并失败则只保留新录音
-          finalBlob = newBlob
+        } catch (e) {
+          existingRecordingChunks.value = []
+          console.error('合并录音失败:', e)
+          ElMessage.error('继续录音失败：录音合并失败，已保留原录音')
+          return
         }
         existingRecordingChunks.value = []
       } else {
@@ -1253,7 +1360,11 @@ async function startPlainRecording(target: 'quick' | 'detail' | 'segment') {
       })
 
       try {
-        const path = await window.electronAPI.meetings.saveRecording(dataUrl, editForm.id || undefined)
+        const shouldUpdateMainRecording = target === 'detail'
+        const path = await window.electronAPI.meetings.saveRecording(
+          dataUrl,
+          shouldUpdateMainRecording ? (editForm.id || undefined) : undefined
+        )
         if (path) {
           recordingUrl.value = dataUrl
           if (target === 'segment') {
@@ -1288,7 +1399,7 @@ async function startPlainRecording(target: 'quick' | 'detail' | 'segment') {
 
 async function stopCurrentRecording() {
   isStoppingRecording.value = true
-  if (!isSimpleMode.value) {
+  if (realtimeSttSessionId.value || audioContext.value) {
     await stopRealtimePipeline()
   }
   if (mediaRecorder.value && mediaRecorder.value.state !== 'inactive') {
@@ -1306,18 +1417,17 @@ async function stopCurrentRecording() {
 
 function openCreateWithRecording(recordingPath: string, dataUrl: string) {
   editingMeeting.value = null
-  const transcript = composeRealtimeTranscript(false)
   Object.assign(editForm, {
     id: 0, title: '', description: '', meeting_type: 'regular', status: 'ongoing',
     start_time: new Date().toLocaleString('sv-SE', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',', ''),
-    end_time: '', location: '', participants: [], minutes: transcript,
+    end_time: '', location: '', participants: [], minutes: '',
     attachments: [], recording_path: recordingPath, has_recording: 1, todo_ids: [],
-    stt_text: transcript, stt_status: transcript ? 'done' : 'none'
+    stt_text: '', stt_status: 'none'
   })
   recordingUrl.value = dataUrl
   aiSummary.value = null
   aiChatHistory.value = []
-  // 保留已有分段（实时转写期间已累积的文本分段）
+  segments.value = []
   segAudioUrls.value = {}
   showMoreOptions.value = false
   detailVisible.value = true
@@ -1325,11 +1435,7 @@ function openCreateWithRecording(recordingPath: string, dataUrl: string) {
 
 // ========== 分段录音 ==========
 async function startSegmentRecord() {
-  if (isSimpleMode.value) {
-    await startPlainRecording('segment')
-  } else {
-    await startRealtimeRecording('segment')
-  }
+  await startPlainRecording('segment')
 }
 
 function stopSegmentRecord() {
@@ -1364,27 +1470,16 @@ async function appendAudioSegment(path: string, dataUrl: string) {
     })
   }
   segAudioUrls.value[path] = dataUrl
-  // 文本分段已由 handleRealtimeSttEvent 逐句保存，无需再重复添加
-  const transcript = composeRealtimeTranscript(false)
-  if (transcript) {
-    editForm.stt_text = transcript
-    editForm.minutes = transcript
-    editForm.stt_status = 'done'
+  editForm.has_recording = 1
+  if (editForm.id) {
+    await window.electronAPI.meetings.update(editForm.id, {has_recording: 1})
+    await handleFilterChange()
   }
+  resetRealtimeTranscript()
 }
 
 function addTextSegment() {
-  segments.value.push({
-    id: -(Date.now()),
-    meeting_id: editForm.id || 0,
-    segment_type: 'text',
-    content: '',
-    speaker: '',
-    sort_order: segments.value.length,
-    start_time: 0,
-    end_time: 0,
-    created_at: getLocalDateTimeStr()
-  })
+  segments.value.push(createDraftTextSegment())
 }
 
 async function addAudioSegment() {
@@ -1428,15 +1523,20 @@ async function addAudioSegment() {
         })
       }
       segAudioUrls.value[path] = dataUrl
+      editForm.has_recording = 1
+      if (editForm.id) {
+        await window.electronAPI.meetings.update(editForm.id, {has_recording: 1})
+        await handleFilterChange()
+      }
     }
   }
   input.click()
 }
 
 function formatSegmentTime(seconds: number): string {
-  if (!seconds || seconds <= 0) return ''
-  const m = Math.floor(seconds / 60)
-  const s = Math.floor(seconds % 60)
+  const safe = Math.floor(safeSeconds(seconds))
+  const m = Math.floor(safe / 60)
+  const s = safe % 60
   return m > 0 ? `${m}:${s.toString().padStart(2, '0')}` : `${s}s`
 }
 
@@ -1487,6 +1587,11 @@ function moveSegment(index: number, direction: number) {
 // ========== STT ==========
 async function doStt() {
   if (!editForm.id) return
+  await refreshSttCapabilities()
+  if (!fileSttConfigured.value) {
+    ElMessage.warning('请先配置普通语音转写模型')
+    return
+  }
   sttLoading.value = true
   try {
     const result = await window.electronAPI.meetings.stt(editForm.id, true)
@@ -1502,6 +1607,27 @@ async function doStt() {
     ElMessage.error('转写失败: ' + e.message)
   } finally {
     sttLoading.value = false
+  }
+}
+
+async function refineMeetingTranscript(meetingId: number, showMessage = false): Promise<boolean> {
+  await refreshSttCapabilities()
+  if (!fileSttConfigured.value) return false
+  try {
+    editForm.stt_status = 'pending'
+    const result = await window.electronAPI.meetings.stt(meetingId, true)
+    if (!result) return false
+    editForm.stt_text = result.full_text
+    editForm.minutes = result.full_text
+    editForm.stt_status = 'done'
+    await loadSegments(meetingId)
+    await handleFilterChange()
+    if (showMessage) ElMessage.success('转写已更新')
+    return true
+  } catch (e: any) {
+    editForm.stt_status = 'error'
+    if (showMessage) ElMessage.warning('批量校准失败: ' + e.message)
+    return false
   }
 }
 
@@ -1554,14 +1680,17 @@ async function openDetail(meeting: Meeting) {
 
   aiChatHistory.value = []
   recordingUrl.value = ''
+  segAudioUrls.value = {}
   showMoreOptions.value = !!(meeting.location || parseParticipants(meeting.participants).length || meeting.description || meeting.end_time)
 
-  await loadSegments(meeting.id)
+  segments.value = []
 
   if (meeting.recording_path) {
     try {
       const urls = await window.electronAPI.meetings.resolveFiles([meeting.recording_path])
-      if (urls?.[0]) recordingUrl.value = urls[0]
+      if (urls?.[0]) {
+        recordingUrl.value = urls[0]
+      }
     } catch {}
   }
 
@@ -1583,23 +1712,13 @@ async function loadSegments(meetingId: number) {
 }
 
 async function handleSave() {
-  // 保存前从分段同步完整文本
-  const transcriptText = mergeTranscriptText(currentSavedTranscript(), composeRealtimeTranscript(false))
-  if (transcriptText) {
-    editForm.stt_text = transcriptText
-    editForm.minutes = transcriptText
-  }
-  if (!editForm.title.trim()) {
-    ElMessage.warning('请输入会议标题')
-    return
-  }
   if (!editForm.start_time) {
-    ElMessage.warning('请选择会议时间')
-    return
+    editForm.start_time = new Date().toLocaleString('sv-SE', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',', '')
   }
+  const title = editForm.title.trim() || `会议记录 ${editForm.start_time}`
 
   const data = {
-    title: editForm.title.trim(),
+    title,
     description: editForm.description,
     meeting_type: editForm.meeting_type,
     status: editForm.status,
@@ -1610,7 +1729,7 @@ async function handleSave() {
     minutes: editForm.minutes,
     attachments: editForm.attachments,
     recording_path: editForm.recording_path || null,
-    has_recording: editForm.has_recording,
+    has_recording: (editForm.has_recording || editForm.recording_path) ? 1 : 0,
     todo_ids: editForm.todo_ids,
     stt_text: editForm.stt_text || null,
     stt_status: editForm.stt_status
@@ -1625,23 +1744,9 @@ async function handleSave() {
     meetingId = result.id
   }
 
-  // 保存未持久化的分段
-  const pendingSegs = segments.value.filter(s => s.id < 0)
-  if (pendingSegs.length) {
-    await window.electronAPI.meetings.segments.addBatch(
-      pendingSegs.map((s, i) => ({
-        meeting_id: meetingId,
-        segment_type: s.segment_type,
-        content: s.content,
-        speaker: s.speaker,
-        sort_order: segments.value.indexOf(s),
-        start_time: s.start_time || 0,
-        end_time: s.end_time || 0
-      }))
-    )
-  }
-
   detailVisible.value = false
+  resetRealtimeTranscript()
+  resetMeetingDraft()
 }
 
 function handleDelete(meeting: Meeting) {
@@ -1733,7 +1838,6 @@ async function sendAiChat() {
 
 // 生命周期
 onMounted(async () => {
-  window.electronAPI.meetings.onRealtimeSttEvent(handleRealtimeSttEvent)
   await handleFilterChange()
   await meetingsStore.fetchStats()
 })
@@ -1743,25 +1847,22 @@ onActivated(async () => {
 })
 
 onBeforeUnmount(() => {
-  window.electronAPI.meetings.removeRealtimeSttListener()
   if (isAnyRecording.value) stopCurrentRecording()
 })
 
 // 清理录音
 watch(detailVisible, (v) => {
   if (!v) {
-    if (isAnyRecording.value) stopCurrentRecording()
+    if (isAnyRecording.value) {
+      stopCurrentRecording()
+    } else {
+      resetMeetingDraft()
+    }
     // 关闭编辑框时清空实时转写状态，避免下次打开时残留上次内容
     resetRealtimeTranscript()
   }
 })
 
-watch(liveTranscript, async () => {
-  await nextTick()
-  for (const el of [recordingLiveRef.value, liveTranscriptRef.value]) {
-    if (el) el.scrollTop = el.scrollHeight
-  }
-})
 </script>
 
 <style scoped>
@@ -1783,7 +1884,7 @@ watch(liveTranscript, async () => {
 }
 .recording-float-main { display: flex; align-items: center; gap: 10px; }
 .recording-live {
-  max-height: 72px;
+  max-height: 120px;
   overflow: auto;
   padding: 8px 10px;
   border-radius: 8px;
@@ -1791,7 +1892,6 @@ watch(liveTranscript, async () => {
   color: var(--text-primary);
   font-size: 12px;
   line-height: 1.5;
-  white-space: pre-wrap;
 }
 .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: #F56C6C; animation: pulse 1s infinite; }
 .rec-dot-sm { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #F56C6C; animation: pulse 1s infinite; margin-right: 4px; }
@@ -1866,18 +1966,20 @@ watch(liveTranscript, async () => {
 .section-head label { font-size: 12px; color: var(--text-tertiary); margin-bottom: 0; }
 .section-actions { display: flex; gap: 4px; }
 
-/* 分段编辑器 */
+/* 旧版记录样式 */
 .segments-list { display: flex; flex-direction: column; gap: 8px; }
-.segment-item { border: 1px solid var(--border-color-light); border-radius: 6px; padding: 8px 10px; }
+.segment-item { border: 1px solid var(--border-color-light); border-radius: 6px; padding: 10px 12px; }
 .segment-item.audio { border-left: 3px solid #409EFF; }
 .segment-item.text { border-left: 3px solid #67C23A; }
-.seg-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-.seg-time { flex: 0 0 72px; min-width: 72px; white-space: nowrap; font-size: 12px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+.seg-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.seg-time { white-space: nowrap; font-size: 12px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
 .seg-type-badge { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 500; }
 .seg-type-badge.audio { background: rgba(64,158,255,.1); color: #409EFF; }
 .seg-type-badge.text { background: rgba(103,194,58,.1); color: #67C23A; }
-.seg-speaker { flex: 0 0 80px; width: 80px; border: 1px solid var(--border-color-light); border-radius: 3px; padding: 1px 4px; font-size: 11px; color: var(--text-primary); background: transparent; outline: none; font-family: inherit; }
+.seg-speaker { flex: 0 0 112px; width: 112px; border: none; border-radius: 3px; padding: 1px 4px; font-size: 13px; font-weight: 600; color: var(--color-primary); background: transparent; outline: none; font-family: inherit; }
+.seg-speaker::placeholder { color: var(--color-primary); opacity: 1; }
 .seg-speaker:focus { border-color: var(--color-primary); }
+.seg-role { font-size: 11px; color: var(--color-primary); background: rgba(64,158,255,.08); border-radius: 3px; padding: 1px 5px; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .seg-rename-all { cursor: pointer; font-size: 12px; color: var(--text-placeholder); margin-left: 2px; }
 .seg-rename-all:hover { color: var(--color-primary); }
 .seg-actions { margin-left: auto; display: flex; align-items: center; gap: 4px; }
@@ -1885,8 +1987,8 @@ watch(liveTranscript, async () => {
 .seg-move:hover { color: var(--color-primary); }
 .seg-del { cursor: pointer; color: var(--text-placeholder); font-size: 14px; }
 .seg-del:hover { color: var(--color-danger); }
-.seg-textarea { width: 100%; border: 1px solid var(--border-color-light); border-radius: 4px; padding: 6px 8px; font-size: 13px; color: var(--text-primary); background: transparent; outline: none; resize: vertical; font-family: inherit; line-height: 1.5; }
-.seg-textarea:focus { border-color: var(--color-primary); }
+.seg-textarea { width: 100%; border: none; border-radius: 4px; padding: 4px 0; font-size: 14px; color: var(--text-primary); background: transparent; outline: none; resize: vertical; font-family: inherit; line-height: 1.7; }
+.seg-textarea:focus { background: var(--bg-tertiary); padding: 6px 8px; }
 .seg-audio { }
 .seg-audio-path { font-size: 12px; color: var(--text-tertiary); }
 .legacy-minutes { }
@@ -1903,7 +2005,19 @@ watch(liveTranscript, async () => {
 .stt-status.done { background: rgba(103,194,58,.1); color: #67C23A; }
 .stt-status.pending { background: rgba(230,162,60,.1); color: #E6A23C; }
 .stt-text { margin-top: 8px; padding: 8px; background: var(--bg-tertiary); border-radius: 4px; font-size: 13px; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; }
-.stt-text.live { max-height: 140px; overflow: auto; border: 1px solid rgba(64,158,255,.18); background: var(--color-primary-bg); }
+.transcript-list { margin-top: 8px; max-height: 260px; overflow: auto; border: 1px solid var(--border-color-light); border-radius: 6px; background: var(--bg-primary); }
+.transcript-list.live { max-height: 180px; border-color: rgba(64,158,255,.18); background: var(--color-primary-bg); }
+.transcript-row { padding: 10px 12px; border-bottom: 1px solid var(--border-color-light); }
+.transcript-row:last-child { border-bottom: none; }
+.transcript-row.compact { padding: 6px 0; border-bottom-color: rgba(0,0,0,.06); }
+.transcript-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; min-width: 0; }
+.transcript-speaker { color: var(--color-primary); font-size: 13px; font-weight: 600; }
+.transcript-time { color: var(--text-tertiary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.transcript-content { color: var(--text-primary); font-size: 14px; line-height: 1.7; word-break: break-word; }
+.transcript-row.compact .transcript-meta { margin-bottom: 2px; }
+.transcript-row.compact .transcript-speaker,
+.transcript-row.compact .transcript-time { font-size: 11px; }
+.transcript-row.compact .transcript-content { font-size: 12px; line-height: 1.5; }
 .stt-error { margin-top: 6px; color: var(--color-danger); font-size: 12px; }
 
 /* 附件 */

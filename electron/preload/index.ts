@@ -253,6 +253,7 @@ const electronAPI = {
         stt: (meetingId: number, enableDiarization?: boolean) =>
             safeInvoke('meetings:stt', meetingId, enableDiarization),
         realtimeSttAvailable: () => safeInvoke('meetings:stt-realtime:available'),
+        fileSttAvailable: () => safeInvoke('meetings:stt-file:available'),
         startRealtimeStt: () => safeInvoke('meetings:stt-realtime:start'),
         sendRealtimeSttChunk: (sessionId: string, base64Audio: string) => {
             ipcRenderer.send('meetings:stt-realtime:chunk', sessionId, base64Audio)

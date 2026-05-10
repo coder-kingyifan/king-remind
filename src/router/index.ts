@@ -34,6 +34,12 @@ const router = createRouter({
             meta: {title: '会议管理', icon: 'Memo'}
         },
         {
+            path: '/thanks',
+            name: 'thanks',
+            component: () => import('@/pages/ThanksPage.vue'),
+            meta: {title: '特别鸣谢', icon: 'GoldMedal'}
+        },
+        {
             path: '/settings',
             name: 'settings',
             component: () => import('@/pages/SettingsPage.vue'),
@@ -65,6 +71,7 @@ const router = createRouter({
 
 // 缓存 app_mode，避免每次导航都读取
 let cachedAppMode: string | null = null
+const aiRoutes = ['/skills', '/skill-store']
 
 // 普通提醒模式下，/ 重定向到 /dashboard；AI 相关路由重定向到 /dashboard
 router.beforeEach(async (to, _from, next) => {

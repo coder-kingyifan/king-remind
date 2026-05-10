@@ -57,7 +57,7 @@
     </div>
 
     <div v-else class="empty-hint">
-      <p>还没有配置{{ activeType === 'web_search' ? '联网搜索' : activeType === 'realtime_stt' ? '实时语音' : activeType === 'file_stt' ? '语音转写' : '对话' }}模型，点击上方「添加模型」开始</p>
+      <p>还没有配置{{ activeType === 'web_search' ? '联网搜索' : '对话' }}模型，点击上方「添加模型」开始</p>
     </div>
 
     <!-- 编辑弹窗 -->
@@ -73,8 +73,6 @@
             <el-select v-model="form.model_type" style="width: 100%;" @change="onModelTypeChange">
               <el-option label="对话模型" value="text"/>
               <el-option label="联网搜索" value="web_search"/>
-              <el-option label="实时语音" value="realtime_stt"/>
-              <el-option label="语音转写" value="file_stt"/>
             </el-select>
           </el-form-item>
           <el-form-item label="服务商" class="flex-1">
@@ -214,8 +212,6 @@ const form = ref({
 
 const typeTabs = [
   {value: 'text', label: '对话模型', icon: '\u{1F4AC}'},
-  {value: 'realtime_stt', label: '实时语音', icon: '\u{1F399}'},
-  {value: 'file_stt', label: '语音转写', icon: '\u{1F3A4}'},
   {value: 'web_search', label: '联网搜索', icon: '\u{1F310}'}
 ]
 
@@ -279,8 +275,8 @@ const filteredProviders = computed(() => {
   if (form.value.model_type === 'file_stt') {
     return providers.value.filter(p => FILE_STT_PROVIDERS.includes(p.id))
   }
-  // Text: show all except web_search-only providers
-  return providers.value.filter(p => !WEB_SEARCH_PROVIDERS.includes(p.id))
+  // Text: show all except providers hidden from the current UI.
+  return providers.value.filter(p => !WEB_SEARCH_PROVIDERS.includes(p.id) && !STT_PROVIDERS.includes(p.id))
 })
 
 function parseModels(modelsJson: string): string[] {

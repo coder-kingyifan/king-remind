@@ -28,7 +28,7 @@ import {checkForUpdate} from './updater'
 import {todosDb} from './db/todos'
 import {meetingsDb} from './db/meetings'
 import {meetingSegmentsDb} from './db/meeting-segments'
-import {createRealtimeSttSession, hasRealtimeSttConfig, transcribeAudio, type RealtimeSttSession} from './stt'
+import {createRealtimeSttSession, hasFileSttConfig, hasRealtimeSttConfig, transcribeAudio, type RealtimeSttSession} from './stt'
 
 // sql.js 返回的对象可能含有不可被 structured clone 序列化的属性（如 Uint8Array 等）
 // 在 IPC 返回前必须转为纯 JS 对象
@@ -889,7 +889,6 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
             if (participants.length) content += `参会人：${participants.join('、')}\n`
         } catch {}
         if (meeting.minutes) content += `\n会议记录：\n${meeting.minutes}\n`
-
         const prompt = `请对以下会议内容进行分析，生成结构化摘要。请用 JSON 格式返回，包含以下字段：
 - topics: 议题列表（字符串数组）
 - decisions: 决议列表（字符串数组）
@@ -897,7 +896,8 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
 - key_points: 关键要点（字符串数组）
 - summary: 一段话总结（字符串）
 
-只输出 JSON，不要其他内容。
+要求：
+- 只输出 JSON，不要其他内容。
 
 ${content}`
 
@@ -1051,33 +1051,6 @@ ${content}`
                 minutes: result.full_text
             } as any)
 
-            // 将说话人分离结果写入分段
-            if (result.utterances.length > 1 || (result.utterances.length === 1 && result.utterances[0].speaker !== '说话人1')) {
-                // 删除旧的 STT 生成的分段，保留手动添加的
-                const existingSegments = meetingSegmentsDb.listByMeeting(meetingId)
-                const sttSegments = existingSegments.filter(s =>
-                    s.segment_type === 'text' &&
-                    s.speaker &&
-                    (s.speaker.startsWith('说话人') || s.speaker.startsWith('用户') || s.speaker === '实时转写')
-                )
-                for (const s of sttSegments) {
-                    meetingSegmentsDb.delete(s.id)
-                }
-
-                // 添加新的 STT 分段
-                const maxOrder = existingSegments.length > 0
-                    ? Math.max(...existingSegments.map(s => s.sort_order)) + 1
-                    : 0
-                const newSegments = result.utterances.map((u, i) => ({
-                    meeting_id: meetingId,
-                    segment_type: 'text' as const,
-                    content: u.text,
-                    speaker: u.speaker,
-                    sort_order: maxOrder + i
-                }))
-                meetingSegmentsDb.addBatch(newSegments)
-            }
-
             return result
         } catch (e: any) {
             meetingsDb.update(meetingId, {stt_status: 'error'} as any)
@@ -1087,6 +1060,10 @@ ${content}`
 
     safeHandle('meetings:stt-realtime:available', () => {
         return hasRealtimeSttConfig()
+    })
+
+    safeHandle('meetings:stt-file:available', () => {
+        return hasFileSttConfig()
     })
 
     safeHandle('meetings:stt-realtime:start', (event) => {

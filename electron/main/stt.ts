@@ -61,7 +61,19 @@ export interface RealtimeSttSession {
 function getSttConfig(): SttConfig | null {
     const configs = modelConfigsDb.list()
     const sttConfigs = configs.filter(c => (c.model_type === 'stt' || c.model_type === 'file_stt') && !/^wss?:\/\//i.test(c.base_url))
-    if (sttConfigs.length === 0) return null
+    if (sttConfigs.length === 0) {
+        const realtimeDoubao = configs.find(c =>
+            (c.model_type === 'stt' || c.model_type === 'realtime_stt') &&
+            /openspeech\.bytedance\.com\/api\/v3\/sauc\/bigmodel/i.test(c.base_url)
+        )
+        if (!realtimeDoubao) return null
+        return {
+            provider: realtimeDoubao.provider,
+            baseUrl: 'https://openspeech.bytedance.com/api/v3',
+            apiKey: realtimeDoubao.api_key,
+            model: 'volc.bigasr.auc_turbo'
+        }
+    }
     const defaultCfg = sttConfigs.find(c => c.is_default === 1)
     const cfg = defaultCfg || sttConfigs[0]
     return {
@@ -90,6 +102,10 @@ export function hasRealtimeSttConfig(): boolean {
     return !!getRealtimeSttConfig()
 }
 
+export function hasFileSttConfig(): boolean {
+    return !!getSttConfig()
+}
+
 function normalizeRealtimeUrl(config: SttConfig): string {
     if (/^wss?:\/\//i.test(config.baseUrl)) return config.baseUrl
     if (/^https:\/\//i.test(config.baseUrl)) return config.baseUrl.replace(/^https:/i, 'wss:')
@@ -111,7 +127,7 @@ function parseKeyValueSecret(secret: string): Record<string, string> {
     return result
 }
 
-function resolveDoubaoAuth(config: SttConfig, sessionId: string): Record<string, string> {
+function resolveDoubaoAuth(config: SttConfig, sessionId: string, resourceOverride?: string): Record<string, string> {
     const apiKey = (config.apiKey || '').trim()
     let parsed: Record<string, string> = {}
 
@@ -124,6 +140,7 @@ function resolveDoubaoAuth(config: SttConfig, sessionId: string): Record<string,
     }
 
     const resourceId =
+        resourceOverride ||
         parsed.resourceId ||
         parsed.resource_id ||
         (config.model?.startsWith('volc.') ? config.model : '') ||
@@ -249,30 +266,72 @@ function parseDoubaoRealtimeFrame(message: any): any {
     return payload.toString('utf8')
 }
 
-function getSpeakerLabel(data: any, fallbackIndex = 1): string {
-    const value =
-        data?.speaker_id ??
-        data?.speakerId ??
-        data?.spk ??
-        data?.spk_id ??
-        data?.speaker ??
-        data?.user_id ??
-        data?.userId ??
-        data?.uid ??
-        data?.channel_id ??
-        data?.channelId
+const SPEAKER_KEYS = [
+    'speaker_id',
+    'speakerId',
+    'speaker',
+    'spk',
+    'spk_id',
+    'spkId',
+    'speakerNo',
+    'speaker_no',
+    'user_id',
+    'userId',
+    'uid',
+    'channel_id',
+    'channelId'
+]
 
+function pickSpeakerValue(data: any, depth = 0): any {
+    if (!data || typeof data !== 'object' || depth > 3) return undefined
+    for (const key of SPEAKER_KEYS) {
+        const value = data[key]
+        if (value !== undefined && value !== null && value !== '') return value
+    }
+
+    const nestedKeys = ['speaker_info', 'speakerInfo', 'additions', 'addition', 'extra', 'metadata', 'attribute', 'attributes']
+    for (const key of nestedKeys) {
+        const value = pickSpeakerValue(data[key], depth + 1)
+        if (value !== undefined && value !== null && value !== '') return value
+    }
+
+    return undefined
+}
+
+function normalizeSpeakerName(value: any): string {
     if (value === undefined || value === null || value === '') return ''
     const text = String(value).trim()
     if (!text) return ''
-    // 火山引擎返回的 speaker_id 为数字编号（如 "0", "1"），映射为 "说话人1", "说话人2"
-    if (/^(用户|说话人|speaker|user)/i.test(text)) return text
-    // 纯数字编号：转为 "说话人N"（编号从0开始则+1）
-    if (/^\d+$/.test(text)) {
-        const num = parseInt(text, 10)
-        return `说话人${num + 1}`
+
+    const cnMatch = text.match(/^(?:用户|说话人)\s*0*([1-9]\d*)$/)
+    if (cnMatch) return `用户${cnMatch[1]}`
+
+    const enMatch = text.match(/^(?:speaker|user|spk)[_\s-]*0*([1-9]\d*)$/i)
+    if (enMatch) return `用户${enMatch[1]}`
+
+    return text
+}
+
+function createSpeakerLabeler() {
+    const labels = new Map<string, string>()
+    let nextIndex = 1
+
+    return (data: any, fallbackIndex = 1, parent?: any): string => {
+        const rawValue = pickSpeakerValue(data) ?? pickSpeakerValue(parent)
+        if (rawValue === undefined || rawValue === null || rawValue === '') {
+            return ''
+        }
+
+        const normalizedName = normalizeSpeakerName(rawValue)
+        if (/^用户\d+$/u.test(normalizedName)) return normalizedName
+        if (/^说话人\d+$/u.test(normalizedName)) return normalizedName.replace(/^说话人/u, '用户')
+
+        const key = String(rawValue).trim().toLowerCase()
+        if (!labels.has(key)) {
+            labels.set(key, `用户${nextIndex++}`)
+        }
+        return labels.get(key)!
     }
-    return `说话人${fallbackIndex}`
 }
 
 function getRealtimeUtteranceItems(data: any): any[] {
@@ -293,7 +352,7 @@ function getRealtimeUtteranceItems(data: any): any[] {
     return single ? [single] : []
 }
 
-function normalizeRealtimeUtterances(data: any): RealtimeSttUtterance[] {
+function normalizeRealtimeUtterances(data: any, resolveSpeaker = createSpeakerLabeler()): RealtimeSttUtterance[] {
     return getRealtimeUtteranceItems(data)
         .map((item, index) => {
             const text = String(item?.text || item?.content || item?.transcript || '').trim()
@@ -308,7 +367,7 @@ function normalizeRealtimeUtterances(data: any): RealtimeSttUtterance[] {
                 : item?.end != null ? Number(item.end) / 1000
                 : undefined
             return {
-                speaker: getSpeakerLabel(item, index + 1) || '说话人1',
+                speaker: resolveSpeaker(item, index + 1, data),
                 text,
                 start_time: startTime,
                 end_time: endTime
@@ -318,7 +377,7 @@ function normalizeRealtimeUtterances(data: any): RealtimeSttUtterance[] {
 }
 
 function formatRealtimeUtterances(utterances: RealtimeSttUtterance[]): string {
-    return utterances.map(item => `${item.speaker}：${item.text}`).join('\n')
+    return utterances.map(item => item.speaker ? `${item.speaker}：${item.text}` : item.text).join('\n')
 }
 
 function normalizeTranscriptLine(text: string): string {
@@ -371,10 +430,10 @@ function mergeRealtimeText(existing: string, incoming: string): string {
     return merged.join('\n')
 }
 
-function extractRealtimeText(data: any): { text: string; final: boolean; speaker?: string; utterances?: RealtimeSttUtterance[] } {
+function extractRealtimeText(data: any, resolveSpeaker = createSpeakerLabeler()): { text: string; final: boolean; speaker?: string; utterances?: RealtimeSttUtterance[] } {
     if (typeof data === 'string') return {text: data, final: true}
 
-    const utterances = normalizeRealtimeUtterances(data)
+    const utterances = normalizeRealtimeUtterances(data, resolveSpeaker)
     const utteranceText = utterances.length ? formatRealtimeUtterances(utterances) : ''
 
     const directText =
@@ -402,7 +461,7 @@ function extractRealtimeText(data: any): { text: string; final: boolean; speaker
         text = data.results.map((item: any) => item?.text || item?.transcript || '').join('')
     }
 
-    const speaker = getSpeakerLabel(data)
+    const speaker = pickSpeakerValue(data) !== undefined ? resolveSpeaker(data) : ''
     if (speaker && text && !utteranceText && !text.startsWith(`${speaker}：`)) {
         text = `${speaker}：${text}`
     }
@@ -447,6 +506,7 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
     const sessionId = `stt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const pendingAudio: Buffer[] = []
     const sentUtterances: RealtimeSttUtterance[] = [] // 已发送的话语，用于计算增量
+    const resolveSpeaker = createSpeakerLabeler()
     let accumulatedText = ''
     const sessionStartTime = Date.now() // 会话开始时间，用于计算相对时间戳
     const doubaoBigModel = isDoubaoBigModelRealtime(config)
@@ -510,7 +570,7 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
             return
         }
 
-        const parsed = extractRealtimeText(raw)
+        const parsed = extractRealtimeText(raw, resolveSpeaker)
         if (!parsed.text) return
 
         if (parsed.final) {
@@ -524,17 +584,8 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
                     const previous = sentUtterances[index]
 
                     if (previous && previous.speaker === utt.speaker) {
-                        const suffix = getIncrementalText(previous.text, utt.text)
-                        if (suffix) {
-                            deltaUtterances.push({
-                                ...utt,
-                                text: suffix,
-                                start_time: previous.end_time ?? utt.start_time
-                            })
-                            sentUtterances[index] = utt
-                            continue
-                        }
-                        if (previous.text === utt.text) continue
+                        sentUtterances[index] = utt
+                        continue
                     }
 
                     const exists = sentUtterances.some(s =>
@@ -542,7 +593,7 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
                     )
                     if (!exists) {
                         deltaUtterances.push(utt)
-                        sentUtterances.push(utt)
+                        sentUtterances[index] = utt
                     }
                 }
             }
@@ -551,8 +602,7 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
             for (const utt of deltaUtterances) {
                 if (utt.start_time === undefined) {
                     const elapsed = (Date.now() - sessionStartTime) / 1000
-                    utt.start_time = Math.max(0, elapsed - 5) // 估算：约5秒前开始
-                    utt.end_time = elapsed
+                    utt.end_time = Math.max(0, elapsed)
                 }
             }
 
@@ -567,7 +617,6 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
             // 如果有 utterances 但没有新增的（deltaUtterances 为空），deltaText 保持为空，不重复保存
 
             accumulatedText = mergeRealtimeText(accumulatedText, deltaText)
-            accumulatedText = mergeRealtimeText(accumulatedText, parsed.text.trim())
             console.log(`[STT] 增量结果: delta_utterances=${deltaUtterances.length}, delta_text="${deltaText?.slice(0, 50)}", sent_total=${sentUtterances.length}`)
 
             // 完整文本以追加式累计缓存为准，避免服务端停顿后只返回最后一句时覆盖前文。
@@ -740,20 +789,22 @@ async function callDoubaoAsr(audioPath: string, config: SttConfig, enableDiariza
 function parseDoubaoResponse(data: any): SttResult {
     const utterances: SttUtterance[] = []
     const items = data?.data?.utterances || data?.utterances || []
+    const resolveSpeaker = createSpeakerLabeler()
 
-    for (const item of items) {
+    for (let index = 0; index < items.length; index++) {
+        const item = items[index]
         utterances.push({
-            speaker: item.speaker_id ? `说话人${item.speaker_id}` : '说话人1',
+            speaker: resolveSpeaker(item, index + 1, data) || `用户${index + 1}`,
             text: item.text || '',
             start_time: item.start_time || 0,
             end_time: item.end_time || 0
         })
     }
 
-    const fullText = utterances.map(u => u.text).join('') || data?.data?.text || data?.text || ''
+    const fullText = utterances.map(u => `${u.speaker}：${u.text}`).join('\n') || data?.data?.text || data?.text || ''
 
     if (utterances.length === 0 && fullText) {
-        utterances.push({speaker: '说话人1', text: fullText, start_time: 0, end_time: 0})
+        utterances.push({speaker: '用户1', text: fullText, start_time: 0, end_time: 0})
     }
 
     return {utterances, full_text: fullText}
@@ -833,7 +884,7 @@ function parseWhisperResponse(data: any): SttResult {
         let speakerCounter = 1
         for (const seg of segments) {
             utterances.push({
-                speaker: `说话人${speakerCounter}`,
+                speaker: `用户${speakerCounter}`,
                 text: seg.text?.trim() || '',
                 start_time: seg.start || 0,
                 end_time: seg.end || 0
@@ -846,10 +897,12 @@ function parseWhisperResponse(data: any): SttResult {
         }
     }
 
-    const fullText = data?.text || utterances.map(u => u.text).join('') || ''
+    const fullText = utterances.length
+        ? utterances.map(u => `${u.speaker}：${u.text}`).join('\n')
+        : data?.text || ''
 
     if (utterances.length === 0 && fullText) {
-        utterances.push({speaker: '说话人1', text: fullText, start_time: 0, end_time: 0})
+        utterances.push({speaker: '用户1', text: fullText, start_time: 0, end_time: 0})
     }
 
     return {utterances, full_text: fullText}
