@@ -13,6 +13,13 @@ electron.vite.config.*.mjs
 
 # database (local data, do not commit)
 remind.db
+/remind-data/
+/*.db
+/*.db-*
+/*.sqlite
+/*.sqlite3
+/*.enc
+/*.key
 
 # Windows junk
 nul
