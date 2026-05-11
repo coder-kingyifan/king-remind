@@ -3,7 +3,7 @@
     <div class="section-header">
       <div>
         <h2 class="section-title">系统设置</h2>
-        <p class="section-subtitle">自定义应用行为和外观</p>
+        <p class="section-subtitle">自定义应用行为和系统配置</p>
       </div>
     </div>
 
@@ -29,9 +29,9 @@
         </div>
       </div>
 
-      <!-- 使用模式 -->
+      <!-- 软件模式 -->
       <div class="setting-section">
-        <h3 class="section-title">使用模式</h3>
+        <h3 class="section-title">软件模式</h3>
 
         <div class="setting-item">
           <div class="setting-info">
@@ -49,76 +49,6 @@
               <el-option label="普通模式" value="simple"/>
             </el-select>
           </div>
-        </div>
-      </div>
-
-      <!-- 网络代理 -->
-      <div class="setting-section">
-        <h3 class="section-title">网络代理</h3>
-
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-label">代理模式</div>
-            <div class="setting-desc">用于技能商店、检查更新和 Telegram 推送等外部网络请求</div>
-          </div>
-          <div class="setting-actions">
-            <el-select
-                v-model="networkProxyMode"
-                size="small"
-                style="width: 150px;"
-            >
-              <el-option label="跟随系统代理" value="system"/>
-              <el-option label="手动代理" value="custom"/>
-              <el-option label="不使用代理" value="direct"/>
-            </el-select>
-          </div>
-        </div>
-
-        <div class="setting-item" v-if="networkProxyMode === 'custom'">
-          <div class="setting-info">
-            <div class="setting-label">代理地址</div>
-            <div class="setting-desc">例如 Clash 默认 http://127.0.0.1:7890，支持 http/https/socks4/socks5</div>
-          </div>
-          <div class="setting-actions">
-            <el-input
-                v-model="networkProxyUrl"
-                size="small"
-                placeholder="http://127.0.0.1:7890"
-                style="width: 240px;"
-            />
-          </div>
-        </div>
-
-        <div class="proxy-tip">
-          如需推送 Telegram，请先确保这里的代理可用；Telegram 通知渠道不再单独配置代理。
-        </div>
-
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-label">代理检测</div>
-            <div class="setting-desc">保存后检测 GitHub raw 访问，技能商店会使用同一套代理设置</div>
-          </div>
-          <div class="setting-actions">
-            <el-button size="small" @click="saveNetworkProxy" :loading="savingProxy">保存</el-button>
-            <el-button size="small" type="success" plain @click="testNetworkProxy" :loading="testingProxy">检测 GitHub</el-button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 主题设置 -->
-      <div class="setting-section">
-        <h3 class="section-title">外观</h3>
-
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-label">主题模式</div>
-            <div class="setting-desc">选择应用的外观主题</div>
-          </div>
-          <el-segmented
-              :model-value="settingsStore.theme"
-              :options="themeOptions"
-              @change="(val: string) => settingsStore.setSetting('theme', val)"
-          />
         </div>
       </div>
 
@@ -448,14 +378,116 @@
 
                   <div class="api-endpoint">
                     <span class="api-method get">GET</span>
+                    <span class="api-path">/api/reminders/stats</span>
+                    <span class="api-endpoint-desc">提醒统计</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method get">GET</span>
                     <span class="api-path">/api/reminders/:id</span>
                     <span class="api-endpoint-desc">获取单条提醒</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method put">PUT</span>
+                    <span class="api-path">/api/reminders/:id</span>
+                    <span class="api-endpoint-desc">更新提醒</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method post">POST</span>
+                    <span class="api-path">/api/reminders/:id/toggle</span>
+                    <span class="api-endpoint-desc">启用或停用提醒</span>
                   </div>
 
                   <div class="api-endpoint">
                     <span class="api-method delete">DELETE</span>
                     <span class="api-path">/api/reminders/:id</span>
                     <span class="api-endpoint-desc">删除提醒</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method post">POST</span>
+                    <span class="api-path">/api/meetings</span>
+                    <span class="api-endpoint-desc">创建会议</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method get">GET</span>
+                    <span class="api-path">/api/meetings</span>
+                    <span class="api-endpoint-desc">查询会议列表</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method get">GET</span>
+                    <span class="api-path">/api/meetings/stats</span>
+                    <span class="api-endpoint-desc">会议统计</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method get">GET</span>
+                    <span class="api-path">/api/meetings/:id</span>
+                    <span class="api-endpoint-desc">获取单场会议</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method put">PUT</span>
+                    <span class="api-path">/api/meetings/:id</span>
+                    <span class="api-endpoint-desc">更新会议</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method post">POST</span>
+                    <span class="api-path">/api/meetings/:id/status</span>
+                    <span class="api-endpoint-desc">更新会议状态</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method delete">DELETE</span>
+                    <span class="api-path">/api/meetings/:id</span>
+                    <span class="api-endpoint-desc">删除会议</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method post">POST</span>
+                    <span class="api-path">/api/todos</span>
+                    <span class="api-endpoint-desc">创建待办（兼容 /api/todo）</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method get">GET</span>
+                    <span class="api-path">/api/todos</span>
+                    <span class="api-endpoint-desc">查询待办列表</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method get">GET</span>
+                    <span class="api-path">/api/todos/stats</span>
+                    <span class="api-endpoint-desc">待办统计</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method get">GET</span>
+                    <span class="api-path">/api/todos/:id</span>
+                    <span class="api-endpoint-desc">获取单条待办</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method put">PUT</span>
+                    <span class="api-path">/api/todos/:id</span>
+                    <span class="api-endpoint-desc">更新待办</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method post">POST</span>
+                    <span class="api-path">/api/todos/:id/toggle</span>
+                    <span class="api-endpoint-desc">切换待办完成状态</span>
+                  </div>
+
+                  <div class="api-endpoint">
+                    <span class="api-method delete">DELETE</span>
+                    <span class="api-path">/api/todos/:id</span>
+                    <span class="api-endpoint-desc">删除待办</span>
                   </div>
 
                   <div class="api-endpoint">
@@ -663,6 +695,30 @@
     "channels": ["desktop"]
   }'</pre>
 
+                  <div class="api-example-title" style="margin-top:14px;">创建会议 / 待办 - curl 示例</div>
+                  <pre class="api-pre">curl -X POST http://127.0.0.1:{{
+                      settingsStore.settings.api_port || '33333'
+                    }}/api/meetings \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer &lt;your_token&gt;" \
+  -d '{
+    "title": "项目周会",
+    "start_time": "2025-03-20T10:00:00",
+    "participants": ["张三", "李四"]
+  }'
+
+curl -X POST http://127.0.0.1:{{
+                      settingsStore.settings.api_port || '33333'
+                    }}/api/todos \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer &lt;your_token&gt;" \
+  -d '{
+    "title": "完成项目报告",
+    "priority": "high",
+    "due_date": "2025-03-20",
+    "category": "工作"
+  }'</pre>
+
                   <div class="api-example-title" style="margin-top:14px;">AI Agent 对话调用示例</div>
                   <p class="api-intro">通过 AI 对话接口，直接用自然语言即可创建提醒：</p>
                   <div class="api-chat-examples">
@@ -699,6 +755,23 @@ resp = requests.post(f"{BASE}/api/reminders", headers=headers, json={
     "interval_value": 30,
     "interval_unit": "minutes",
     "channels": ["desktop"]
+})
+print(resp.json())
+
+# 方式3: 创建会议
+resp = requests.post(f"{BASE}/api/meetings", headers=headers, json={
+    "title": "项目周会",
+    "start_time": "2025-03-20T10:00:00",
+    "participants": ["张三", "李四"]
+})
+print(resp.json())
+
+# 方式4: 创建待办
+resp = requests.post(f"{BASE}/api/todos", headers=headers, json={
+    "title": "完成项目报告",
+    "priority": "high",
+    "due_date": "2025-03-20",
+    "category": "工作"
 })
 print(resp.json())
 
@@ -751,6 +824,59 @@ print(resp.json())</pre>
             <div class="setting-desc">删除 30 天前的通知发送记录</div>
           </div>
           <el-button size="small" plain @click="cleanupLogs">清理日志</el-button>
+        </div>
+      </div>
+
+      <!-- 网络代理 -->
+      <div class="setting-section">
+        <h3 class="section-title">网络代理</h3>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">代理模式</div>
+            <div class="setting-desc">用于技能商店、检查更新和 Telegram 推送等外部网络请求</div>
+          </div>
+          <div class="setting-actions">
+            <el-select
+                v-model="networkProxyMode"
+                size="small"
+                style="width: 150px;"
+            >
+              <el-option label="跟随系统代理" value="system"/>
+              <el-option label="手动代理" value="custom"/>
+              <el-option label="不使用代理" value="direct"/>
+            </el-select>
+          </div>
+        </div>
+
+        <div class="setting-item" v-if="networkProxyMode === 'custom'">
+          <div class="setting-info">
+            <div class="setting-label">代理地址</div>
+            <div class="setting-desc">例如 Clash 默认 http://127.0.0.1:7890，支持 http/https/socks4/socks5</div>
+          </div>
+          <div class="setting-actions">
+            <el-input
+                v-model="networkProxyUrl"
+                size="small"
+                placeholder="http://127.0.0.1:7890"
+                style="width: 240px;"
+            />
+          </div>
+        </div>
+
+        <div class="proxy-tip">
+          如需推送 Telegram，请先确保这里的代理可用；Telegram 通知渠道不再单独配置代理。
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">代理检测</div>
+            <div class="setting-desc">保存后检测 GitHub 是否可访问</div>
+          </div>
+          <div class="setting-actions">
+            <el-button size="small" @click="saveNetworkProxy" :loading="savingProxy">保存</el-button>
+            <el-button size="small" type="success" plain @click="testNetworkProxy" :loading="testingProxy">检测 GitHub</el-button>
+          </div>
         </div>
       </div>
 
@@ -938,7 +1064,7 @@ onMounted(async () => {
   try {
     appVersion.value = await window.electronAPI.app.getVersion()
   } catch {
-    appVersion.value = '2.0.0'
+    appVersion.value = '2.0.2'
   }
   // 监听启动时自动检查更新的通知
   window.electronAPI.updater.onUpdateAvailable((info: any) => {
@@ -969,12 +1095,6 @@ function starStyle(i: number) {
   }
 }
 
-const themeOptions = [
-  {label: '☀️ 亮色', value: 'light'},
-  {label: '🌙 暗色', value: 'dark'},
-  {label: '💻 跟随系统', value: 'system'}
-]
-
 function initNetworkProxyForm() {
   const mode = settingsStore.settings.network_proxy_mode
   networkProxyMode.value = mode === 'direct' || mode === 'custom' ? mode : 'system'
@@ -993,7 +1113,7 @@ async function saveNetworkProxy(showMessage = true): Promise<boolean> {
     if (showMessage) ElMessage.success('网络代理设置已保存')
     return true
   } catch (e: any) {
-    ElMessage.error(e.message || '代理设置保存失败')
+    ElMessage({message: e.message || '代理设置保存失败', type: 'error', duration: 7000})
     return false
   } finally {
     savingProxy.value = false
@@ -1009,10 +1129,10 @@ async function testNetworkProxy() {
     if (result.success) {
       ElMessage.success('GitHub 访问正常')
     } else {
-      ElMessage.error(`GitHub 访问失败：${result.error || '未知错误'}`)
+      ElMessage({message: `GitHub 访问失败：${result.error || '未知错误'}`, type: 'error', duration: 8000})
     }
   } catch (e: any) {
-    ElMessage.error(e.message || '代理检测失败')
+    ElMessage({message: e.message || '代理检测失败', type: 'error', duration: 7000})
   } finally {
     testingProxy.value = false
   }
@@ -1692,6 +1812,11 @@ function renderMarkdown(text: string): string {
 .api-method.post {
   background: #e8f9ef;
   color: #67C23A;
+}
+
+.api-method.put {
+  background: #fdf6ec;
+  color: #E6A23C;
 }
 
 .api-method.delete {

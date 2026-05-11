@@ -1,4 +1,5 @@
 import {createServer, IncomingMessage, Server, ServerResponse} from 'http'
+import {app} from 'electron'
 import {remindersDb} from './db/reminders'
 import {settingsDb} from './db/settings'
 import {ReminderScheduler} from './scheduler'
@@ -9,6 +10,7 @@ import {notificationConfigsDb} from './db/notification-configs'
 import {weChatBot} from './wechat-bot/wechat-bot'
 import {NotificationDispatcher} from './notifications/dispatcher'
 import {todosDb} from './db/todos'
+import {meetingsDb} from './db/meetings'
 
 let server: Server | null = null
 let dispatcherRef: NotificationDispatcher | null = null
@@ -45,6 +47,19 @@ function ok(res: ServerResponse, data: any) {
 
 function err(res: ServerResponse, status: number, message: string) {
     send(res, status, {success: false, error: message})
+}
+
+function toStringArray(value: any): string[] | undefined {
+    if (Array.isArray(value)) return value.map(item => String(item))
+    if (typeof value === 'string' && value.trim()) {
+        return value.split(/[,\uff0c]/).map(item => item.trim()).filter(Boolean)
+    }
+    return undefined
+}
+
+function toNumberArray(value: any): number[] | undefined {
+    if (!Array.isArray(value)) return undefined
+    return value.map(item => Number(item)).filter(item => Number.isFinite(item))
 }
 
 function checkAuth(req: IncomingMessage, res: ServerResponse, token: string): boolean {
@@ -122,12 +137,58 @@ export function startApiServer(scheduler: ReminderScheduler, dispatcher?: Notifi
                 return ok(res, remindersDb.list(filters))
             }
 
+            // GET /api/reminders/stats
+            if (method === 'GET' && path === '/api/reminders/stats') {
+                return ok(res, remindersDb.getTodayStats())
+            }
+
             // GET /api/reminders/:id
             const matchGet = path.match(/^\/api\/reminders\/(\d+)$/)
             if (method === 'GET' && matchGet) {
                 const reminder = remindersDb.get(parseInt(matchGet[1]))
                 if (!reminder) return err(res, 404, '提醒不存在')
                 return ok(res, reminder)
+            }
+
+            // PUT /api/reminders/:id
+            const matchPut = path.match(/^\/api\/reminders\/(\d+)$/)
+            if (method === 'PUT' && matchPut) {
+                const id = parseInt(matchPut[1])
+                const reminder = remindersDb.get(id)
+                if (!reminder) return err(res, 404, '提醒不存在')
+
+                const body = await readBody(req)
+                const data: any = {}
+                if (body.title !== undefined) data.title = String(body.title)
+                if (body.description !== undefined) data.description = String(body.description)
+                if (body.icon !== undefined) data.icon = String(body.icon)
+                if (body.color !== undefined) data.color = String(body.color)
+                if (body.remind_type !== undefined) data.remind_type = body.remind_type
+                if (body.interval_value !== undefined) data.interval_value = Number(body.interval_value)
+                if (body.interval_unit !== undefined) data.interval_unit = body.interval_unit
+                if (body.weekdays !== undefined) data.weekdays = body.weekdays === null ? null : toNumberArray(body.weekdays)
+                if (body.workday_only !== undefined) data.workday_only = body.workday_only ? 1 : 0
+                if (body.holiday_only !== undefined) data.holiday_only = body.holiday_only ? 1 : 0
+                if (body.lunar_date !== undefined) data.lunar_date = body.lunar_date ? String(body.lunar_date) : null
+                if (body.start_time !== undefined) data.start_time = String(body.start_time)
+                if (body.end_time !== undefined) data.end_time = body.end_time ? String(body.end_time) : null
+                if (body.active_hours_start !== undefined) data.active_hours_start = body.active_hours_start ? String(body.active_hours_start) : null
+                if (body.active_hours_end !== undefined) data.active_hours_end = body.active_hours_end ? String(body.active_hours_end) : null
+                if (body.channels !== undefined) data.channels = Array.isArray(body.channels) ? body.channels.map(String) : ['desktop']
+                if (body.skill_id !== undefined) data.skill_id = body.skill_id === null ? null : Number(body.skill_id)
+
+                const result = remindersDb.update(id, data)
+                scheduler.triggerNow()
+                return ok(res, result)
+            }
+
+            // POST /api/reminders/:id/toggle
+            const matchToggle = path.match(/^\/api\/reminders\/(\d+)\/toggle$/)
+            if (method === 'POST' && matchToggle) {
+                const result = remindersDb.toggleActive(parseInt(matchToggle[1]))
+                if (!result) return err(res, 404, '提醒不存在')
+                scheduler.triggerNow()
+                return ok(res, result)
             }
 
             // DELETE /api/reminders/:id
@@ -140,7 +201,7 @@ export function startApiServer(scheduler: ReminderScheduler, dispatcher?: Notifi
 
             // GET /api/ping
             if (method === 'GET' && path === '/api/ping') {
-                return ok(res, {message: 'pong', version: '1.0.0'})
+                return ok(res, {message: 'pong', version: app.getVersion()})
             }
 
             // POST /api/chat - AI 对话接口
@@ -244,9 +305,115 @@ export function startApiServer(scheduler: ReminderScheduler, dispatcher?: Notifi
                 return ok(res, settingsDb.getAll())
             }
 
+            // ========== Meeting management API ==========
+            // POST /api/meetings
+            if (method === 'POST' && path === '/api/meetings') {
+                const body = await readBody(req)
+                if (!body.title) return err(res, 400, '缺少必填字段: title')
+                if (!body.start_time) return err(res, 400, '缺少必填字段: start_time')
+
+                const meeting = meetingsDb.create({
+                    title: String(body.title),
+                    description: body.description ? String(body.description) : undefined,
+                    meeting_type: body.meeting_type ? String(body.meeting_type) : undefined,
+                    status: body.status ? String(body.status) : undefined,
+                    start_time: String(body.start_time),
+                    end_time: body.end_time ? String(body.end_time) : null,
+                    location: body.location ? String(body.location) : undefined,
+                    participants: toStringArray(body.participants),
+                    minutes: body.minutes ? String(body.minutes) : undefined,
+                    attachments: Array.isArray(body.attachments) ? body.attachments : undefined,
+                    recording_path: body.recording_path ? String(body.recording_path) : null,
+                    has_recording: body.has_recording ? 1 : 0,
+                    todo_ids: toNumberArray(body.todo_ids),
+                    stt_text: body.stt_text ? String(body.stt_text) : null,
+                    stt_status: body.stt_status ? String(body.stt_status) : undefined
+                })
+                return ok(res, meeting)
+            }
+
+            // GET /api/meetings
+            if (method === 'GET' && path === '/api/meetings') {
+                const filters: any = {}
+                const status = url.searchParams.get('status')
+                const meetingType = url.searchParams.get('meeting_type')
+                const search = url.searchParams.get('search')
+                const startDate = url.searchParams.get('start_date')
+                const endDate = url.searchParams.get('end_date')
+                if (status) filters.status = status
+                if (meetingType) filters.meeting_type = meetingType
+                if (search) filters.search = search
+                if (startDate) filters.start_date = startDate
+                if (endDate) filters.end_date = endDate
+                return ok(res, meetingsDb.list(filters))
+            }
+
+            // GET /api/meetings/stats
+            if (method === 'GET' && path === '/api/meetings/stats') {
+                return ok(res, meetingsDb.stats())
+            }
+
+            // GET /api/meetings/:id
+            const matchMeetingGet = path.match(/^\/api\/meetings\/(\d+)$/)
+            if (method === 'GET' && matchMeetingGet) {
+                const meeting = meetingsDb.get(parseInt(matchMeetingGet[1]))
+                if (!meeting) return err(res, 404, '会议不存在')
+                return ok(res, meeting)
+            }
+
+            // PUT /api/meetings/:id
+            const matchMeetingPut = path.match(/^\/api\/meetings\/(\d+)$/)
+            if (method === 'PUT' && matchMeetingPut) {
+                const id = parseInt(matchMeetingPut[1])
+                const meeting = meetingsDb.get(id)
+                if (!meeting) return err(res, 404, '会议不存在')
+
+                const body = await readBody(req)
+                const data: any = {}
+                if (body.title !== undefined) data.title = String(body.title)
+                if (body.description !== undefined) data.description = String(body.description)
+                if (body.meeting_type !== undefined) data.meeting_type = String(body.meeting_type)
+                if (body.status !== undefined) data.status = String(body.status)
+                if (body.start_time !== undefined) data.start_time = String(body.start_time)
+                if (body.end_time !== undefined) data.end_time = body.end_time ? String(body.end_time) : null
+                if (body.location !== undefined) data.location = String(body.location)
+                if (body.participants !== undefined) data.participants = toStringArray(body.participants) || []
+                if (body.minutes !== undefined) data.minutes = String(body.minutes)
+                if (body.ai_summary !== undefined) data.ai_summary = body.ai_summary
+                if (body.attachments !== undefined) data.attachments = Array.isArray(body.attachments) ? body.attachments : []
+                if (body.recording_path !== undefined) data.recording_path = body.recording_path ? String(body.recording_path) : null
+                if (body.has_recording !== undefined) data.has_recording = body.has_recording ? 1 : 0
+                if (body.todo_ids !== undefined) data.todo_ids = toNumberArray(body.todo_ids) || []
+                if (body.stt_text !== undefined) data.stt_text = body.stt_text ? String(body.stt_text) : null
+                if (body.stt_status !== undefined) data.stt_status = String(body.stt_status)
+
+                return ok(res, meetingsDb.update(id, data))
+            }
+
+            // POST /api/meetings/:id/status
+            const matchMeetingStatus = path.match(/^\/api\/meetings\/(\d+)\/status$/)
+            if (method === 'POST' && matchMeetingStatus) {
+                const id = parseInt(matchMeetingStatus[1])
+                const body = await readBody(req)
+                if (!body.status) return err(res, 400, '缺少必填字段: status')
+                const result = meetingsDb.updateStatus(id, String(body.status))
+                if (!result) return err(res, 404, '会议不存在')
+                return ok(res, result)
+            }
+
+            // DELETE /api/meetings/:id
+            const matchMeetingDel = path.match(/^\/api\/meetings\/(\d+)$/)
+            if (method === 'DELETE' && matchMeetingDel) {
+                const id = parseInt(matchMeetingDel[1])
+                const meeting = meetingsDb.get(id)
+                if (!meeting) return err(res, 404, '会议不存在')
+                meetingsDb.delete(id)
+                return ok(res, {deleted: true})
+            }
+
             // ========== 待办事项 API ==========
-            // POST /api/todos - 创建待办
-            if (method === 'POST' && path === '/api/todo') {
+            // POST /api/todos - 创建待办，/api/todo 保持兼容
+            if (method === 'POST' && (path === '/api/todos' || path === '/api/todo')) {
                 const body = await readBody(req)
                 if (!body.title) return err(res, 400, '缺少必填字段: title')
 
@@ -263,8 +430,8 @@ export function startApiServer(scheduler: ReminderScheduler, dispatcher?: Notifi
                 return ok(res, todo)
             }
 
-            // GET /api/todo - 获取待办列表
-            if (method === 'GET' && path === '/api/todo') {
+            // GET /api/todos - 获取待办列表
+            if (method === 'GET' && (path === '/api/todos' || path === '/api/todo')) {
                 const completed = url.searchParams.get('completed')
                 const category = url.searchParams.get('category') || undefined
                 const search = url.searchParams.get('search') || undefined
@@ -275,21 +442,21 @@ export function startApiServer(scheduler: ReminderScheduler, dispatcher?: Notifi
                 return ok(res, todosDb.list(filters))
             }
 
-            // GET /api/todo/stats - 获取待办统计
-            if (method === 'GET' && path === '/api/todo/stats') {
+            // GET /api/todos/stats - 获取待办统计
+            if (method === 'GET' && (path === '/api/todos/stats' || path === '/api/todo/stats')) {
                 return ok(res, todosDb.stats())
             }
 
-            // GET /api/todo/:id - 获取单个待办
-            const matchTodoGet = path.match(/^\/api\/todo\/(\d+)$/)
+            // GET /api/todos/:id - 获取单个待办
+            const matchTodoGet = path.match(/^\/api\/todos?\/(\d+)$/)
             if (method === 'GET' && matchTodoGet) {
                 const todo = todosDb.get(parseInt(matchTodoGet[1]))
                 if (!todo) return err(res, 404, '待办不存在')
                 return ok(res, todo)
             }
 
-            // PUT /api/todo/:id - 更新待办
-            const matchTodoPut = path.match(/^\/api\/todo\/(\d+)$/)
+            // PUT /api/todos/:id - 更新待办
+            const matchTodoPut = path.match(/^\/api\/todos?\/(\d+)$/)
             if (method === 'PUT' && matchTodoPut) {
                 const id = parseInt(matchTodoPut[1])
                 const todo = todosDb.get(id)
@@ -307,8 +474,8 @@ export function startApiServer(scheduler: ReminderScheduler, dispatcher?: Notifi
                 return ok(res, result)
             }
 
-            // DELETE /api/todo/:id - 删除待办
-            const matchTodoDel = path.match(/^\/api\/todo\/(\d+)$/)
+            // DELETE /api/todos/:id - 删除待办
+            const matchTodoDel = path.match(/^\/api\/todos?\/(\d+)$/)
             if (method === 'DELETE' && matchTodoDel) {
                 const id = parseInt(matchTodoDel[1])
                 const todo = todosDb.get(id)
@@ -317,8 +484,8 @@ export function startApiServer(scheduler: ReminderScheduler, dispatcher?: Notifi
                 return ok(res, {deleted: true})
             }
 
-            // POST /api/todo/:id/toggle - 切换完成状态
-            const matchTodoToggle = path.match(/^\/api\/todo\/(\d+)\/toggle$/)
+            // POST /api/todos/:id/toggle - 切换完成状态
+            const matchTodoToggle = path.match(/^\/api\/todos?\/(\d+)\/toggle$/)
             if (method === 'POST' && matchTodoToggle) {
                 const id = parseInt(matchTodoToggle[1])
                 const result = todosDb.toggle(id)

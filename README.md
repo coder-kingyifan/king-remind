@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white" alt="Vue" />
   <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Element%20Plus-2.9-409EFF?logo=element&logoColor=white" alt="Element Plus" />
-  <img src="https://img.shields.io/badge/Version-V2.0.1-blue" alt="Version V2.0.1" />
+  <img src="https://img.shields.io/badge/Version-V2.0.2-blue" alt="Version V2.0.2" />
   <img src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-orange" alt="License" />
 </p>
 
@@ -347,7 +347,7 @@ npm run pack        # 打包 Windows 安装程序 (NSIS) + 便携版
 npm run pack:dir    # 打包为免安装目录
 ```
 
-产物输出到 `dist/` 目录：`king-mate-V2.0.1-setup.exe`（安装程序）、`king-mate-V2.0.1-portable.exe`（便携版）
+产物输出到 `dist/` 目录：`king-mate-V2.0.2-setup.exe`（安装程序）、`king-mate-V2.0.2-portable.exe`（便携版）
 
 **macOS / Linux：**
 
@@ -466,8 +466,9 @@ docker compose down             # 停止并移除容器
 | 分组 | 接口 |
 |:--|:--|
 | 健康检查 | `GET /api/ping` |
-| 日程事项 | `POST /api/reminders`、`GET /api/reminders`、`GET /api/reminders/:id`、`DELETE /api/reminders/:id` |
-| 待办 | `POST /api/todo`、`GET /api/todo`、`GET /api/todo/stats`、`GET /api/todo/:id`、`PUT /api/todo/:id`、`DELETE /api/todo/:id`、`POST /api/todo/:id/toggle` |
+| 日程事项 | `POST /api/reminders`、`GET /api/reminders`、`GET /api/reminders/stats`、`GET /api/reminders/:id`、`PUT /api/reminders/:id`、`POST /api/reminders/:id/toggle`、`DELETE /api/reminders/:id` |
+| 会议 | `POST /api/meetings`、`GET /api/meetings`、`GET /api/meetings/stats`、`GET /api/meetings/:id`、`PUT /api/meetings/:id`、`POST /api/meetings/:id/status`、`DELETE /api/meetings/:id` |
+| 待办 | `POST /api/todos`、`GET /api/todos`、`GET /api/todos/stats`、`GET /api/todos/:id`、`PUT /api/todos/:id`、`DELETE /api/todos/:id`、`POST /api/todos/:id/toggle`；兼容旧路径 `/api/todo` |
 | AI 对话 | `POST /api/chat` |
 | 模型配置 | `GET /api/models` |
 | 通知配置 | `GET /api/notifications/configs`、`PUT /api/notifications/configs/:channel`、`POST /api/notifications/test/:channel` |
@@ -483,6 +484,16 @@ curl -X POST http://127.0.0.1:33333/api/reminders \
   -H "Content-Type: application/json" \
   -d '{"title":"喝水","remind_type":"interval","start_time":"2025-06-01T09:00:00","interval_value":30,"interval_unit":"minutes","channels":["desktop"]}'
 
+# 创建会议
+curl -X POST http://127.0.0.1:33333/api/meetings \
+  -H "Content-Type: application/json" \
+  -d '{"title":"项目周会","start_time":"2025-06-01T10:00:00","participants":["张三","李四"]}'
+
+# 创建待办
+curl -X POST http://127.0.0.1:33333/api/todos \
+  -H "Content-Type: application/json" \
+  -d '{"title":"完成项目报告","priority":"high","due_date":"2025-06-01","category":"工作"}'
+
 # AI 对话
 curl -X POST http://127.0.0.1:33333/api/chat \
   -H "Content-Type: application/json" \
@@ -490,6 +501,8 @@ curl -X POST http://127.0.0.1:33333/api/chat \
 
 # 获取事项列表
 curl http://127.0.0.1:33333/api/reminders?is_active=1
+curl http://127.0.0.1:33333/api/meetings
+curl http://127.0.0.1:33333/api/todos?completed=0
 ```
 
 完整接口文档见 [API.md](./API.md)。

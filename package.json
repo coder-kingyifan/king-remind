@@ -1,6 +1,6 @@
 {
   "name": "king-mate",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "king-mate - Desktop reminder with multi-channel notifications",
   "main": "./out/main/index.js",
   "author": "kingyifan",

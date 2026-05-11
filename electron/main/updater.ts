@@ -85,25 +85,48 @@ function fetchReleasesPage(): Promise<string> {
     return new Promise((resolve, reject) => {
         const request = net.request({
             method: 'GET',
-            url: GITHUB_RELEASES_URL
+            url: `${GITHUB_RELEASES_URL}?_update_check=${Date.now()}`
         })
-        request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
+        request.setHeader('Accept', 'text/html,application/xhtml+xml')
+        request.setHeader('Cache-Control', 'no-cache, no-store, max-age=0')
+        request.setHeader('Pragma', 'no-cache')
+        request.setHeader('User-Agent', 'King-Mate update check')
+
+        let settled = false
+        let timer: ReturnType<typeof setTimeout>
+        const finish = (fn: () => void) => {
+            if (settled) return
+            settled = true
+            clearTimeout(timer)
+            fn()
+        }
+
+        timer = setTimeout(() => {
+            request.abort()
+            finish(() => reject(new Error('GitHub Releases 连接超时')))
+        }, 15000)
 
         let body = ''
         request.on('response', (response) => {
-            if (response.statusCode !== 200) {
-                reject(new Error(`GitHub 返回状态码 ${response.statusCode}`))
-                return
-            }
             response.on('data', (chunk) => {
                 body += chunk.toString()
             })
             response.on('end', () => {
-                resolve(body)
+                finish(() => {
+                    if (response.statusCode < 200 || response.statusCode >= 400) {
+                        reject(new Error(`GitHub Releases 返回状态码 ${response.statusCode}`))
+                        return
+                    }
+                    if (!body.includes('/releases') && !body.includes('Releases')) {
+                        reject(new Error('GitHub Releases 返回内容不符合预期'))
+                        return
+                    }
+                    resolve(body)
+                })
             })
         })
         request.on('error', (err) => {
-            reject(err)
+            finish(() => reject(err))
         })
         request.end()
     })

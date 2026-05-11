@@ -900,6 +900,56 @@ function isDeepSeekConfig(config: ReturnType<typeof getLLMConfig>): boolean {
     return providerId === 'deepseek' || baseUrl.includes('api.deepseek.com') || model.includes('deepseek')
 }
 
+function describeModelEndpoint(config: ReturnType<typeof getLLMConfig>): string {
+    const providerName = config.provider?.name || config.provider?.id || '当前模型'
+    return `${providerName}（${config.model || '未选择模型'}，${config.baseUrl || '未填写 API 地址'}）`
+}
+
+function isLocalBaseUrl(baseUrl: string): boolean {
+    try {
+        const host = new URL(baseUrl).hostname.toLowerCase()
+        return host === '127.0.0.1' || host === 'localhost' || host === '::1'
+    } catch {
+        return false
+    }
+}
+
+function toFriendlyLLMError(e: any, config: ReturnType<typeof getLLMConfig>): string {
+    const raw = String(e?.message || '请求失败')
+    const code = String(e?.code || '')
+    const endpoint = describeModelEndpoint(config)
+    const target = e?.address && e?.port ? `${e.address}:${e.port}` : config.baseUrl
+
+    if (code === 'ECONNREFUSED' || raw.includes('ECONNREFUSED')) {
+        if (isLocalBaseUrl(config.baseUrl)) {
+            return `模型服务连接失败：${target} 没有服务在监听。请先启动本地模型服务，或到「设置 → 模型配置」修改当前默认模型的 API 地址。这个问题和 GitHub 代理无关。`
+        }
+        return `模型接口连接被拒绝：${endpoint}。请检查 API 地址是否正确，或服务商接口是否可用。`
+    }
+
+    if (code === 'ENOTFOUND' || raw.includes('ENOTFOUND') || raw.includes('ERR_NAME_NOT_RESOLVED')) {
+        return `模型接口域名解析失败：${endpoint}。请检查 API 地址是否填写正确，以及当前网络或代理是否能访问该模型服务商。`
+    }
+
+    if (code === 'ETIMEDOUT' || raw.includes('ETIMEDOUT') || raw.includes('timeout')) {
+        return `模型接口请求超时：${endpoint}。请检查网络、代理或模型服务是否响应过慢。`
+    }
+
+    if (code === 'ECONNRESET' || raw.includes('ECONNRESET')) {
+        return `模型接口连接被中断：${endpoint}。请检查网络、代理或模型服务状态后重试。`
+    }
+
+    if (raw.includes('401') || raw.includes('Unauthorized') || raw.includes('invalid api key')) {
+        return `模型鉴权失败：${endpoint}。请检查「模型配置」里的 API Key。`
+    }
+
+    if (raw.includes('404') || raw.includes('model not found')) {
+        return `模型接口或模型名称不存在：${endpoint}。请检查 API 地址和模型名称是否匹配。`
+    }
+
+    return raw
+}
+
 function buildResult(
     allMessages: Array<Record<string, any>>,
     lastReply: string
@@ -1001,7 +1051,7 @@ async function chatOpenAIStream(
         try {
             res = await axios.post(url, body, {headers, timeout: 120000, responseType: 'stream'})
         } catch (e: any) {
-            let errorMsg = e.message || '请求失败'
+            let errorMsg = toFriendlyLLMError(e, config)
             if (e.response?.data) {
                 try {
                     const errData = e.response.data
@@ -1244,7 +1294,7 @@ async function chatAnthropicStream(
         try {
             res = await axios.post(url, body, {headers, timeout: 120000, responseType: 'stream'})
         } catch (e: any) {
-            let errorMsg = e.message || '请求失败'
+            let errorMsg = toFriendlyLLMError(e, config)
             if (e.response?.data) {
                 try {
                     const errData = e.response.data
@@ -1471,7 +1521,7 @@ export async function chatWithLLM(
         }
         return await chatOpenAIStream(config, allMessages, scheduler, eventHandler)
     } catch (e: any) {
-        const errorMsg = e.message || '请求失败'
+        const errorMsg = toFriendlyLLMError(e, config)
         eventHandler({type: 'error', message: errorMsg})
         return {reply: `请求失败: ${errorMsg}`, messages: []}
     }
@@ -1708,7 +1758,15 @@ export async function testModelConnection(data: {
             return {ok: true, message: '连接成功', reply}
         }
     } catch (e: any) {
-        const msg = e.response?.data?.error?.message || e.response?.data?.message || e.message || '连接失败'
+        const provider = getProviderById(data.provider)
+        const config = {
+            provider,
+            baseUrl: data.base_url || provider.baseUrl,
+            apiKey: data.api_key,
+            model: data.model,
+            modelNotes: {}
+        }
+        const msg = e.response?.data?.error?.message || e.response?.data?.message || toFriendlyLLMError(e, config)
         return {ok: false, message: msg}
     }
 }
