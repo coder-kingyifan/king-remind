@@ -5,6 +5,12 @@
       <span class="slogan-text">您的专属搭子</span>
     </div>
     <div class="title-bar-controls">
+      <div class="control-btn" @click="toggleTheme" :title="themeTooltip">
+        <el-icon :size="14">
+          <Sunny v-if="settingsStore.currentTheme === 'dark'"/>
+          <Moon v-else/>
+        </el-icon>
+      </div>
       <div class="control-btn" :class="{ active: isAlwaysOnTop }" @click="toggleAlwaysOnTop" :title="isAlwaysOnTop ? '取消置顶' : '置顶'">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
           <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/>
@@ -25,9 +31,21 @@
 </template>
 
 <script setup lang="ts">
-import {ref, onMounted, onUnmounted} from 'vue'
+import {computed, ref, onMounted, onUnmounted} from 'vue'
+import {Moon, Sunny} from '@element-plus/icons-vue'
+import {useSettingsStore} from '@/stores/settings'
 
+const settingsStore = useSettingsStore()
 const isAlwaysOnTop = ref(false)
+
+const themeTooltip = computed(() => {
+  return settingsStore.currentTheme === 'dark' ? '切换亮色' : '切换暗色'
+})
+
+function toggleTheme() {
+  const newTheme = settingsStore.currentTheme === 'dark' ? 'light' : 'dark'
+  settingsStore.setSetting('theme', newTheme)
+}
 
 async function toggleAlwaysOnTop() {
   const result = await window.electronAPI.window.toggleAlwaysOnTop()

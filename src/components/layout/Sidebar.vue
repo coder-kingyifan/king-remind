@@ -39,14 +39,6 @@
           <el-icon :size="20"><Setting/></el-icon>
         </el-tooltip>
       </div>
-      <div class="nav-item theme-toggle" @click="toggleTheme">
-        <el-tooltip :content="themeTooltip" placement="right" :show-after="400">
-          <el-icon :size="20">
-            <Sunny v-if="settingsStore.currentTheme === 'dark'"/>
-            <Moon v-else/>
-          </el-icon>
-        </el-tooltip>
-      </div>
     </div>
   </nav>
 </template>
@@ -55,7 +47,7 @@
 import {computed} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {useSettingsStore} from '@/stores/settings'
-import {Bell, Calendar, ChatDotRound, GoldMedal, Moon, Odometer, Setting, Sunny, HomeFilled, List, Memo} from '@element-plus/icons-vue'
+import {Bell, Calendar, ChatDotRound, GoldMedal, Odometer, Setting, HomeFilled, List, Memo} from '@element-plus/icons-vue'
 import logoIcon from '../../../resources/icon.png'
 
 const route = useRoute()
@@ -89,15 +81,6 @@ const currentNavItems = computed(() => {
 function isActive(path: string): boolean {
   if (path === '/') return route.path === '/'
   return route.path === path
-}
-
-const themeTooltip = computed(() => {
-  return settingsStore.currentTheme === 'dark' ? '切换亮色' : '切换暗色'
-})
-
-function toggleTheme() {
-  const newTheme = settingsStore.currentTheme === 'dark' ? 'light' : 'dark'
-  settingsStore.setSetting('theme', newTheme)
 }
 </script>
 

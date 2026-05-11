@@ -77,9 +77,9 @@ const router = createRouter({
 
 // 缓存 app_mode，避免每次导航都读取
 let cachedAppMode: string | null = null
-const aiRoutes = ['/skills', '/skill-store']
+const skillRoutes = ['/skills', '/skill-store']
 
-// 普通提醒模式下，/ 重定向到 /dashboard；AI 相关路由重定向到 /dashboard
+// 普通提醒模式下，/ 重定向到 /dashboard；其他功能页保持可直接访问
 router.beforeEach(async (to, _from, next) => {
     try {
         if (cachedAppMode === null) {
@@ -87,7 +87,10 @@ router.beforeEach(async (to, _from, next) => {
             cachedAppMode = settings.app_mode || 'ai'
         }
         if (cachedAppMode === 'simple') {
-            if (to.path === '/' || aiRoutes.includes(to.path)) {
+            if (skillRoutes.includes(to.path)) {
+                return next('/reminders')
+            }
+            if (to.path === '/') {
                 return next('/dashboard')
             }
         }

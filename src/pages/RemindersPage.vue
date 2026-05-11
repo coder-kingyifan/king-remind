@@ -6,11 +6,11 @@
         <p class="page-subtitle">创建和管理您的提醒事项</p>
       </div>
       <div class="header-actions">
-        <el-button v-if="activeTab === 'skills'" type="primary" @click="router.push('/skill-store')">
+        <el-button v-if="!isSimpleMode && activeTab === 'skills'" type="primary" @click="router.push('/skill-store')">
           <el-icon><ShoppingBag/></el-icon>
           技能商店
         </el-button>
-        <el-button v-if="activeTab === 'skills'" @click="openSkillCreateDialog">
+        <el-button v-if="!isSimpleMode && activeTab === 'skills'" @click="openSkillCreateDialog">
           <el-icon><Plus/></el-icon>
           新建技能
         </el-button>
@@ -139,7 +139,7 @@
         </div>
       </el-tab-pane>
 
-      <el-tab-pane label="技能中心" name="skills">
+      <el-tab-pane v-if="!isSimpleMode" label="技能中心" name="skills">
         <SkillsTabContent
           ref="skillsTabRef"
           :hide-header="true"
@@ -201,6 +201,7 @@ function openCreateDialog(date?: string) {
 }
 
 function openSkillCreateDialog() {
+  if (isSimpleMode.value) return
   skillsTabRef.value?.openCreateDialog()
 }
 
@@ -303,6 +304,11 @@ onMounted(() => {
 })
 
 watch(() => route.fullPath, () => applyCreateQuery())
+watch(isSimpleMode, (simple) => {
+  if (simple && activeTab.value === 'skills') {
+    activeTab.value = 'reminders'
+  }
+}, {immediate: true})
 
 function getSkillName(skillId: number): string {
   const skill = skillsStore.skills.find(s => s.id === skillId)
@@ -341,6 +347,43 @@ function getSkillName(skillId: number): string {
 
 .page-tabs {
   margin-bottom: 0;
+}
+
+.page-tabs :deep(.el-tabs__header) {
+  margin: 0 0 14px;
+}
+
+.page-tabs :deep(.el-tabs__nav-wrap::after),
+.page-tabs :deep(.el-tabs__active-bar) {
+  display: none;
+}
+
+.page-tabs :deep(.el-tabs__nav) {
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--border-color-light);
+  border-radius: 8px;
+  background: var(--bg-card);
+}
+
+.page-tabs :deep(.el-tabs__item) {
+  height: 28px;
+  padding: 0 13px;
+  border-radius: 6px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 28px;
+}
+
+.page-tabs :deep(.el-tabs__item:hover) {
+  color: var(--text-primary);
+}
+
+.page-tabs :deep(.el-tabs__item.is-active) {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-weight: 700;
 }
 
 .filter-bar {

@@ -19,6 +19,27 @@
       </div>
     </div>
 
+    <section class="month-summary" aria-label="本月概览">
+      <div class="summary-item todo">
+        <span class="summary-dot"></span>
+        <span class="summary-label">待办</span>
+        <strong>{{ monthSummary.todo.total }}</strong>
+        <span>{{ monthSummary.todo.done }} 已完成</span>
+      </div>
+      <div class="summary-item reminder">
+        <span class="summary-dot"></span>
+        <span class="summary-label">提醒</span>
+        <strong>{{ monthSummary.reminder.total }}</strong>
+        <span>{{ monthSummary.reminder.active }} 生效中</span>
+      </div>
+      <div class="summary-item meeting">
+        <span class="summary-dot"></span>
+        <span class="summary-label">会议</span>
+        <strong>{{ monthSummary.meeting.total }}</strong>
+        <span>{{ monthSummary.meeting.active }} 待开/进行中</span>
+      </div>
+    </section>
+
     <section class="month-panel">
       <div class="weekday-row">
         <span v-for="day in weekdays" :key="day">{{ day }}</span>
@@ -63,7 +84,7 @@
                     </el-dropdown-item>
                     <el-dropdown-item command="reminder">
                       <el-icon><Bell /></el-icon>
-                      提醒
+                      我的提醒
                     </el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
@@ -254,6 +275,27 @@ const monthEvents = computed<CalendarEvent[]>(() => {
       return !!event && event.date >= start && event.date <= end
     })
   ].sort(sortEvents)
+})
+
+const monthSummary = computed(() => {
+  const events = monthEvents.value
+  const todoEvents = events.filter(event => event.type === 'todo')
+  const reminderEvents = events.filter(event => event.type === 'reminder')
+  const meetingEvents = events.filter(event => event.type === 'meeting')
+  return {
+    todo: {
+      total: todoEvents.length,
+      done: todoEvents.filter(event => event.done).length
+    },
+    reminder: {
+      total: reminderEvents.length,
+      active: reminderEvents.length
+    },
+    meeting: {
+      total: meetingEvents.length,
+      active: meetingEvents.filter(event => !event.done).length
+    }
+  }
 })
 
 const eventsByDate = computed<Record<string, CalendarEvent[]>>(() => {
@@ -529,6 +571,79 @@ onActivated(refresh)
   justify-content: flex-end;
   gap: 6px;
   flex-shrink: 0;
+}
+
+.month-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin: -4px 0 10px;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color-light);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-card) 86%, var(--bg-secondary));
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.summary-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.summary-label {
+  flex: 0 0 auto;
+  font-weight: 700;
+}
+
+.summary-item strong {
+  color: var(--text-primary);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.summary-item span:last-child {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary-item.todo .summary-label {
+  color: var(--color-success);
+}
+
+.summary-item.todo .summary-dot {
+  color: var(--color-success);
+}
+
+.summary-item.reminder .summary-label {
+  color: var(--color-warning);
+}
+
+.summary-item.reminder .summary-dot {
+  color: var(--color-warning);
+}
+
+.summary-item.meeting .summary-label {
+  color: var(--color-primary);
+}
+
+.summary-item.meeting .summary-dot {
+  color: var(--color-primary);
 }
 
 .icon-btn,
@@ -990,6 +1105,10 @@ onActivated(refresh)
 
   .head-actions {
     justify-content: flex-start;
+  }
+
+  .month-summary {
+    margin-top: 0;
   }
 
   .month-grid {
