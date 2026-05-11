@@ -6,7 +6,7 @@
   "author": "kingyifan",
   "license": "CC-BY-NC-SA-4.0",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "chcp 65001 >nul && electron-vite dev",
     "dev:win": "chcp 65001 >nul && electron-vite dev",
     "dev:headless": "electron-vite dev -- --headless",
     "build": "electron-vite build",

@@ -266,6 +266,7 @@
 
 <script setup lang="ts">
 import {computed, nextTick, onActivated, onMounted, reactive, ref, watch} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
 import {useTodosStore} from '@/stores/todos'
 import {
   ArrowDown,
@@ -284,6 +285,8 @@ import {ElImageViewer, ElMessageBox} from 'element-plus'
 import type {Todo} from '@/types/todo'
 
 const todosStore = useTodosStore()
+const route = useRoute()
+const router = useRouter()
 const pageRef = ref<HTMLElement>()
 const addInputRef = ref<HTMLTextAreaElement>()
 const newTitle = ref('')
@@ -437,6 +440,30 @@ function onCustomDate(value: string) {
   newDueDate.value = value
   dueDateStep.value = 3
   customDate.value = ''
+}
+
+function applyCreateQuery() {
+  if (route.query.create !== 'calendar' || route.query.type !== 'todo') return
+  const date = typeof route.query.date === 'string' && isDateKey(route.query.date) ? route.query.date : dayStr(0)
+  const quickValues = [dayStr(0), dayStr(1), dayStr(2)]
+  const quickIndex = quickValues.indexOf(date)
+  newDueDate.value = date
+  dueDateStep.value = quickIndex >= 0 ? quickIndex : 3
+  customDate.value = quickIndex >= 0 ? '' : date
+  nextTick(() => addInputRef.value?.focus())
+  clearCreateQuery()
+}
+
+function clearCreateQuery() {
+  const query = {...route.query}
+  delete query.create
+  delete query.type
+  delete query.date
+  router.replace({path: route.path, query})
+}
+
+function isDateKey(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)
 }
 
 const imgCache = new Map<string, string>()
@@ -631,15 +658,18 @@ function resizeAddInput() {
 onMounted(async () => {
   await refreshTodos()
   await resolveImages()
+  applyCreateQuery()
 })
 
 onActivated(async () => {
   await refreshTodos()
   await resolveImages()
+  applyCreateQuery()
 })
 
 watch(() => todosStore.todos.length, () => resolveImages())
 watch(newTitle, () => nextTick(resizeAddInput))
+watch(() => route.fullPath, () => applyCreateQuery())
 </script>
 
 <style scoped>

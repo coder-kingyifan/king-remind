@@ -34,6 +34,12 @@ const router = createRouter({
             meta: {title: '会议管理', icon: 'Memo'}
         },
         {
+            path: '/calendar',
+            name: 'calendar',
+            component: () => import('@/pages/CalendarPage.vue'),
+            meta: {title: '日历', icon: 'Calendar'}
+        },
+        {
             path: '/thanks',
             name: 'thanks',
             component: () => import('@/pages/ThanksPage.vue'),

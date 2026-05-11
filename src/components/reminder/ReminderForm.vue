@@ -281,6 +281,8 @@ function getLocalDateTimeStr(date: Date = new Date()): string {
 const props = defineProps<{
   visible: boolean
   reminder: Reminder | null
+  initialDate?: string
+  initialTime?: string
 }>()
 
 const emit = defineEmits<{
@@ -561,8 +563,9 @@ function initForm() {
     lunarDay.value = 1
     lunarTime.value = '09:00'
     const now = new Date()
-    scheduledDate.value = getLocalDateStr(now)
-    scheduledTime.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    scheduledDate.value = props.initialDate && /^\d{4}-\d{2}-\d{2}$/.test(props.initialDate) ? props.initialDate : getLocalDateStr(now)
+    scheduledTime.value = props.initialTime && /^\d{2}:\d{2}$/.test(props.initialTime) ? props.initialTime : `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    form.value.start_time = `${scheduledDate.value}T${scheduledTime.value}:00`
   }
 }
 

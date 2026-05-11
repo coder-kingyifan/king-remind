@@ -14,7 +14,7 @@
           <el-icon><Plus/></el-icon>
           新建技能
         </el-button>
-        <el-button v-if="activeTab === 'reminders'" type="primary" @click="openCreateDialog">
+        <el-button v-if="activeTab === 'reminders'" type="primary" @click="openCreateDialog()">
           <el-icon><Plus/></el-icon>
           新建提醒
         </el-button>
@@ -151,14 +151,15 @@
     <ReminderForm
         v-model:visible="formVisible"
         :reminder="editingReminder"
+        :initial-date="createInitialDate"
         @saved="handleSaved"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, ref} from 'vue'
-import {useRouter} from 'vue-router'
+import {computed, onMounted, ref, watch} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
 import {useRemindersStore} from '@/stores/reminders'
 import {useSkillsStore} from '@/stores/skills'
 import {useSettingsStore} from '@/stores/settings'
@@ -174,6 +175,7 @@ import dingtalkIcon from '@/../resources/dingding.ico'
 import feishuIcon from '@/../resources/feishu.png'
 
 const router = useRouter()
+const route = useRoute()
 const remindersStore = useRemindersStore()
 const skillsStore = useSkillsStore()
 const settingsStore = useSettingsStore()
@@ -182,6 +184,7 @@ const searchText = ref('')
 const statusFilter = ref('all')
 const formVisible = ref(false)
 const editingReminder = ref<Reminder | null>(null)
+const createInitialDate = ref('')
 const activeTab = ref('reminders')
 const skillsTabRef = ref()
 
@@ -191,8 +194,9 @@ const filterOptions = [
   {label: '已暂停', value: 'paused'}
 ]
 
-function openCreateDialog() {
+function openCreateDialog(date?: string) {
   editingReminder.value = null
+  createInitialDate.value = date || ''
   formVisible.value = true
 }
 
@@ -215,6 +219,7 @@ function handleFilterChange() {
 function handleCommand(cmd: string, reminder: Reminder) {
   if (cmd === 'edit') {
     editingReminder.value = reminder
+    createInitialDate.value = ''
     formVisible.value = true
   } else if (cmd === 'delete') {
     ElMessageBox.confirm(
@@ -239,6 +244,26 @@ function handleToggle(id: number) {
 
 function handleSaved() {
   handleSearch()
+}
+
+function applyCreateQuery() {
+  if (route.query.create !== 'calendar' || route.query.type !== 'reminder') return
+  const date = typeof route.query.date === 'string' && isDateKey(route.query.date) ? route.query.date : ''
+  activeTab.value = 'reminders'
+  openCreateDialog(date)
+  clearCreateQuery()
+}
+
+function clearCreateQuery() {
+  const query = {...route.query}
+  delete query.create
+  delete query.type
+  delete query.date
+  router.replace({path: route.path, query})
+}
+
+function isDateKey(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)
 }
 
 function unitLabel(unit: string): string {
@@ -274,7 +299,10 @@ function formatTime(iso: string): string {
 onMounted(() => {
   remindersStore.fetchReminders()
   skillsStore.fetchSkills()
+  applyCreateQuery()
 })
+
+watch(() => route.fullPath, () => applyCreateQuery())
 
 function getSkillName(skillId: number): string {
   const skill = skillsStore.skills.find(s => s.id === skillId)

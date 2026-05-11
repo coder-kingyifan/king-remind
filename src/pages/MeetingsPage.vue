@@ -222,6 +222,7 @@
 
 <script setup lang="ts">
 import {computed, onActivated, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
 import {useMeetingsStore} from '@/stores/meetings'
 import {ArrowDown, ArrowUp, Location, Microphone, Plus, Upload, Document, MagicStick, User, EditPen, Delete} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
@@ -240,6 +241,8 @@ function getLocalDateTimeStr(date: Date = new Date()): string {
 
 const meetingsStore = useMeetingsStore()
 const settingsStore = useSettingsStore()
+const route = useRoute()
+const router = useRouter()
 const isSimpleMode = computed(() => settingsStore.settings.app_mode === 'simple')
 const realtimeSttConfigured = ref(false)
 const fileSttConfigured = ref(false)
@@ -1632,12 +1635,12 @@ async function refineMeetingTranscript(meetingId: number, showMessage = false): 
 }
 
 // ========== 创建/编辑 ==========
-function openCreate() {
+function openCreate(date?: string) {
   if (!isAnyRecording.value) resetRealtimeTranscript()
   editingMeeting.value = null
   Object.assign(editForm, {
     id: 0, title: '', description: '', meeting_type: 'regular', status: 'pending',
-    start_time: new Date().toLocaleString('sv-SE', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',', ''),
+    start_time: date ? `${date} 09:00` : new Date().toLocaleString('sv-SE', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',', ''),
     end_time: '', location: '', participants: [], minutes: '',
     attachments: [], recording_path: '', has_recording: 0, todo_ids: [],
     stt_text: '', stt_status: 'none'
@@ -1649,6 +1652,25 @@ function openCreate() {
   segAudioUrls.value = {}
   showMoreOptions.value = false
   detailVisible.value = true
+}
+
+function applyCreateQuery() {
+  if (route.query.create !== 'calendar' || route.query.type !== 'meeting') return
+  const date = typeof route.query.date === 'string' && isDateKey(route.query.date) ? route.query.date : undefined
+  openCreate(date)
+  clearCreateQuery()
+}
+
+function clearCreateQuery() {
+  const query = {...route.query}
+  delete query.create
+  delete query.type
+  delete query.date
+  router.replace({path: route.path, query})
+}
+
+function isDateKey(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)
 }
 
 async function openDetail(meeting: Meeting) {
@@ -1840,10 +1862,12 @@ async function sendAiChat() {
 onMounted(async () => {
   await handleFilterChange()
   await meetingsStore.fetchStats()
+  applyCreateQuery()
 })
 onActivated(async () => {
   await handleFilterChange()
   await meetingsStore.fetchStats()
+  applyCreateQuery()
 })
 
 onBeforeUnmount(() => {
@@ -1862,6 +1886,8 @@ watch(detailVisible, (v) => {
     resetRealtimeTranscript()
   }
 })
+
+watch(() => route.fullPath, () => applyCreateQuery())
 
 </script>
 

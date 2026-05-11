@@ -55,7 +55,7 @@
 import {computed} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {useSettingsStore} from '@/stores/settings'
-import {Bell, ChatDotRound, GoldMedal, Moon, Odometer, Setting, Sunny, HomeFilled, List, Memo} from '@element-plus/icons-vue'
+import {Bell, Calendar, ChatDotRound, GoldMedal, Moon, Odometer, Setting, Sunny, HomeFilled, List, Memo} from '@element-plus/icons-vue'
 import logoIcon from '../../../resources/icon.png'
 
 const route = useRoute()
@@ -65,6 +65,7 @@ const settingsStore = useSettingsStore()
 // AI 提醒模式 - 全功能导航
 const aiNavItems = [
   {path: '/', title: '对话', icon: ChatDotRound},
+  {path: '/calendar', title: '日历', icon: Calendar},
   {path: '/dashboard', title: '导览', icon: Odometer},
   {path: '/reminders', title: '提醒', icon: Bell},
   {path: '/todos', title: '待办', icon: List},
@@ -74,6 +75,7 @@ const aiNavItems = [
 // 普通模式 - 简洁导航
 const simpleNavItems = [
   {path: '/dashboard', title: '导览', icon: HomeFilled},
+  {path: '/calendar', title: '日历', icon: Calendar},
   {path: '/reminders', title: '提醒', icon: Bell},
   {path: '/todos', title: '待办', icon: List},
   {path: '/meetings', title: '会议', icon: Memo}
