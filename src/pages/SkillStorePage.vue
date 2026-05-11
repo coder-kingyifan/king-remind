@@ -60,7 +60,7 @@
       </div>
       <div v-else class="error-icon">⚠️</div>
       <p class="error-title">{{ isNetworkError ? '无法访问 GitHub' : '加载失败' }}</p>
-      <p class="error-text">{{ isNetworkError ? '当前无法访问 GitHub，请检查网络连接' : skillStoreStore.fetchError }}</p>
+      <p class="error-text">{{ isNetworkError ? '当前无法访问 GitHub，请检查网络连接或系统设置里的网络代理' : skillStoreStore.fetchError }}</p>
       <el-button type="primary" @click="loadStoreData">重试</el-button>
     </div>
 

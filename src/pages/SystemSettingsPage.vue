@@ -1115,7 +1115,7 @@ async function checkUpdate() {
   } catch (e: any) {
     const msg = e.message || '未知错误'
     if (msg.includes('ENOTFOUND') || msg.includes('ECONNREFUSED') || msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT') || msg.includes('ERR_NETWORK') || msg.includes('状态码')) {
-      ElMessage.error('无法访问 GitHub，请检查网络连接')
+      ElMessage.error('无法访问 GitHub，请检查网络连接或网络代理设置')
     } else {
       ElMessage.error('检查更新失败: ' + msg)
     }

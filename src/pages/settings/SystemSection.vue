@@ -52,6 +52,59 @@
         </div>
       </div>
 
+      <!-- 网络代理 -->
+      <div class="setting-section">
+        <h3 class="section-title">网络代理</h3>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">代理模式</div>
+            <div class="setting-desc">用于技能商店、检查更新和 Telegram 推送等外部网络请求</div>
+          </div>
+          <div class="setting-actions">
+            <el-select
+                v-model="networkProxyMode"
+                size="small"
+                style="width: 150px;"
+            >
+              <el-option label="跟随系统代理" value="system"/>
+              <el-option label="手动代理" value="custom"/>
+              <el-option label="不使用代理" value="direct"/>
+            </el-select>
+          </div>
+        </div>
+
+        <div class="setting-item" v-if="networkProxyMode === 'custom'">
+          <div class="setting-info">
+            <div class="setting-label">代理地址</div>
+            <div class="setting-desc">例如 Clash 默认 http://127.0.0.1:7890，支持 http/https/socks4/socks5</div>
+          </div>
+          <div class="setting-actions">
+            <el-input
+                v-model="networkProxyUrl"
+                size="small"
+                placeholder="http://127.0.0.1:7890"
+                style="width: 240px;"
+            />
+          </div>
+        </div>
+
+        <div class="proxy-tip">
+          如需推送 Telegram，请先确保这里的代理可用；Telegram 通知渠道不再单独配置代理。
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">代理检测</div>
+            <div class="setting-desc">保存后检测 GitHub raw 访问，技能商店会使用同一套代理设置</div>
+          </div>
+          <div class="setting-actions">
+            <el-button size="small" @click="saveNetworkProxy" :loading="savingProxy">保存</el-button>
+            <el-button size="small" type="success" plain @click="testNetworkProxy" :loading="testingProxy">检测 GitHub</el-button>
+          </div>
+        </div>
+      </div>
+
       <!-- 主题设置 -->
       <div class="setting-section">
         <h3 class="section-title">外观</h3>
@@ -864,6 +917,12 @@ const encConfirmPassword = ref('')
 const encError = ref('')
 const encLoading = ref(false)
 
+// 网络代理
+const networkProxyMode = ref<'system' | 'direct' | 'custom'>('system')
+const networkProxyUrl = ref('http://127.0.0.1:7890')
+const savingProxy = ref(false)
+const testingProxy = ref(false)
+
 // 更新相关
 const appVersion = ref('')
 const checkingUpdate = ref(false)
@@ -873,6 +932,8 @@ const updateInfo = ref<{ hasUpdate: boolean; currentVersion: string; latestVersi
 })
 
 onMounted(async () => {
+  initNetworkProxyForm()
+
   // 获取应用版本
   try {
     appVersion.value = await window.electronAPI.app.getVersion()
@@ -913,6 +974,49 @@ const themeOptions = [
   {label: '🌙 暗色', value: 'dark'},
   {label: '💻 跟随系统', value: 'system'}
 ]
+
+function initNetworkProxyForm() {
+  const mode = settingsStore.settings.network_proxy_mode
+  networkProxyMode.value = mode === 'direct' || mode === 'custom' ? mode : 'system'
+  networkProxyUrl.value = settingsStore.settings.network_proxy_url || 'http://127.0.0.1:7890'
+}
+
+async function saveNetworkProxy(showMessage = true): Promise<boolean> {
+  savingProxy.value = true
+  try {
+    await window.electronAPI.settings.setNetworkProxy({
+      mode: networkProxyMode.value,
+      proxyUrl: networkProxyUrl.value
+    })
+    settingsStore.settings.network_proxy_mode = networkProxyMode.value
+    settingsStore.settings.network_proxy_url = networkProxyUrl.value.trim()
+    if (showMessage) ElMessage.success('网络代理设置已保存')
+    return true
+  } catch (e: any) {
+    ElMessage.error(e.message || '代理设置保存失败')
+    return false
+  } finally {
+    savingProxy.value = false
+  }
+}
+
+async function testNetworkProxy() {
+  testingProxy.value = true
+  try {
+    const saved = await saveNetworkProxy(false)
+    if (!saved) return
+    const result = await window.electronAPI.settings.testNetworkProxy()
+    if (result.success) {
+      ElMessage.success('GitHub 访问正常')
+    } else {
+      ElMessage.error(`GitHub 访问失败：${result.error || '未知错误'}`)
+    }
+  } catch (e: any) {
+    ElMessage.error(e.message || '代理检测失败')
+  } finally {
+    testingProxy.value = false
+  }
+}
 
 // 待办通知时间选项（整点和半点）
 const todoNotifyTimes = [
@@ -1117,7 +1221,7 @@ async function checkUpdate() {
   } catch (e: any) {
     const msg = e.message || '未知错误'
     if (msg.includes('ENOTFOUND') || msg.includes('ECONNREFUSED') || msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT') || msg.includes('ERR_NETWORK') || msg.includes('状态码')) {
-      ElMessage.error('无法访问 GitHub，请检查网络连接')
+      ElMessage.error('无法访问 GitHub，请检查网络连接或网络代理设置')
     } else {
       ElMessage.error('检查更新失败: ' + msg)
     }
@@ -1214,6 +1318,16 @@ function renderMarkdown(text: string): string {
 .setting-desc {
   font-size: 12px;
   color: var(--text-tertiary);
+}
+
+.proxy-tip {
+  margin: 2px 0 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .about-info {

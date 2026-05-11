@@ -29,6 +29,7 @@ import {todosDb} from './db/todos'
 import {meetingsDb} from './db/meetings'
 import {meetingSegmentsDb} from './db/meeting-segments'
 import {createRealtimeSttSession, hasFileSttConfig, hasRealtimeSttConfig, transcribeAudio, type RealtimeSttSession} from './stt'
+import {saveNetworkProxyConfig, testNetworkProxy} from './network-proxy'
 
 // sql.js 返回的对象可能含有不可被 structured clone 序列化的属性（如 Uint8Array 等）
 // 在 IPC 返回前必须转为纯 JS 对象
@@ -132,6 +133,15 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
         }
 
         return true
+    })
+
+    safeHandle('settings:set-network-proxy', async (_event, config: {mode: 'system' | 'direct' | 'custom'; proxyUrl: string}) => {
+        await saveNetworkProxyConfig(config)
+        return true
+    })
+
+    safeHandle('settings:test-network-proxy', async () => {
+        return await testNetworkProxy()
     })
 
     // ========== 主题 ==========

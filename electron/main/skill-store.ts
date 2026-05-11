@@ -1,4 +1,4 @@
-import axios from 'axios'
+import {net} from 'electron'
 import {skillsDb} from './db/skills'
 
 // 技能商店 URL（GitHub 仓库 raw 文件地址）
@@ -34,21 +34,32 @@ export interface StoreSkillWithStatus extends StoreSkill {
  * 从 GitHub 获取商店清单（加随机参数绕过 CDN 缓存）
  */
 export async function fetchStoreManifest(): Promise<StoreManifest> {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 15000)
+
     try {
         const url = `${STORE_URL}?_t=${Date.now()}`
-        const response = await axios.get<StoreManifest>(url, {
-            timeout: 15000,
+        const response = await net.fetch(url, {
+            signal: controller.signal,
             headers: {'Accept': 'application/json'}
         })
-        return response.data
-    } catch (e: any) {
-        if (e.code === 'ENOTFOUND' || e.code === 'ECONNREFUSED' || e.code === 'ECONNRESET' || e.code === 'ETIMEDOUT' || e.code === 'ERR_NETWORK') {
-            throw new Error('无法访问 GitHub，请检查网络连接')
-        }
-        if (e.response?.status === 404) {
+        if (response.status === 404) {
             throw new Error('商店数据源未找到（404），请确保仓库中存在 skill-store.json 文件')
         }
-        throw new Error('无法访问 GitHub，请检查网络连接')
+        if (!response.ok) {
+            throw new Error(`GitHub 返回状态码 ${response.status}`)
+        }
+        return await response.json() as StoreManifest
+    } catch (e: any) {
+        if (e.message?.includes('商店数据源未找到')) {
+            throw e
+        }
+        if (e.code === 'ENOTFOUND' || e.code === 'ECONNREFUSED' || e.code === 'ECONNRESET' || e.code === 'ETIMEDOUT' || e.code === 'ERR_NETWORK') {
+            throw new Error('无法访问 GitHub，请检查网络连接或网络代理设置')
+        }
+        throw new Error('无法访问 GitHub，请检查网络连接或网络代理设置')
+    } finally {
+        clearTimeout(timer)
     }
 }
 

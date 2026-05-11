@@ -21,6 +21,7 @@ import {initNetworkInterceptor} from './network-interceptor'
 import {weChatBot} from './wechat-bot/wechat-bot'
 import {checkForUpdate} from './updater'
 import {loadEnvConfig} from './env-config'
+import {applyNetworkProxy} from './network-proxy'
 
 // Windows 控制台中文乱码修复
 try {
@@ -99,6 +100,13 @@ async function continueAppInit(win: BrowserWindow | null): Promise<void> {
     console.log('[主进程] 正在运行数据库迁移...')
     runMigrations()
     console.log('[主进程] 数据库迁移完成')
+
+    try {
+        await applyNetworkProxy()
+        console.log('[主进程] 网络代理设置已应用')
+    } catch (e: any) {
+        console.error('[主进程] 网络代理设置应用失败:', e.message)
+    }
 
     // 创建系统托盘
     createTray(win)

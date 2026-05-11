@@ -78,14 +78,12 @@ function loadTelegramConfig(): void {
     const enabled = envBool('KING_TELEGRAM_ENABLED')
     const botToken = env('KING_TELEGRAM_BOT_TOKEN')
     const chatId = env('KING_TELEGRAM_CHAT_ID')
-    const proxyUrl = env('KING_TELEGRAM_PROXY_URL')
 
     if (enabled === undefined && !botToken) return
 
     const config: Record<string, any> = {}
     if (botToken) config.bot_token = botToken
     if (chatId) config.chat_id = chatId
-    if (proxyUrl) config.proxy_url = proxyUrl
 
     updateChannel('telegram', enabled, Object.keys(config).length > 0 ? JSON.stringify(config) : undefined)
 }

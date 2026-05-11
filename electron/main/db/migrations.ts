@@ -242,7 +242,7 @@ export function runMigrations(): void {
           ('email', 0, '{"smtp_host": "", "smtp_port": 587, "smtp_secure": false, "smtp_user": "", "smtp_pass": "", "from_address": "", "to_addresses": []}');
         INSERT
                 OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
-          ('telegram', 0, '{"bot_token": "", "chat_id": "", "proxy_url": ""}');
+          ('telegram', 0, '{"bot_token": "", "chat_id": ""}');
         INSERT
                 OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
           ('wechat_work', 0, '{"corp_id": "", "corp_secret": "", "agent_id": "", "to_user": "@all"}');
@@ -757,6 +757,13 @@ export function runMigrations(): void {
             sql: `
                 ALTER TABLE notification_logs ADD COLUMN reminder_title TEXT DEFAULT NULL;
                 ALTER TABLE notification_logs ADD COLUMN reminder_icon TEXT DEFAULT NULL;
+            `
+        },
+        {
+            version: 32,
+            sql: `
+                INSERT OR IGNORE INTO settings (key, value) VALUES ('network_proxy_mode', 'system');
+                INSERT OR IGNORE INTO settings (key, value) VALUES ('network_proxy_url', 'http://127.0.0.1:7890');
             `
         }
     ]

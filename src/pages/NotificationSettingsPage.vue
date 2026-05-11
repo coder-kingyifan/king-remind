@@ -128,7 +128,7 @@
               <li>在 Telegram 搜索 <b>@BotFather</b>，发送 <code>/newbot</code> 创建机器人，获取 Bot Token</li>
               <li>搜索 <b>@userinfobot</b>，发送任意消息获取你的数字 Chat ID；多个接收人填多个 Chat ID，逗号分隔</li>
               <li>给你创建的机器人发送 <code>/start</code> 启动对话</li>
-              <li>国内网络需要填写代理地址（如 Clash 默认 <code>http://127.0.0.1:7890</code>）</li>
+              <li>如需推送 Telegram，请先在「系统设置」的网络代理中选择系统代理或填写代理地址</li>
             </ol>
           </div>
           <el-form :model="telegramConfig" label-position="top" size="small">
@@ -138,9 +138,7 @@
             <el-form-item label="Chat ID（多个用逗号分隔）">
               <el-input v-model="telegramConfig.chat_id" placeholder="如 123456789 或 123456789,987654321"/>
             </el-form-item>
-            <el-form-item label="代理地址（国内网络需要）">
-              <el-input v-model="telegramConfig.proxy_url" placeholder="http://127.0.0.1:7890"/>
-            </el-form-item>
+            <p class="config-tip">Telegram 不再单独配置代理，会使用「系统设置」里的网络代理。</p>
             <div class="template-section">
               <div class="template-header" @click="templateExpanded.telegram = !templateExpanded.telegram">
                 <span class="template-header-title">消息模板</span>
@@ -721,7 +719,7 @@ const emailConfig = ref({
 })
 const emailToStr = ref('')
 
-const telegramConfig = ref({bot_token: '', chat_id: '', proxy_url: '', message_template: ''})
+const telegramConfig = ref({bot_token: '', chat_id: '', message_template: ''})
 const wechatConfig = ref({
   corp_id: '',
   corp_secret: '',
@@ -788,6 +786,7 @@ function loadConfigFromStore(channel: string) {
       Object.assign(emailConfig.value, json)
       emailToStr.value = (json.to_addresses || []).join(', ')
     } else if (channel === 'telegram') {
+      delete json.proxy_url
       Object.assign(telegramConfig.value, json)
     } else if (channel === 'wechat_work') {
       Object.assign(wechatConfig.value, json)

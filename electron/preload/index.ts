@@ -56,7 +56,10 @@ const electronAPI = {
     settings: {
         getAll: () => safeInvoke('settings:get-all'),
         get: (key: string) => safeInvoke('settings:get', key),
-        set: (key: string, value: string) => safeInvoke('settings:set', key, value)
+        set: (key: string, value: string) => safeInvoke('settings:set', key, value),
+        setNetworkProxy: (config: {mode: 'system' | 'direct' | 'custom'; proxyUrl: string}) =>
+            safeInvoke('settings:set-network-proxy', config),
+        testNetworkProxy: () => safeInvoke('settings:test-network-proxy')
     },
 
     // 主题

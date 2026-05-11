@@ -72,7 +72,7 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
         // 将网络错误向上抛出，让前端可以区分网络问题和其他错误
         const code = e.code || ''
         if (code === 'ENOTFOUND' || code === 'ECONNREFUSED' || code === 'ECONNRESET' || code === 'ETIMEDOUT' || code === 'ERR_NETWORK') {
-            throw new Error('无法访问 GitHub，请检查网络连接')
+            throw new Error('无法访问 GitHub，请检查网络连接或网络代理设置')
         }
         throw e
     }
