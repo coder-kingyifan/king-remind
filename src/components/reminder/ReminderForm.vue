@@ -204,11 +204,11 @@
             <el-option :value="null" label="不绑定技能"/>
             <el-option-group v-for="cat in skillCategories" :key="cat.key" :label="cat.icon + ' ' + cat.label">
               <el-option
-                v-for="skill in getSkillsByCategory(cat.key)"
-                :key="skill.id"
-                :value="skill.id"
-                :label="skill.icon + ' ' + skill.name"
-                :disabled="skill.is_enabled === 0"
+                  v-for="skill in getSkillsByCategory(cat.key)"
+                  :key="skill.id"
+                  :value="skill.id"
+                  :label="skill.icon + ' ' + skill.name"
+                  :disabled="skill.is_enabled === 0"
               />
             </el-option-group>
           </el-select>
@@ -247,7 +247,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, ref} from 'vue'
+import {computed, ref} from 'vue'
 import {useRemindersStore} from '@/stores/reminders'
 import {useNotificationsStore} from '@/stores/notifications'
 import {useSkillsStore} from '@/stores/skills'
@@ -308,13 +308,13 @@ const channelOptions = CHANNELS
 
 // 技能相关
 const skillCategories = [
-  { key: 'weather', label: '天气环境', icon: '🌤️' },
-  { key: 'daily', label: '每日内容', icon: '📰' },
-  { key: 'health', label: '健康生活', icon: '🍎' },
-  { key: 'finance', label: '财经理财', icon: '💰' },
-  { key: 'study', label: '学习成长', icon: '📚' },
-  { key: 'tools', label: '实用工具', icon: '🔧' },
-  { key: 'custom', label: '自定义', icon: '⚡' }
+  {key: 'weather', label: '天气环境', icon: '🌤️'},
+  {key: 'daily', label: '每日内容', icon: '📰'},
+  {key: 'health', label: '健康生活', icon: '🍎'},
+  {key: 'finance', label: '财经理财', icon: '💰'},
+  {key: 'study', label: '学习成长', icon: '📚'},
+  {key: 'tools', label: '实用工具', icon: '🔧'},
+  {key: 'custom', label: '自定义', icon: '⚡'}
 ]
 
 const enabledSkills = computed(() => skillsStore.skills.filter(s => s.is_enabled === 1))

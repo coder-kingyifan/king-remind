@@ -11,7 +11,8 @@
           <Moon v-else/>
         </el-icon>
       </div>
-      <div class="control-btn" :class="{ active: isAlwaysOnTop }" @click="toggleAlwaysOnTop" :title="isAlwaysOnTop ? '取消置顶' : '置顶'">
+      <div class="control-btn" :class="{ active: isAlwaysOnTop }" @click="toggleAlwaysOnTop"
+           :title="isAlwaysOnTop ? '取消置顶' : '置顶'">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
           <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/>
         </svg>
@@ -23,7 +24,8 @@
       </div>
       <div class="control-btn close-btn" @click="close" title="关闭">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+          <path
+              d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
         </svg>
       </div>
     </div>
@@ -31,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref, onMounted, onUnmounted} from 'vue'
+import {computed, onMounted, onUnmounted, ref} from 'vue'
 import {Moon, Sunny} from '@element-plus/icons-vue'
 import {useSettingsStore} from '@/stores/settings'
 
@@ -65,7 +67,10 @@ function onAlwaysOnTopChanged(checked: boolean) {
 }
 
 onMounted(async () => {
-  try { isAlwaysOnTop.value = await window.electronAPI.window.isAlwaysOnTop() } catch { /* ignore */ }
+  try {
+    isAlwaysOnTop.value = await window.electronAPI.window.isAlwaysOnTop()
+  } catch { /* ignore */
+  }
   window.electronAPI.window.onAlwaysOnTopChanged(onAlwaysOnTopChanged)
 })
 

@@ -1,4 +1,4 @@
-import {createWebHashHistory, createRouter} from 'vue-router'
+import {createRouter, createWebHashHistory} from 'vue-router'
 
 const router = createRouter({
     history: createWebHashHistory(),
@@ -92,7 +92,8 @@ router.beforeEach(async (to, _from, next) => {
                 return next('/dashboard')
             }
         }
-    } catch { /* ignore */ }
+    } catch { /* ignore */
+    }
     if (to.path === '/') {
         return next()
     }

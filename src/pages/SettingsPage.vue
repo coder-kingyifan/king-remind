@@ -7,13 +7,15 @@
     <!-- 二级菜单 -->
     <div class="settings-tabs">
       <div
-        v-for="tab in tabs"
-        :key="tab.key"
-        class="settings-tab"
-        :class="{ active: activeTab === tab.key }"
-        @click="activeTab = tab.key"
+          v-for="tab in tabs"
+          :key="tab.key"
+          class="settings-tab"
+          :class="{ active: activeTab === tab.key }"
+          @click="activeTab = tab.key"
       >
-        <el-icon :size="16"><component :is="tab.icon"/></el-icon>
+        <el-icon :size="16">
+          <component :is="tab.icon"/>
+        </el-icon>
         <span>{{ tab.label }}</span>
       </div>
     </div>
@@ -38,7 +40,7 @@
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
-import {Bell, Setting, Cpu} from '@element-plus/icons-vue'
+import {Bell, Cpu, Setting} from '@element-plus/icons-vue'
 import ModelConfigSection from './settings/ModelConfigSection.vue'
 import NotificationSection from './settings/NotificationSection.vue'
 import SystemSection from './settings/SystemSection.vue'
@@ -138,7 +140,11 @@ watch(activeTab, (tab) => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 </style>

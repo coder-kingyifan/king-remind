@@ -41,7 +41,7 @@ export function initNetworkProxy(): void {
             // 响应到达
             const pending = pendingEvents.get(event.id)
             if (pending) {
-                const merged: NetworkEvent = { ...pending, ...event }
+                const merged: NetworkEvent = {...pending, ...event}
                 logToConsole(pending, event)
                 // 保存到历史记录
                 recentEvents.push(merged)
@@ -141,7 +141,8 @@ function logToConsole(request: NetworkEvent, response: NetworkEvent): void {
     try {
         const u = new URL(url)
         shortUrl = u.pathname + u.search
-    } catch { /* keep original */ }
+    } catch { /* keep original */
+    }
 
     console.groupCollapsed(
         `%c${method} %c${shortUrl} %c${statusText} %c${duration}ms`,
@@ -206,6 +207,7 @@ function truncate(data: any, maxLen = 2000): any {
         if (str.length > maxLen) {
             return str.substring(0, maxLen) + '...[truncated]'
         }
-    } catch { /* ignore */ }
+    } catch { /* ignore */
+    }
     return data
 }

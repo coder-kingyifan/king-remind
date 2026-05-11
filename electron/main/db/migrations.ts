@@ -480,8 +480,9 @@ export function runMigrations(): void {
         {
             version: 11,
             sql: `
-        ALTER TABLE model_configs ADD COLUMN model_notes TEXT NOT NULL DEFAULT '{}';
-      `
+                ALTER TABLE model_configs
+                    ADD COLUMN model_notes TEXT NOT NULL DEFAULT '{}';
+            `
         },
         {
             version: 12,
@@ -565,53 +566,89 @@ export function runMigrations(): void {
                 ))
                     );
 
-                ALTER TABLE reminders ADD COLUMN skill_id INTEGER DEFAULT NULL;
+                ALTER TABLE reminders
+                    ADD COLUMN skill_id INTEGER DEFAULT NULL;
             `
         },
         {
             version: 13,
             sql: `
-                UPDATE skills SET is_enabled = 0 WHERE is_builtin = 1;
+                UPDATE skills
+                SET is_enabled = 0
+                WHERE is_builtin = 1;
             `
         },
         {
             version: 14,
             sql: `
-                ALTER TABLE model_configs ADD COLUMN model_type TEXT NOT NULL DEFAULT 'text';
+                ALTER TABLE model_configs
+                    ADD COLUMN model_type TEXT NOT NULL DEFAULT 'text';
             `
         },
         {
             version: 15,
             sql: `
-                ALTER TABLE chat_messages ADD COLUMN images TEXT DEFAULT NULL;
+                ALTER TABLE chat_messages
+                    ADD COLUMN images TEXT DEFAULT NULL;
             `
         },
         {
             version: 16,
             sql: `
-                INSERT OR IGNORE INTO settings (key, value) VALUES ('setup_done', 'false');
-                INSERT OR IGNORE INTO settings (key, value) VALUES ('api_enabled', 'false');
-                INSERT OR IGNORE INTO settings (key, value) VALUES ('api_host', '0.0.0.0');
+                INSERT
+                OR IGNORE INTO settings (key, value) VALUES ('setup_done', 'false');
+                INSERT
+                OR IGNORE INTO settings (key, value) VALUES ('api_enabled', 'false');
+                INSERT
+                OR IGNORE INTO settings (key, value) VALUES ('api_host', '0.0.0.0');
             `
         },
         {
             version: 17,
             sql: `
-                INSERT OR IGNORE INTO settings (key, value) VALUES ('db_path', '');
-                INSERT OR IGNORE INTO settings (key, value) VALUES ('db_encrypted', 'false');
+                INSERT
+                OR IGNORE INTO settings (key, value) VALUES ('db_path', '');
+                INSERT
+                OR IGNORE INTO settings (key, value) VALUES ('db_encrypted', 'false');
             `
         },
         {
             version: 18,
             sql: `
-                CREATE TABLE IF NOT EXISTS skill_content (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    skill_key TEXT NOT NULL,
-                    category TEXT DEFAULT '',
-                    content TEXT NOT NULL,
-                    extra TEXT DEFAULT '{}',
-                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-                );
+                CREATE TABLE IF NOT EXISTS skill_content
+                (
+                    id
+                    INTEGER
+                    PRIMARY
+                    KEY
+                    AUTOINCREMENT,
+                    skill_key
+                    TEXT
+                    NOT
+                    NULL,
+                    category
+                    TEXT
+                    DEFAULT
+                    '',
+                    content
+                    TEXT
+                    NOT
+                    NULL,
+                    extra
+                    TEXT
+                    DEFAULT
+                    '{}',
+                    created_at
+                    TEXT
+                    NOT
+                    NULL
+                    DEFAULT (
+                    datetime
+                (
+                    'now',
+                    'localtime'
+                ))
+                    );
                 CREATE INDEX IF NOT EXISTS idx_skill_content_key ON skill_content(skill_key);
                 CREATE INDEX IF NOT EXISTS idx_skill_content_key_cat ON skill_content(skill_key, category);
             `
@@ -619,55 +656,75 @@ export function runMigrations(): void {
         {
             version: 19,
             sql: `
-                ALTER TABLE skills ADD COLUMN store_version TEXT DEFAULT NULL;
-                ALTER TABLE skills ADD COLUMN store_source TEXT DEFAULT NULL;
+                ALTER TABLE skills
+                    ADD COLUMN store_version TEXT DEFAULT NULL;
+                ALTER TABLE skills
+                    ADD COLUMN store_source TEXT DEFAULT NULL;
             `
         },
         {
             version: 20,
             sql: `
-                UPDATE skills SET is_enabled = 1 WHERE is_builtin = 1 AND is_enabled = 0;
-                UPDATE skills SET is_builtin = 0 WHERE is_builtin = 1;
+                UPDATE skills
+                SET is_enabled = 1
+                WHERE is_builtin = 1
+                  AND is_enabled = 0;
+                UPDATE skills
+                SET is_builtin = 0
+                WHERE is_builtin = 1;
             `
         },
         {
             version: 21,
             sql: `
-                DELETE FROM skills;
-                DELETE FROM skill_content;
+                DELETE
+                FROM skills;
+                DELETE
+                FROM skill_content;
             `
         },
         {
             version: 22,
             sql: `
-                INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
+                INSERT
+                OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
           ('wechat_test', 0, '{"app_id": "", "app_secret": "", "to_openid": "", "msg_type": "text", "template_id": "", "template_url": "", "template_fields": [{"key": "first", "value": "{{icon}} {{title}}", "color": ""}, {"key": "keyword1", "value": "{{body}}", "color": ""}, {"key": "remark", "value": "{{app_name}} · {{time}}", "color": ""}]}');
             `
         },
         {
             version: 23,
             sql: `
-                INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
+                INSERT
+                OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
           ('dingtalk', 0, '{"webhook_url": "", "msg_type": "text", "secret": "", "mention_mode": "none", "mention_mobiles": "", "mention_userids": ""}');
-                INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
+                INSERT
+                OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
           ('feishu', 0, '{"webhook_url": "", "msg_type": "text"}');
-                INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
+                INSERT
+                OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
           ('bark', 0, '{"server_url": "", "sound": "alarm", "group": "king-mate"}');
-                INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
+                INSERT
+                OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
           ('discord', 0, '{"webhook_url": "", "username": "King Mate"}');
             `
         },
         {
             version: 24,
             sql: `
-                UPDATE settings SET value = 'on' WHERE key = 'notification_sound' AND value = 'true';
-                UPDATE notification_configs SET config_json = '{"server_url": "", "sound": "alarm", "group": "king-mate"}' WHERE channel = 'bark' AND config_json LIKE '%api.day.app%';
+                UPDATE settings
+                SET value = 'on'
+                WHERE key = 'notification_sound' AND value = 'true';
+                UPDATE notification_configs
+                SET config_json = '{"server_url": "", "sound": "alarm", "group": "king-mate"}'
+                WHERE channel = 'bark'
+                  AND config_json LIKE '%api.day.app%';
             `
         },
         {
             version: 25,
             sql: `
-                INSERT OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
+                INSERT
+                OR IGNORE INTO notification_configs (channel, is_enabled, config_json) VALUES
           ('wechat_bot', 0, '{"message_template": ""}');
             `
         },
@@ -676,17 +733,63 @@ export function runMigrations(): void {
             sql: `
                 CREATE TABLE IF NOT EXISTS todos
                 (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL,
-                    description TEXT DEFAULT '',
-                    completed INTEGER NOT NULL DEFAULT 0,
-                    priority TEXT NOT NULL DEFAULT 'normal',
-                    due_date TEXT DEFAULT NULL,
-                    category TEXT DEFAULT '',
-                    sort_order INTEGER NOT NULL DEFAULT 0,
-                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-                    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-                );
+                    id
+                    INTEGER
+                    PRIMARY
+                    KEY
+                    AUTOINCREMENT,
+                    title
+                    TEXT
+                    NOT
+                    NULL,
+                    description
+                    TEXT
+                    DEFAULT
+                    '',
+                    completed
+                    INTEGER
+                    NOT
+                    NULL
+                    DEFAULT
+                    0,
+                    priority
+                    TEXT
+                    NOT
+                    NULL
+                    DEFAULT
+                    'normal',
+                    due_date
+                    TEXT
+                    DEFAULT
+                    NULL,
+                    category
+                    TEXT
+                    DEFAULT
+                    '',
+                    sort_order
+                    INTEGER
+                    NOT
+                    NULL
+                    DEFAULT
+                    0,
+                    created_at
+                    TEXT
+                    NOT
+                    NULL
+                    DEFAULT (
+                    datetime
+                (
+                    'now',
+                    'localtime'
+                )),
+                    updated_at TEXT NOT NULL DEFAULT
+                (
+                    datetime
+                (
+                    'now',
+                    'localtime'
+                ))
+                    );
                 CREATE INDEX IF NOT EXISTS idx_todos_completed ON todos(completed);
                 CREATE INDEX IF NOT EXISTS idx_todos_due_date ON todos(due_date);
             `
@@ -694,7 +797,8 @@ export function runMigrations(): void {
         {
             version: 27,
             sql: `
-                ALTER TABLE todos ADD COLUMN images TEXT NOT NULL DEFAULT '[]';
+                ALTER TABLE todos
+                    ADD COLUMN images TEXT NOT NULL DEFAULT '[]';
             `
         },
         {
@@ -702,24 +806,97 @@ export function runMigrations(): void {
             sql: `
                 CREATE TABLE IF NOT EXISTS meetings
                 (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL,
-                    description TEXT DEFAULT '',
-                    meeting_type TEXT NOT NULL DEFAULT 'regular',
-                    status TEXT NOT NULL DEFAULT 'pending',
-                    start_time TEXT NOT NULL,
-                    end_time TEXT DEFAULT NULL,
-                    location TEXT DEFAULT '',
-                    participants TEXT NOT NULL DEFAULT '[]',
-                    minutes TEXT DEFAULT '',
-                    ai_summary TEXT DEFAULT NULL,
-                    attachments TEXT NOT NULL DEFAULT '[]',
-                    recording_path TEXT DEFAULT NULL,
-                    has_recording INTEGER NOT NULL DEFAULT 0,
-                    todo_ids TEXT NOT NULL DEFAULT '[]',
-                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-                    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-                );
+                    id
+                    INTEGER
+                    PRIMARY
+                    KEY
+                    AUTOINCREMENT,
+                    title
+                    TEXT
+                    NOT
+                    NULL,
+                    description
+                    TEXT
+                    DEFAULT
+                    '',
+                    meeting_type
+                    TEXT
+                    NOT
+                    NULL
+                    DEFAULT
+                    'regular',
+                    status
+                    TEXT
+                    NOT
+                    NULL
+                    DEFAULT
+                    'pending',
+                    start_time
+                    TEXT
+                    NOT
+                    NULL,
+                    end_time
+                    TEXT
+                    DEFAULT
+                    NULL,
+                    location
+                    TEXT
+                    DEFAULT
+                    '',
+                    participants
+                    TEXT
+                    NOT
+                    NULL
+                    DEFAULT
+                    '[]',
+                    minutes
+                    TEXT
+                    DEFAULT
+                    '',
+                    ai_summary
+                    TEXT
+                    DEFAULT
+                    NULL,
+                    attachments
+                    TEXT
+                    NOT
+                    NULL
+                    DEFAULT
+                    '[]',
+                    recording_path
+                    TEXT
+                    DEFAULT
+                    NULL,
+                    has_recording
+                    INTEGER
+                    NOT
+                    NULL
+                    DEFAULT
+                    0,
+                    todo_ids
+                    TEXT
+                    NOT
+                    NULL
+                    DEFAULT
+                    '[]',
+                    created_at
+                    TEXT
+                    NOT
+                    NULL
+                    DEFAULT (
+                    datetime
+                (
+                    'now',
+                    'localtime'
+                )),
+                    updated_at TEXT NOT NULL DEFAULT
+                (
+                    datetime
+                (
+                    'now',
+                    'localtime'
+                ))
+                    );
                 CREATE INDEX IF NOT EXISTS idx_meetings_status ON meetings(status);
                 CREATE INDEX IF NOT EXISTS idx_meetings_start_time ON meetings(start_time);
                 CREATE INDEX IF NOT EXISTS idx_meetings_type ON meetings(meeting_type);
@@ -730,40 +907,88 @@ export function runMigrations(): void {
             sql: `
                 CREATE TABLE IF NOT EXISTS meeting_segments
                 (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    meeting_id INTEGER NOT NULL,
-                    segment_type TEXT NOT NULL DEFAULT 'text',
-                    content TEXT NOT NULL DEFAULT '',
-                    speaker TEXT DEFAULT '',
-                    sort_order INTEGER NOT NULL DEFAULT 0,
-                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-                    FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE
-                );
+                    id
+                    INTEGER
+                    PRIMARY
+                    KEY
+                    AUTOINCREMENT,
+                    meeting_id
+                    INTEGER
+                    NOT
+                    NULL,
+                    segment_type
+                    TEXT
+                    NOT
+                    NULL
+                    DEFAULT
+                    'text',
+                    content
+                    TEXT
+                    NOT
+                    NULL
+                    DEFAULT
+                    '',
+                    speaker
+                    TEXT
+                    DEFAULT
+                    '',
+                    sort_order
+                    INTEGER
+                    NOT
+                    NULL
+                    DEFAULT
+                    0,
+                    created_at
+                    TEXT
+                    NOT
+                    NULL
+                    DEFAULT (
+                    datetime
+                (
+                    'now',
+                    'localtime'
+                )),
+                    FOREIGN KEY
+                (
+                    meeting_id
+                ) REFERENCES meetings
+                (
+                    id
+                ) ON DELETE CASCADE
+                    );
                 CREATE INDEX IF NOT EXISTS idx_segments_meeting ON meeting_segments(meeting_id);
 
-                ALTER TABLE meetings ADD COLUMN stt_text TEXT DEFAULT NULL;
-                ALTER TABLE meetings ADD COLUMN stt_status TEXT NOT NULL DEFAULT 'none';
+                ALTER TABLE meetings
+                    ADD COLUMN stt_text TEXT DEFAULT NULL;
+                ALTER TABLE meetings
+                    ADD COLUMN stt_status TEXT NOT NULL DEFAULT 'none';
             `
         },
         {
             version: 30,
             sql: `
-                ALTER TABLE meeting_segments ADD COLUMN start_time REAL DEFAULT 0;
-                ALTER TABLE meeting_segments ADD COLUMN end_time REAL DEFAULT 0;
+                ALTER TABLE meeting_segments
+                    ADD COLUMN start_time REAL DEFAULT 0;
+                ALTER TABLE meeting_segments
+                    ADD COLUMN end_time REAL DEFAULT 0;
             `
         },
         {
             version: 31,
             sql: `
-                ALTER TABLE notification_logs ADD COLUMN reminder_title TEXT DEFAULT NULL;
-                ALTER TABLE notification_logs ADD COLUMN reminder_icon TEXT DEFAULT NULL;
+                ALTER TABLE notification_logs
+                    ADD COLUMN reminder_title TEXT DEFAULT NULL;
+                ALTER TABLE notification_logs
+                    ADD COLUMN reminder_icon TEXT DEFAULT NULL;
             `
         },
         {
             version: 32,
             sql: `
-                INSERT OR IGNORE INTO settings (key, value) VALUES ('network_proxy_mode', 'system');
-                INSERT OR IGNORE INTO settings (key, value) VALUES ('network_proxy_url', 'http://127.0.0.1:7890');
+                INSERT
+                OR IGNORE INTO settings (key, value) VALUES ('network_proxy_mode', 'system');
+                INSERT
+                OR IGNORE INTO settings (key, value) VALUES ('network_proxy_url', 'http://127.0.0.1:7890');
             `
         }
     ]

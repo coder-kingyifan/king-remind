@@ -131,7 +131,8 @@
 
 ## 为什么做 King Mate
 
-工作、生活、会议、临时想法和各种通知常常散落在不同地方。King Mate 希望把这些入口收拢到一个本地桌面应用里：日历总览、日程事项、待办清单、会议记录、AI 对话、技能扩展和多渠道通知都能在同一个工作流里完成。
+工作、生活、会议、临时想法和各种通知常常散落在不同地方。King Mate 希望把这些入口收拢到一个本地桌面应用里：日历总览、日程事项、待办清单、会议记录、AI
+对话、技能扩展和多渠道通知都能在同一个工作流里完成。
 
 - **安排更快** — 用表单、日历入口或自然语言创建日程、待办和会议
 - **处理更清楚** — 数据概览、分组列表、状态筛选和通知记录集中展示
@@ -199,34 +200,34 @@
 
 **支持的 AI 服务商：**
 
-| 服务商 | 说明 |
-|:--|:--|
-| OpenAI | GPT-4o、GPT-4o-mini、o1-mini、o3-mini 等 |
-| DeepSeek | deepseek-chat、deepseek-reasoner |
-| 阿里百炼（通义千问） | qwen-plus、qwq-plus、qwen-coder-plus 等 |
-| Kimi（月之暗面） | moonshot-v1 系列 |
-| 智谱 GLM | glm-4-flash、glm-4-plus、glm-z1-flash 等 |
+| 服务商               | 说明                                           |
+|:------------------|:---------------------------------------------|
+| OpenAI            | GPT-4o、GPT-4o-mini、o1-mini、o3-mini 等         |
+| DeepSeek          | deepseek-chat、deepseek-reasoner              |
+| 阿里百炼（通义千问）        | qwen-plus、qwq-plus、qwen-coder-plus 等         |
+| Kimi（月之暗面）        | moonshot-v1 系列                               |
+| 智谱 GLM            | glm-4-flash、glm-4-plus、glm-z1-flash 等        |
 | Claude（Anthropic） | claude-sonnet-4、claude-haiku-4、claude-opus-4 |
-| 字节豆包 | doubao-pro、doubao-lite 系列 |
-| 腾讯混元 | hunyuan-lite、hunyuan-turbo 等 |
-| 百度文心一言 | ernie-4.0、ernie-3.5、ernie-speed 系列 |
-| 讯飞星火 | 4.0Ultra、generalv3.5 等 |
-| 零一万物（Yi） | yi-lightning、yi-large 等 |
-| SiliconFlow（硅基流动） | Qwen、DeepSeek、GLM 等开源模型 |
-| Groq | llama-3.3、mixtral 等 |
-| 小米 | MiMo |
-| Ollama（本地） | 本地部署任意模型（qwen3、deepseek-r1、llama3 等） |
-| 自定义 | OpenAI / Anthropic 兼容接口 |
+| 字节豆包              | doubao-pro、doubao-lite 系列                    |
+| 腾讯混元              | hunyuan-lite、hunyuan-turbo 等                 |
+| 百度文心一言            | ernie-4.0、ernie-3.5、ernie-speed 系列           |
+| 讯飞星火              | 4.0Ultra、generalv3.5 等                       |
+| 零一万物（Yi）          | yi-lightning、yi-large 等                      |
+| SiliconFlow（硅基流动） | Qwen、DeepSeek、GLM 等开源模型                      |
+| Groq              | llama-3.3、mixtral 等                          |
+| 小米                | MiMo                                         |
+| Ollama（本地）        | 本地部署任意模型（qwen3、deepseek-r1、llama3 等）         |
+| 自定义               | OpenAI / Anthropic 兼容接口                      |
 
 **联网搜索服务商：**
 
-| 服务商 | 搜索协议 | 说明 |
-|:--|:--|:--|
+| 服务商        | 搜索协议      | 说明                                |
+|:-----------|:----------|:----------------------------------|
 | Perplexity | OpenAI 兼容 | sonar、sonar-pro、sonar-reasoning 等 |
-| Tavily | Tavily 协议 | tavily-search、tavily-extract |
-| Jina | Jina 协议 | jina-search、jina-reader、grounding |
-| 博查 AI | 博查协议 | bocha-web-search、bocha-ai-search |
-| Exa | Exa 协议 | exa-search、exa-contents |
+| Tavily     | Tavily 协议 | tavily-search、tavily-extract      |
+| Jina       | Jina 协议   | jina-search、jina-reader、grounding |
+| 博查 AI      | 博查协议      | bocha-web-search、bocha-ai-search  |
+| Exa        | Exa 协议    | exa-search、exa-contents           |
 
 ### 技能系统
 
@@ -234,20 +235,20 @@
 
 **内置技能：**
 
-| 技能 | 说明 |
-|:--|:--|
-| 天气查询 | 实时天气信息 |
+| 技能   | 说明                 |
+|:-----|:-------------------|
+| 天气查询 | 实时天气信息             |
 | 每日一言 | 励志名言 / 哲理金句 / 唯美句子 |
-| 倒计时 | 日期倒计时计算 |
-| 喝水助手 | 按时间段推荐饮水量 |
-| 诗词推荐 | 古典诗词赏析 |
-| 健康贴士 | 按时段健康建议（早/午/晚） |
-| 运动推荐 | 室内/户外/轻量运动推荐 |
-| 每日英语 | 英语词汇学习（含音标和例句） |
-| 每日一笑 | 笑话 / 段子 |
-| 星座运势 | 每日星座运势 |
-| 农历信息 | 农历日期展示 |
-| 工作汇报 | 工作总结素材 |
+| 倒计时  | 日期倒计时计算            |
+| 喝水助手 | 按时间段推荐饮水量          |
+| 诗词推荐 | 古典诗词赏析             |
+| 健康贴士 | 按时段健康建议（早/午/晚）     |
+| 运动推荐 | 室内/户外/轻量运动推荐       |
+| 每日英语 | 英语词汇学习（含音标和例句）     |
+| 每日一笑 | 笑话 / 段子            |
+| 星座运势 | 每日星座运势             |
+| 农历信息 | 农历日期展示             |
+| 工作汇报 | 工作总结素材             |
 
 **自定义技能类型：** API 调用 / AI 提示词 / 联网搜索 + AI 总结
 
@@ -257,20 +258,20 @@
 
 每个事项可同时启用多个通知渠道，均支持独立配置和发送测试。
 
-| 渠道 | 说明 |
-|:--|:--|
-| 桌面通知 | 自定义浮窗（最多同时 3 条），支持提示音、自动消失、进度条动画 |
-| 邮件 | SMTP 发送，支持 SSL/TLS，多收件人 |
-| Telegram | Bot API 推送，支持多 Chat ID，支持 HTTP 代理 |
-| 企业微信 | 应用消息推送，支持 `@all` 或指定用户 |
-| 企微群机器人 | Webhook 群消息推送 |
-| 微信 | 通过微信机器人（ClawBot）主动推送，扫码登录绑定 |
-| 测试公众号 | 微信公众平台测试号消息推送，支持客服文本消息和模板消息 |
-| 钉钉 | 群机器人 Webhook 推送 |
-| 飞书 | 群机器人 Webhook 推送 |
-| Bark | iOS 推送通知 |
-| Discord | Webhook 推送 |
-| Webhook | 自定义 HTTP 请求（GET/POST/PUT/PATCH），支持自定义 Header 和模板变量 |
+| 渠道       | 说明                                                 |
+|:---------|:---------------------------------------------------|
+| 桌面通知     | 自定义浮窗（最多同时 3 条），支持提示音、自动消失、进度条动画                   |
+| 邮件       | SMTP 发送，支持 SSL/TLS，多收件人                            |
+| Telegram | Bot API 推送，支持多 Chat ID，支持 HTTP 代理                  |
+| 企业微信     | 应用消息推送，支持 `@all` 或指定用户                             |
+| 企微群机器人   | Webhook 群消息推送                                      |
+| 微信       | 通过微信机器人（ClawBot）主动推送，扫码登录绑定                        |
+| 测试公众号    | 微信公众平台测试号消息推送，支持客服文本消息和模板消息                        |
+| 钉钉       | 群机器人 Webhook 推送                                    |
+| 飞书       | 群机器人 Webhook 推送                                    |
+| Bark     | iOS 推送通知                                           |
+| Discord  | Webhook 推送                                         |
+| Webhook  | 自定义 HTTP 请求（GET/POST/PUT/PATCH），支持自定义 Header 和模板变量 |
 
 ### 模型与系统
 
@@ -291,20 +292,20 @@
 
 ## 技术栈
 
-| 分类 | 技术 |
-|:--|:--|
-| 桌面框架 | Electron 33 |
-| 前端 | Vue 3 + TypeScript |
-| 构建 | electron-vite + Vite |
-| UI | Element Plus |
-| 状态管理 | Pinia |
-| 数据库 | sql.js（SQLite），支持 AES-256-GCM 加密 |
-| 节假日 | chinese-days |
-| 邮件 | Nodemailer |
-| 通信 | 本地 HTTP API |
-| HTTP | Axios |
-| 样式 | SCSS |
-| 打包 | electron-builder |
+| 分类   | 技术                               |
+|:-----|:---------------------------------|
+| 桌面框架 | Electron 33                      |
+| 前端   | Vue 3 + TypeScript               |
+| 构建   | electron-vite + Vite             |
+| UI   | Element Plus                     |
+| 状态管理 | Pinia                            |
+| 数据库  | sql.js（SQLite），支持 AES-256-GCM 加密 |
+| 节假日  | chinese-days                     |
+| 邮件   | Nodemailer                       |
+| 通信   | 本地 HTTP API                      |
+| HTTP | Axios                            |
+| 样式   | SCSS                             |
+| 打包   | electron-builder                 |
 
 <br />
 
@@ -407,17 +408,17 @@ docker compose run --rm king-mate
 
 复制 `.env.example` 为 `.env`，按需填写：
 
-| 变量前缀 | 渠道 | 关键配置项 |
-|:--|:--|:--|
-| `KING_EMAIL_*` | 邮件 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `FROM`, `TO` |
-| `KING_TELEGRAM_*` | Telegram | `BOT_TOKEN`, `CHAT_ID`, `PROXY_URL` |
-| `KING_WECHAT_WORK_*` | 企业微信 | `CORP_ID`, `CORP_SECRET`, `AGENT_ID`, `TO_USER` |
-| `KING_WECHAT_WORK_WEBHOOK_*` | 企微群机器人 | `WEBHOOK_URL` |
-| `KING_DINGTALK_*` | 钉钉 | `WEBHOOK_URL`, `SECRET` |
-| `KING_FEISHU_*` | 飞书 | `WEBHOOK_URL` |
-| `KING_BARK_*` | Bark | `SERVER_URL`, `KEY` |
-| `KING_DISCORD_*` | Discord | `WEBHOOK_URL` |
-| `KING_WEBHOOK_*` | 自定义 Webhook | `URL` |
+| 变量前缀                         | 渠道          | 关键配置项                                                            |
+|:-----------------------------|:------------|:-----------------------------------------------------------------|
+| `KING_EMAIL_*`               | 邮件          | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `FROM`, `TO` |
+| `KING_TELEGRAM_*`            | Telegram    | `BOT_TOKEN`, `CHAT_ID`, `PROXY_URL`                              |
+| `KING_WECHAT_WORK_*`         | 企业微信        | `CORP_ID`, `CORP_SECRET`, `AGENT_ID`, `TO_USER`                  |
+| `KING_WECHAT_WORK_WEBHOOK_*` | 企微群机器人      | `WEBHOOK_URL`                                                    |
+| `KING_DINGTALK_*`            | 钉钉          | `WEBHOOK_URL`, `SECRET`                                          |
+| `KING_FEISHU_*`              | 飞书          | `WEBHOOK_URL`                                                    |
+| `KING_BARK_*`                | Bark        | `SERVER_URL`, `KEY`                                              |
+| `KING_DISCORD_*`             | Discord     | `WEBHOOK_URL`                                                    |
+| `KING_WEBHOOK_*`             | 自定义 Webhook | `URL`                                                            |
 
 > 默认不覆盖数据库已有配置。如需强制覆盖，设置 `KING_CONFIG_OVERRIDE=true`。
 
@@ -447,13 +448,13 @@ docker compose down             # 停止并移除容器
 
 ### 环境变量
 
-| 变量 | 默认值 | 说明 |
-|:--|:--|:--|
-| `KING_API_ENABLED` | `true` | API 服务开关 |
-| `KING_API_PORT` | `33333` | API 端口 |
-| `KING_API_TOKEN` | 空 | API 鉴权令牌（留空不鉴权） |
-| `KING_CONFIG_OVERRIDE` | `false` | 是否允许环境变量覆盖数据库已有配置 |
-| `API_HOST` | `0.0.0.0` | API 监听地址 |
+| 变量                     | 默认值       | 说明                |
+|:-----------------------|:----------|:------------------|
+| `KING_API_ENABLED`     | `true`    | API 服务开关          |
+| `KING_API_PORT`        | `33333`   | API 端口            |
+| `KING_API_TOKEN`       | 空         | API 鉴权令牌（留空不鉴权）   |
+| `KING_CONFIG_OVERRIDE` | `false`   | 是否允许环境变量覆盖数据库已有配置 |
+| `API_HOST`             | `0.0.0.0` | API 监听地址          |
 
 <br />
 
@@ -463,17 +464,17 @@ docker compose down             # 停止并移除容器
 
 接口分组：
 
-| 分组 | 接口 |
-|:--|:--|
-| 健康检查 | `GET /api/ping` |
-| 日程事项 | `POST /api/reminders`、`GET /api/reminders`、`GET /api/reminders/stats`、`GET /api/reminders/:id`、`PUT /api/reminders/:id`、`POST /api/reminders/:id/toggle`、`DELETE /api/reminders/:id` |
-| 会议 | `POST /api/meetings`、`GET /api/meetings`、`GET /api/meetings/stats`、`GET /api/meetings/:id`、`PUT /api/meetings/:id`、`POST /api/meetings/:id/status`、`DELETE /api/meetings/:id` |
-| 待办 | `POST /api/todos`、`GET /api/todos`、`GET /api/todos/stats`、`GET /api/todos/:id`、`PUT /api/todos/:id`、`DELETE /api/todos/:id`、`POST /api/todos/:id/toggle`；兼容旧路径 `/api/todo` |
-| AI 对话 | `POST /api/chat` |
-| 模型配置 | `GET /api/models` |
-| 通知配置 | `GET /api/notifications/configs`、`PUT /api/notifications/configs/:channel`、`POST /api/notifications/test/:channel` |
-| 系统设置 | `GET /api/settings`、`PUT /api/settings` |
-| 微信机器人 | `GET /api/wechat-bot/qrcode`、`GET /api/wechat-bot/status`、`POST /api/wechat-bot/login`、`POST /api/wechat-bot/logout`、`POST /api/wechat-bot/toggle` |
+| 分组    | 接口                                                                                                                                                                                   |
+|:------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 健康检查  | `GET /api/ping`                                                                                                                                                                      |
+| 日程事项  | `POST /api/reminders`、`GET /api/reminders`、`GET /api/reminders/stats`、`GET /api/reminders/:id`、`PUT /api/reminders/:id`、`POST /api/reminders/:id/toggle`、`DELETE /api/reminders/:id` |
+| 会议    | `POST /api/meetings`、`GET /api/meetings`、`GET /api/meetings/stats`、`GET /api/meetings/:id`、`PUT /api/meetings/:id`、`POST /api/meetings/:id/status`、`DELETE /api/meetings/:id`        |
+| 待办    | `POST /api/todos`、`GET /api/todos`、`GET /api/todos/stats`、`GET /api/todos/:id`、`PUT /api/todos/:id`、`DELETE /api/todos/:id`、`POST /api/todos/:id/toggle`；兼容旧路径 `/api/todo`           |
+| AI 对话 | `POST /api/chat`                                                                                                                                                                     |
+| 模型配置  | `GET /api/models`                                                                                                                                                                    |
+| 通知配置  | `GET /api/notifications/configs`、`PUT /api/notifications/configs/:channel`、`POST /api/notifications/test/:channel`                                                                   |
+| 系统设置  | `GET /api/settings`、`PUT /api/settings`                                                                                                                                              |
+| 微信机器人 | `GET /api/wechat-bot/qrcode`、`GET /api/wechat-bot/status`、`POST /api/wechat-bot/login`、`POST /api/wechat-bot/logout`、`POST /api/wechat-bot/toggle`                                   |
 
 ```bash
 # 健康检查
@@ -565,11 +566,11 @@ king-mate/
 <summary><b>邮件（SMTP）</b></summary>
 <br />
 
-| 邮箱 | SMTP 服务器 | 端口 | SSL |
-|:--|:--|:--|:--|
-| QQ 邮箱 | smtp.qq.com | 465 | 是 |
-| 163 邮箱 | smtp.163.com | 465 | 是 |
-| Gmail | smtp.gmail.com | 587 | 否 |
+| 邮箱     | SMTP 服务器       | 端口  | SSL |
+|:-------|:---------------|:----|:----|
+| QQ 邮箱  | smtp.qq.com    | 465 | 是   |
+| 163 邮箱 | smtp.163.com   | 465 | 是   |
+| Gmail  | smtp.gmail.com | 587 | 否   |
 
 > 密码字段填写邮箱的**授权码**（非登录密码）。收件人支持多个地址，逗号分隔。
 

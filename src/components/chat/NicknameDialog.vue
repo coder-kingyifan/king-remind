@@ -1,11 +1,11 @@
 <template>
   <el-dialog
-    :model-value="visible"
-    title="编辑称呼"
-    width="400px"
-    :close-on-click-modal="true"
-    :show-close="true"
-    @update:model-value="$emit('update:modelValue', $event)"
+      :model-value="visible"
+      title="编辑称呼"
+      width="400px"
+      :close-on-click-modal="true"
+      :show-close="true"
+      @update:model-value="$emit('update:modelValue', $event)"
   >
     <div class="nickname-intro">
       <div class="nickname-icon">👤</div>
@@ -13,12 +13,12 @@
       <p class="nickname-hint">AI 会用这个昵称呼叫你</p>
     </div>
     <el-input
-      v-model="nickname"
-      placeholder="请输入昵称"
-      maxlength="20"
-      show-word-limit
-      size="large"
-      @keydown.enter="confirm"
+        v-model="nickname"
+        placeholder="请输入昵称"
+        maxlength="20"
+        show-word-limit
+        size="large"
+        @keydown.enter="confirm"
     />
     <template #footer>
       <el-button @click="$emit('update:modelValue', false)">取消</el-button>

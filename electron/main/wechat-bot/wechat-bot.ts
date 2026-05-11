@@ -1,4 +1,4 @@
-import {ILinkAPI, WeixinMessage, QRCodeResult, QRCodeStatus} from './ilink-api'
+import {ILinkAPI, QRCodeResult, QRCodeStatus, WeixinMessage} from './ilink-api'
 import {chatWithLLM} from '../llm'
 import {settingsDb} from '../db/settings'
 import {notificationConfigsDb} from '../db/notification-configs'
@@ -11,7 +11,7 @@ export interface WeChatBotState {
     status: WeChatBotStatus
     nickname?: string
     headImgUrl?: string
-    recentContacts: Array<{uin: string; nickname: string}>
+    recentContacts: Array<{ uin: string; nickname: string }>
     isBound: boolean
 }
 
@@ -31,7 +31,7 @@ class WeChatBot {
     private _initialized: boolean = false
 
     // 每个联系人的对话上下文（简单实现：保留最近几轮）
-    private _chatContexts: Map<string, Array<{role: string; content: string}>> = new Map()
+    private _chatContexts: Map<string, Array<{ role: string; content: string }>> = new Map()
     // 每个联系人对应的 chat session id
     private _chatSessionIds: Map<string, number> = new Map()
     private static MAX_CONTEXT_LENGTH = 20

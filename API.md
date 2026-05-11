@@ -19,11 +19,17 @@ Authorization: Bearer <token>
 ## 统一响应
 
 ```json
-{ "success": true, "data": {} }
+{
+  "success": true,
+  "data": {}
+}
 ```
 
 ```json
-{ "success": false, "error": "错误描述" }
+{
+  "success": false,
+  "error": "错误描述"
+}
 ```
 
 常见状态码：`200` 成功，`400` 参数错误，`401` Token 校验失败，`404` 资源不存在，`500` 服务端错误。
@@ -35,7 +41,10 @@ Authorization: Bearer <token>
 ```json
 {
   "success": true,
-  "data": { "message": "pong", "version": "2.0.2" }
+  "data": {
+    "message": "pong",
+    "version": "2.0.2"
+  }
 }
 ```
 
@@ -45,24 +54,24 @@ Authorization: Bearer <token>
 
 创建提醒。创建成功后调度器会立即检查。
 
-| 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `title` | string | 是 | 提醒标题 |
-| `description` | string | 否 | 提醒说明 |
-| `icon` | string | 否 | 图标，默认 `🔔` |
-| `color` | string | 否 | 十六进制颜色，默认 `#409EFF` |
-| `remind_type` | string | 是 | `interval` 周期提醒，或 `scheduled` 定时提醒 |
-| `start_time` | string | 是 | ISO 8601 时间，如 `2026-05-12T09:00:00` |
-| `end_time` | string | 否 | 结束时间 |
-| `interval_value` | number | 否 | 周期数值，默认 `60` |
-| `interval_unit` | string | 否 | `minutes` / `hours` / `days` / `months` / `years` |
-| `weekdays` | number[] | 否 | 指定星期，`0` 为周日，`1` 为周一 |
-| `workday_only` | boolean | 否 | 仅工作日触发 |
-| `holiday_only` | boolean | 否 | 仅节假日触发 |
-| `lunar_date` | string | 否 | 农历日期，格式 `MM-DD` |
-| `active_hours_start` | string | 否 | 活跃时间开始，格式 `HH:mm` |
-| `active_hours_end` | string | 否 | 活跃时间结束，格式 `HH:mm` |
-| `channels` | string[] | 否 | 默认 `["desktop"]` |
+| 字段                   | 类型       | 必填 | 说明                                                |
+|----------------------|----------|----|---------------------------------------------------|
+| `title`              | string   | 是  | 提醒标题                                              |
+| `description`        | string   | 否  | 提醒说明                                              |
+| `icon`               | string   | 否  | 图标，默认 `🔔`                                        |
+| `color`              | string   | 否  | 十六进制颜色，默认 `#409EFF`                               |
+| `remind_type`        | string   | 是  | `interval` 周期提醒，或 `scheduled` 定时提醒                |
+| `start_time`         | string   | 是  | ISO 8601 时间，如 `2026-05-12T09:00:00`               |
+| `end_time`           | string   | 否  | 结束时间                                              |
+| `interval_value`     | number   | 否  | 周期数值，默认 `60`                                      |
+| `interval_unit`      | string   | 否  | `minutes` / `hours` / `days` / `months` / `years` |
+| `weekdays`           | number[] | 否  | 指定星期，`0` 为周日，`1` 为周一                              |
+| `workday_only`       | boolean  | 否  | 仅工作日触发                                            |
+| `holiday_only`       | boolean  | 否  | 仅节假日触发                                            |
+| `lunar_date`         | string   | 否  | 农历日期，格式 `MM-DD`                                   |
+| `active_hours_start` | string   | 否  | 活跃时间开始，格式 `HH:mm`                                 |
+| `active_hours_end`   | string   | 否  | 活跃时间结束，格式 `HH:mm`                                 |
+| `channels`           | string[] | 否  | 默认 `["desktop"]`                                  |
 
 ```bash
 curl -X POST http://127.0.0.1:33333/api/reminders \
@@ -82,10 +91,10 @@ curl -X POST http://127.0.0.1:33333/api/reminders \
 
 查询提醒列表。
 
-| Query | 说明 |
-| --- | --- |
+| Query       | 说明                |
+|-------------|-------------------|
 | `is_active` | `0` 或 `1`，按启用状态筛选 |
-| `search` | 按标题或说明模糊搜索 |
+| `search`    | 按标题或说明模糊搜索        |
 
 ### GET /api/reminders/stats
 
@@ -113,21 +122,21 @@ curl -X POST http://127.0.0.1:33333/api/reminders \
 
 创建会议。
 
-| 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `title` | string | 是 | 会议标题 |
-| `description` | string | 否 | 会议说明 |
-| `meeting_type` | string | 否 | `regular` / `project` / `adhoc`，默认 `regular` |
-| `status` | string | 否 | `pending` / `ongoing` / `completed`，默认 `pending` |
-| `start_time` | string | 是 | 开始时间，ISO 8601 |
-| `end_time` | string | 否 | 结束时间 |
-| `location` | string | 否 | 地点 |
-| `participants` | string[] | 否 | 参会人 |
-| `minutes` | string | 否 | 会议纪要 |
-| `attachments` | array | 否 | 附件列表 `{ name, path, type, size }` |
-| `recording_path` | string | 否 | 录音路径 |
-| `has_recording` | boolean | 否 | 是否有录音 |
-| `todo_ids` | number[] | 否 | 关联待办 ID |
+| 字段               | 类型       | 必填 | 说明                                               |
+|------------------|----------|----|--------------------------------------------------|
+| `title`          | string   | 是  | 会议标题                                             |
+| `description`    | string   | 否  | 会议说明                                             |
+| `meeting_type`   | string   | 否  | `regular` / `project` / `adhoc`，默认 `regular`     |
+| `status`         | string   | 否  | `pending` / `ongoing` / `completed`，默认 `pending` |
+| `start_time`     | string   | 是  | 开始时间，ISO 8601                                    |
+| `end_time`       | string   | 否  | 结束时间                                             |
+| `location`       | string   | 否  | 地点                                               |
+| `participants`   | string[] | 否  | 参会人                                              |
+| `minutes`        | string   | 否  | 会议纪要                                             |
+| `attachments`    | array    | 否  | 附件列表 `{ name, path, type, size }`                |
+| `recording_path` | string   | 否  | 录音路径                                             |
+| `has_recording`  | boolean  | 否  | 是否有录音                                            |
+| `todo_ids`       | number[] | 否  | 关联待办 ID                                          |
 
 ```bash
 curl -X POST http://127.0.0.1:33333/api/meetings \
@@ -147,13 +156,13 @@ curl -X POST http://127.0.0.1:33333/api/meetings \
 
 查询会议列表。
 
-| Query | 说明 |
-| --- | --- |
-| `status` | 按状态筛选 |
-| `meeting_type` | 按会议类型筛选 |
-| `search` | 按标题、说明、地点搜索 |
-| `start_date` | 开始日期下限，格式 `YYYY-MM-DD` |
-| `end_date` | 开始日期上限，格式 `YYYY-MM-DD` |
+| Query          | 说明                     |
+|----------------|------------------------|
+| `status`       | 按状态筛选                  |
+| `meeting_type` | 按会议类型筛选                |
+| `search`       | 按标题、说明、地点搜索            |
+| `start_date`   | 开始日期下限，格式 `YYYY-MM-DD` |
+| `end_date`     | 开始日期上限，格式 `YYYY-MM-DD` |
 
 ### GET /api/meetings/stats
 
@@ -172,7 +181,9 @@ curl -X POST http://127.0.0.1:33333/api/meetings \
 更新会议状态。
 
 ```json
-{ "status": "completed" }
+{
+  "status": "completed"
+}
 ```
 
 ### DELETE /api/meetings/:id
@@ -187,14 +198,14 @@ curl -X POST http://127.0.0.1:33333/api/meetings \
 
 创建待办。
 
-| 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `title` | string | 是 | 待办标题 |
-| `description` | string | 否 | 描述 |
-| `priority` | string | 否 | `normal` / `high` / `urgent` / `low`，默认 `normal` |
-| `due_date` | string | 否 | 截止日期，格式 `YYYY-MM-DD` |
-| `category` | string | 否 | 分类 |
-| `images` | string[] | 否 | 图片路径列表 |
+| 字段            | 类型       | 必填 | 说明                                               |
+|---------------|----------|----|--------------------------------------------------|
+| `title`       | string   | 是  | 待办标题                                             |
+| `description` | string   | 否  | 描述                                               |
+| `priority`    | string   | 否  | `normal` / `high` / `urgent` / `low`，默认 `normal` |
+| `due_date`    | string   | 否  | 截止日期，格式 `YYYY-MM-DD`                             |
+| `category`    | string   | 否  | 分类                                               |
+| `images`      | string[] | 否  | 图片路径列表                                           |
 
 ```bash
 curl -X POST http://127.0.0.1:33333/api/todos \
@@ -212,11 +223,11 @@ curl -X POST http://127.0.0.1:33333/api/todos \
 
 查询待办列表。
 
-| Query | 说明 |
-| --- | --- |
+| Query       | 说明                |
+|-------------|-------------------|
 | `completed` | `0` 或 `1`，按完成状态筛选 |
-| `category` | 按分类筛选 |
-| `search` | 按标题搜索 |
+| `category`  | 按分类筛选             |
+| `search`    | 按标题搜索             |
 
 ### GET /api/todos/stats
 
@@ -244,11 +255,11 @@ curl -X POST http://127.0.0.1:33333/api/todos \
 
 通过自然语言与 AI 助手对话，AI 可调用工具创建或查询提醒，并可辅助生成技能。
 
-| 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `message` | string | 是 | 用户消息 |
-| `model_config_id` | number | 否 | 模型配置 ID，不传则使用默认模型 |
-| `history` | array | 否 | 对话历史 `[{ "role": "user", "content": "..." }]` |
+| 字段                | 类型     | 必填 | 说明                                            |
+|-------------------|--------|----|-----------------------------------------------|
+| `message`         | string | 是  | 用户消息                                          |
+| `model_config_id` | number | 否  | 模型配置 ID，不传则使用默认模型                             |
+| `history`         | array  | 否  | 对话历史 `[{ "role": "user", "content": "..." }]` |
 
 ```bash
 curl -X POST http://127.0.0.1:33333/api/chat \

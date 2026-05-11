@@ -151,7 +151,7 @@ export class ILinkAPI {
     private botToken: string = ''
     private baseUrl: string = ILINK_BASE_URL
     // 缓存每个用户的 typing_ticket
-    private _typingTickets: Map<string, {ticket: string; expires: number}> = new Map()
+    private _typingTickets: Map<string, { ticket: string; expires: number }> = new Map()
 
     setToken(token: string): void {
         this.botToken = token

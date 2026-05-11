@@ -34,7 +34,9 @@
       </div>
       <!-- 待办进度 -->
       <div v-if="dashStats.todoTotal > 0" class="progress-row">
-        <div class="progress-bar"><div class="progress-fill" :style="{width: todoPercent + '%'}"></div></div>
+        <div class="progress-bar">
+          <div class="progress-fill" :style="{width: todoPercent + '%'}"></div>
+        </div>
         <span class="progress-label">待办完成 {{ dashStats.todoCompleted }}/{{ dashStats.todoTotal }}</span>
       </div>
     </div>
@@ -85,7 +87,9 @@
           <span class="metric-lbl">技能</span>
         </div>
         <div class="metric" @click="router.push('/notifications')">
-          <span class="metric-val">{{ dashStats.enabledChannels }}<span class="dim">/{{ dashStats.totalChannels }}</span></span>
+          <span class="metric-val">{{ dashStats.enabledChannels }}<span class="dim">/{{
+              dashStats.totalChannels
+            }}</span></span>
           <span class="metric-lbl">通知渠道</span>
         </div>
       </div>
@@ -103,20 +107,25 @@
           <el-button type="primary" plain size="small" @click="router.push('/reminders')">创建提醒</el-button>
         </div>
         <div v-else class="reminder-list">
-          <div v-for="reminder in activeReminders.slice(0, 6)" :key="reminder.id" class="reminder-item" :style="{ borderLeftColor: reminder.color }">
+          <div v-for="reminder in activeReminders.slice(0, 6)" :key="reminder.id" class="reminder-item"
+               :style="{ borderLeftColor: reminder.color }">
             <div class="reminder-item-left">
               <span class="reminder-icon">{{ reminder.icon }}</span>
               <div class="reminder-item-info">
                 <span class="reminder-title">{{ reminder.title }}</span>
                 <span class="reminder-meta">
-                  <el-tag :type="reminder.remind_type === 'scheduled' ? 'warning' : 'primary'" size="small" effect="plain">{{ reminder.remind_type === 'scheduled' ? '定时' : '循环' }}</el-tag>
-                  <template v-if="reminder.remind_type === 'interval'">每 {{ reminder.interval_value }} {{ unitLabel(reminder.interval_unit) }}</template>
+                  <el-tag :type="reminder.remind_type === 'scheduled' ? 'warning' : 'primary'" size="small"
+                          effect="plain">{{ reminder.remind_type === 'scheduled' ? '定时' : '循环' }}</el-tag>
+                  <template v-if="reminder.remind_type === 'interval'">每 {{
+                      reminder.interval_value
+                    }} {{ unitLabel(reminder.interval_unit) }}</template>
                   <template v-else>{{ formatTime(reminder.start_time) }}</template>
                 </span>
               </div>
             </div>
             <div class="reminder-item-right">
-              <div class="channel-badges"><span v-for="ch in parseChannels(reminder.channels)" :key="ch" class="channel-badge">
+              <div class="channel-badges"><span v-for="ch in parseChannels(reminder.channels)" :key="ch"
+                                                class="channel-badge">
                 <img v-if="ch === 'wechat_work'" :src="wechatWorkIcon" class="channel-badge-img"/>
                 <img v-else-if="ch === 'wechat_test'" :src="wechatTestIcon" class="channel-badge-img"/>
                 <img v-else-if="ch === 'wechat_bot'" :src="wechatTestIcon" class="channel-badge-img"/>
@@ -124,7 +133,8 @@
                 <img v-else-if="ch === 'feishu'" :src="feishuIcon" class="channel-badge-img"/>
                 <template v-else>{{ channelIcon(ch) }}</template>
               </span></div>
-              <el-switch :model-value="reminder.is_active === 1" size="small" @change="() => remindersStore.toggleReminder(reminder.id)"/>
+              <el-switch :model-value="reminder.is_active === 1" size="small"
+                         @change="() => remindersStore.toggleReminder(reminder.id)"/>
             </div>
           </div>
         </div>
@@ -137,7 +147,9 @@
         <div v-else class="log-list">
           <div v-for="log in recentLogs" :key="log.id" class="log-item-wrapper">
             <div class="log-item">
-              <span class="log-status" :class="log.status">{{ log.reminder_icon || (log.status === 'sent' ? '✓' : '✗') }}</span>
+              <span class="log-status" :class="log.status">{{
+                  log.reminder_icon || (log.status === 'sent' ? '✓' : '✗')
+                }}</span>
               <span class="log-title">{{ log.reminder_title || '未知' }}</span>
               <span class="log-channel">
                 <img v-if="log.channel === 'wechat_work'" :src="wechatWorkIcon" class="channel-badge-img"/>
@@ -148,11 +160,14 @@
                 <template v-else>{{ channelIcon(log.channel) }}</template>
               </span>
               <span class="log-time">{{ formatTime(log.sent_at) }}</span>
-              <span v-if="log.status === 'failed' && log.error_message" class="log-expand-arrow" :class="{ expanded: expandedErrors[log.id] }" @click="toggleLogError(log.id)">
+              <span v-if="log.status === 'failed' && log.error_message" class="log-expand-arrow"
+                    :class="{ expanded: expandedErrors[log.id] }" @click="toggleLogError(log.id)">
                 <el-icon :size="14"><ArrowDown/></el-icon>
               </span>
             </div>
-            <div v-if="log.status === 'failed' && log.error_message && expandedErrors[log.id]" class="log-error-detail">{{ log.error_message }}</div>
+            <div v-if="log.status === 'failed' && log.error_message && expandedErrors[log.id]" class="log-error-detail">
+              {{ log.error_message }}
+            </div>
           </div>
         </div>
       </div>
@@ -161,7 +176,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, onUnmounted, onActivated, onDeactivated, reactive, ref} from 'vue'
+import {computed, onActivated, onDeactivated, onMounted, onUnmounted, reactive, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {useRemindersStore} from '@/stores/reminders'
 import {useSettingsStore} from '@/stores/settings'
@@ -195,12 +210,20 @@ const todoPercent = computed(() => {
   return todoTotal === 0 ? 0 : Math.round((todoCompleted / todoTotal) * 100)
 })
 
-function toggleLogError(id: number) { expandedErrors[id] = !expandedErrors[id] }
+function toggleLogError(id: number) {
+  expandedErrors[id] = !expandedErrors[id]
+}
 
 async function refreshData() {
   await remindersStore.fetchReminders()
-  try { dashStats.value = await window.electronAPI.dashboard.stats() } catch {}
-  try { recentLogs.value = await window.electronAPI.logs.recent(10) } catch {}
+  try {
+    dashStats.value = await window.electronAPI.dashboard.stats()
+  } catch {
+  }
+  try {
+    recentLogs.value = await window.electronAPI.logs.recent(10)
+  } catch {
+  }
 }
 
 const activeReminders = computed(() => remindersStore.reminders.filter(r => r.is_active === 1))
@@ -227,92 +250,396 @@ const nextReminderText = computed(() => {
   return `${Math.round(diff / 86400000)}天`
 })
 
-function unitLabel(unit: string): string { return ({minutes: '分钟', hours: '小时', days: '天', months: '月', years: '年'} as any)[unit] || unit }
-function parseChannels(channels: string): string[] { try { return JSON.parse(channels) } catch { return ['desktop'] } }
-function channelIcon(key: string): string { return CHANNELS.find(c => c.key === key)?.icon || '📌' }
+function unitLabel(unit: string): string {
+  return ({minutes: '分钟', hours: '小时', days: '天', months: '月', years: '年'} as any)[unit] || unit
+}
+
+function parseChannels(channels: string): string[] {
+  try {
+    return JSON.parse(channels)
+  } catch {
+    return ['desktop']
+  }
+}
+
+function channelIcon(key: string): string {
+  return CHANNELS.find(c => c.key === key)?.icon || '📌'
+}
+
 function formatTime(iso: string): string {
   const d = new Date(iso), now = new Date()
-  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'})
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
   return d.toLocaleString('zh-CN', {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'})
 }
 
-onMounted(async () => { await refreshData(); window.electronAPI.notifications.onShow(() => refreshData()) })
-onActivated(() => { refreshData(); if (!refreshTimer) refreshTimer = setInterval(refreshData, 30000) })
-onDeactivated(() => { if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null } })
-onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
+onMounted(async () => {
+  await refreshData();
+  window.electronAPI.notifications.onShow(() => refreshData())
+})
+onActivated(() => {
+  refreshData();
+  if (!refreshTimer) refreshTimer = setInterval(refreshData, 30000)
+})
+onDeactivated(() => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+    refreshTimer = null
+  }
+})
+onUnmounted(() => {
+  if (refreshTimer) clearInterval(refreshTimer)
+})
 </script>
 
 <style scoped>
-.dashboard { max-width: 960px; }
+.dashboard {
+  max-width: 960px;
+}
 
-.page-header { margin-bottom: 24px; }
-.page-title { font-size: 22px; font-weight: 600; color: var(--text-primary); margin: 0; }
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
 
 /* 分组 */
-.section { margin-bottom: 24px; }
-.section-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-.section-icon { font-size: 16px; }
-.section-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.section {
+  margin-bottom: 24px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.section-icon {
+  font-size: 16px;
+}
+
+.section-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
 
 /* 指标行 - Linear 风格 */
-.metric-row { display: flex; gap: 32px; flex-wrap: wrap; padding-left: 24px; }
-.metric { display: flex; flex-direction: column; gap: 2px; cursor: pointer; min-width: 60px; }
-.metric:hover .metric-val { color: var(--color-primary); }
-.metric-val { font-size: 24px; font-weight: 700; color: var(--text-primary); line-height: 1.2; transition: color .15s; }
-.metric-val.warn { color: var(--color-danger); }
-.metric-val.dim { color: var(--text-secondary); font-size: 20px; }
-.metric-val .dim { font-size: 14px; font-weight: 400; color: var(--text-tertiary); }
-.metric-lbl { font-size: 12px; color: var(--text-tertiary); }
+.metric-row {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  padding-left: 24px;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+  min-width: 60px;
+}
+
+.metric:hover .metric-val {
+  color: var(--color-primary);
+}
+
+.metric-val {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+  transition: color .15s;
+}
+
+.metric-val.warn {
+  color: var(--color-danger);
+}
+
+.metric-val.dim {
+  color: var(--text-secondary);
+  font-size: 20px;
+}
+
+.metric-val .dim {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+
+.metric-lbl {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
 
 /* 进度条 */
-.progress-row { display: flex; align-items: center; gap: 12px; padding-left: 24px; margin-top: 12px; }
-.progress-bar { width: 200px; height: 4px; background: var(--bg-tertiary); border-radius: 2px; overflow: hidden; }
-.progress-fill { height: 100%; background: linear-gradient(90deg, var(--color-primary), #67C23A); border-radius: 2px; transition: width .4s; }
-.progress-label { font-size: 12px; color: var(--text-tertiary); }
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-left: 24px;
+  margin-top: 12px;
+}
+
+.progress-bar {
+  width: 200px;
+  height: 4px;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), #67C23A);
+  border-radius: 2px;
+  transition: width .4s;
+}
+
+.progress-label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
 
 /* 两栏 */
-.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.section-title { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
 
 /* 提醒列表 */
-.reminder-list { display: flex; flex-direction: column; gap: 8px; }
-.reminder-item { background: var(--bg-card); border: 1px solid var(--border-color-light); border-left: 3px solid; border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; transition: all 0.2s ease; }
-.reminder-item:hover { box-shadow: var(--shadow-sm); }
-.reminder-item-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-.reminder-icon { font-size: 18px; flex-shrink: 0; }
-.reminder-item-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.reminder-title { font-size: 14px; font-weight: 500; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.reminder-meta { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; }
-.reminder-item-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.channel-badges { display: flex; gap: 2px; }
-.channel-badge { font-size: 13px; }
-.channel-badge-img { width: 14px; height: 14px; border-radius: 2px; vertical-align: middle; }
+.reminder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reminder-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color-light);
+  border-left: 3px solid;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.reminder-item:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.reminder-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.reminder-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.reminder-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reminder-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reminder-item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.channel-badges {
+  display: flex;
+  gap: 2px;
+}
+
+.channel-badge {
+  font-size: 13px;
+}
+
+.channel-badge-img {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
 
 /* 空状态 */
-.empty-state { background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: 12px; padding: 40px; text-align: center; }
-.empty-state.small { padding: 28px; }
-.empty-text { color: var(--text-tertiary); font-size: 13px; margin-bottom: 12px; }
+.empty-state {
+  background: var(--bg-card);
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+}
+
+.empty-state.small {
+  padding: 28px;
+}
+
+.empty-text {
+  color: var(--text-tertiary);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
 
 /* 日志列表 */
-.log-list { background: var(--bg-card); border: 1px solid var(--border-color-light); border-radius: 10px; overflow: hidden; }
-.log-item { display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 13px; }
-.log-status { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
-.log-status.sent { background: rgba(103, 194, 58, 0.1); color: #67C23A; }
-.log-status.failed { background: rgba(245, 108, 108, 0.1); color: #F56C6C; }
-.log-title { flex: 1; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-.log-channel { font-size: 13px; flex-shrink: 0; }
-.log-time { color: var(--text-tertiary); font-size: 11px; white-space: nowrap; flex-shrink: 0; }
-.log-expand-arrow { cursor: pointer; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0; color: var(--text-tertiary); transition: all 0.2s ease; }
-.log-expand-arrow:hover { background: var(--bg-hover); color: var(--text-secondary); }
-.log-expand-arrow .el-icon { transition: transform 0.2s ease; }
-.log-expand-arrow.expanded .el-icon { transform: rotate(180deg); }
-.log-item-wrapper { border-bottom: 1px solid var(--border-color-light); }
-.log-item-wrapper:last-child { border-bottom: none; }
-.log-error-detail { padding: 6px 14px 10px 40px; font-size: 12px; color: #F56C6C; background: rgba(245, 108, 108, 0.04); line-height: 1.5; word-break: break-all; }
+.log-list {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color-light);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.log-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.log-status {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.log-status.sent {
+  background: rgba(103, 194, 58, 0.1);
+  color: #67C23A;
+}
+
+.log-status.failed {
+  background: rgba(245, 108, 108, 0.1);
+  color: #F56C6C;
+}
+
+.log-title {
+  flex: 1;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.log-channel {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.log-time {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.log-expand-arrow {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  transition: all 0.2s ease;
+}
+
+.log-expand-arrow:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.log-expand-arrow .el-icon {
+  transition: transform 0.2s ease;
+}
+
+.log-expand-arrow.expanded .el-icon {
+  transform: rotate(180deg);
+}
+
+.log-item-wrapper {
+  border-bottom: 1px solid var(--border-color-light);
+}
+
+.log-item-wrapper:last-child {
+  border-bottom: none;
+}
+
+.log-error-detail {
+  padding: 6px 14px 10px 40px;
+  font-size: 12px;
+  color: #F56C6C;
+  background: rgba(245, 108, 108, 0.04);
+  line-height: 1.5;
+  word-break: break-all;
+}
 
 @media (max-width: 800px) {
-  .two-col { grid-template-columns: 1fr; }
-  .metric-row { gap: 20px; }
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-row {
+    gap: 20px;
+  }
 }
 </style>

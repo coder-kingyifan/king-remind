@@ -1,12 +1,7 @@
 import {app, BrowserWindow, shell} from 'electron'
 import {join} from 'path'
 import {is} from '@electron-toolkit/utils'
-import {
-    closeDatabase,
-    initDatabase,
-    isDatabaseEncrypted,
-    loadEncryptionKey
-} from './db/connection'
+import {closeDatabase, initDatabase, isDatabaseEncrypted, loadEncryptionKey} from './db/connection'
 import {runMigrations} from './db/migrations'
 import {createTray, destroyTray} from './tray'
 import {registerIpcHandlers} from './ipc-handlers'

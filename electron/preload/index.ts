@@ -57,7 +57,7 @@ const electronAPI = {
         getAll: () => safeInvoke('settings:get-all'),
         get: (key: string) => safeInvoke('settings:get', key),
         set: (key: string, value: string) => safeInvoke('settings:set', key, value),
-        setNetworkProxy: (config: {mode: 'system' | 'direct' | 'custom'; proxyUrl: string}) =>
+        setNetworkProxy: (config: { mode: 'system' | 'direct' | 'custom'; proxyUrl: string }) =>
             safeInvoke('settings:set-network-proxy', config),
         testNetworkProxy: () => safeInvoke('settings:test-network-proxy')
     },
@@ -240,7 +240,7 @@ const electronAPI = {
         saveRecording: (dataUrl: string, meetingId?: number) =>
             safeInvoke('meetings:save-recording', dataUrl, meetingId),
         aiSummarize: (meetingId: number) => safeInvoke('meetings:ai-summarize', meetingId),
-        aiChat: (meetingId: number, question: string, chatHistory?: Array<{role: string; content: string}>) =>
+        aiChat: (meetingId: number, question: string, chatHistory?: Array<{ role: string; content: string }>) =>
             safeInvoke('meetings:ai-chat', meetingId, question, chatHistory),
         // 分段
         segments: {

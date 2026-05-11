@@ -3,32 +3,44 @@ import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'fs'
 import {extname, isAbsolute, join} from 'path'
 import {remindersDb} from './db/reminders'
 import {notificationConfigsDb} from './db/notification-configs'
-import {selectNotificationSoundFile, previewNotificationSound} from './notifications/notification-window'
+import {previewNotificationSound, selectNotificationSoundFile} from './notifications/notification-window'
 import {settingsDb} from './db/settings'
 import {reminderLogsDb} from './db/reminder-logs'
 import {workdaysDb} from './db/workdays'
 import {NotificationDispatcher} from './notifications/dispatcher'
 import {getSolarDateFromLunar} from 'chinese-days'
-import {chatWithLLM, generateSessionTitle, PROVIDERS, testModelConnection, hasTextModelConfigured, hasSearchModelConfigured} from './llm'
+import {
+    chatWithLLM,
+    generateSessionTitle,
+    hasSearchModelConfigured,
+    hasTextModelConfigured,
+    PROVIDERS,
+    testModelConnection
+} from './llm'
 import {chatHistoryDb} from './db/chat-history'
 import {modelConfigsDb} from './db/model-configs'
 import {skillsDb} from './db/skills'
 import {skillContentDb} from './db/skill-content'
 import {startApiServer, stopApiServer} from './api-server'
-import {ReminderScheduler} from './scheduler'
 import {updateTrayAlwaysOnTop} from './tray'
 import {
     isDatabaseEncrypted,
-    setEncryptionPassword,
     removeEncryption as removeDbEncryption,
-    saveDatabase
+    saveDatabase,
+    setEncryptionPassword
 } from './db/connection'
 import {weChatBot} from './wechat-bot/wechat-bot'
 import {checkForUpdate} from './updater'
 import {todosDb} from './db/todos'
 import {meetingsDb} from './db/meetings'
 import {meetingSegmentsDb} from './db/meeting-segments'
-import {createRealtimeSttSession, hasFileSttConfig, hasRealtimeSttConfig, transcribeAudio, type RealtimeSttSession} from './stt'
+import {
+    createRealtimeSttSession,
+    hasFileSttConfig,
+    hasRealtimeSttConfig,
+    type RealtimeSttSession,
+    transcribeAudio
+} from './stt'
 import {saveNetworkProxyConfig, testNetworkProxy} from './network-proxy'
 
 // sql.js 返回的对象可能含有不可被 structured clone 序列化的属性（如 Uint8Array 等）
@@ -135,7 +147,10 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
         return true
     })
 
-    safeHandle('settings:set-network-proxy', async (_event, config: {mode: 'system' | 'direct' | 'custom'; proxyUrl: string}) => {
+    safeHandle('settings:set-network-proxy', async (_event, config: {
+        mode: 'system' | 'direct' | 'custom';
+        proxyUrl: string
+    }) => {
         await saveNetworkProxyConfig(config)
         return true
     })
@@ -387,15 +402,15 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
                 }])
             }
             if (result.reply) {
-                chatHistoryDb.appendToSession(_sessionId, [{ role: 'assistant', content: result.reply }])
+                chatHistoryDb.appendToSession(_sessionId, [{role: 'assistant', content: result.reply}])
             }
         } else {
             const lastUser = messages[messages.length - 1]
             if (lastUser?.role === 'user') {
-                chatHistoryDb.append([{ role: 'user', content: stripImages(lastUser.content) }])
+                chatHistoryDb.append([{role: 'user', content: stripImages(lastUser.content)}])
             }
             if (result.reply) {
-                chatHistoryDb.append([{ role: 'assistant', content: result.reply }])
+                chatHistoryDb.append([{role: 'assistant', content: result.reply}])
             }
         }
         return result
@@ -462,7 +477,9 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
                             const ext = extname(p).slice(1)
                             const mime = mimeMap[ext] || 'image/png'
                             return `data:${mime};base64,${buf.toString('base64')}`
-                        } catch { return p }
+                        } catch {
+                            return p
+                        }
                     }
                     return p
                 })
@@ -482,7 +499,10 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
 
             const now = new Date()
             const hour = now.getHours()
-            const dateInfo = `${now.toLocaleDateString('zh-CN', {timeZone: 'Asia/Shanghai'})} ${now.toLocaleDateString('zh-CN', {timeZone: 'Asia/Shanghai', weekday: 'long'})} ${now.toLocaleTimeString('zh-CN', {timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit'})}`
+            const dateInfo = `${now.toLocaleDateString('zh-CN', {timeZone: 'Asia/Shanghai'})} ${now.toLocaleDateString('zh-CN', {
+                timeZone: 'Asia/Shanghai',
+                weekday: 'long'
+            })} ${now.toLocaleTimeString('zh-CN', {timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit'})}`
             const period = hour < 6 ? '凌晨' : hour < 12 ? '早上' : hour < 14 ? '中午' : hour < 18 ? '下午' : '晚上'
 
             // 并行生成问候和建议
@@ -499,9 +519,10 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
             try {
                 const arr = JSON.parse(r2.reply?.trim() || '[]')
                 if (Array.isArray(arr) && arr.length > 0) suggestions = arr.filter((s: any) => typeof s === 'string' && s.length > 0)
-            } catch { /* ignore */ }
+            } catch { /* ignore */
+            }
 
-            return { encouragement, suggestions }
+            return {encouragement, suggestions}
         } catch {
             return null
         }
@@ -654,7 +675,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
         const port = settingsDb.get('api_port') || '33333'
         const host = settingsDb.get('api_host') || '0.0.0.0'
         const token = settingsDb.get('api_token') || ''
-        return { enabled: enabled === 'true', port, host, token }
+        return {enabled: enabled === 'true', port, host, token}
     })
 
     // ========== API 接口控制 ==========
@@ -897,7 +918,8 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, dispatcher: Notif
         try {
             const participants = JSON.parse(meeting.participants || '[]')
             if (participants.length) content += `参会人：${participants.join('、')}\n`
-        } catch {}
+        } catch {
+        }
         if (meeting.minutes) content += `\n会议记录：\n${meeting.minutes}\n`
         const prompt = `请对以下会议内容进行分析，生成结构化摘要。请用 JSON 格式返回，包含以下字段：
 - topics: 议题列表（字符串数组）
@@ -919,7 +941,8 @@ ${content}`
             if (jsonMatch) {
                 summary = JSON.parse(jsonMatch[0])
             }
-        } catch {}
+        } catch {
+        }
 
         if (summary) {
             meetingsDb.update(meetingId, {ai_summary: summary})
@@ -928,7 +951,10 @@ ${content}`
     })
 
     // AI 会议问答
-    safeHandle('meetings:ai-chat', async (_event, meetingId: number, question: string, chatHistory?: Array<{role: string; content: string}>) => {
+    safeHandle('meetings:ai-chat', async (_event, meetingId: number, question: string, chatHistory?: Array<{
+        role: string;
+        content: string
+    }>) => {
         const meeting = meetingsDb.get(meetingId)
         if (!meeting) throw new Error('会议不存在')
 
@@ -945,17 +971,22 @@ ${content}`
         try {
             const participants = JSON.parse(meeting.participants || '[]')
             if (participants.length) meetingContext += `参会人：${participants.join('、')}\n`
-        } catch {}
+        } catch {
+        }
         if (meeting.minutes) meetingContext += `\n会议记录：\n${meeting.minutes}\n`
         if (meeting.ai_summary) {
             try {
                 const summary = typeof meeting.ai_summary === 'string' ? JSON.parse(meeting.ai_summary) : meeting.ai_summary
                 meetingContext += `\nAI 摘要：${JSON.stringify(summary, null, 2)}\n`
-            } catch {}
+            } catch {
+            }
         }
 
-        const systemMsg = {role: 'system', content: `你是一个会议助手。请根据以下会议内容回答用户的问题。如果问题不在会议内容范围内，请说明。\n\n${meetingContext}`}
-        const messages: Array<{role: string; content: string}> = [systemMsg as any]
+        const systemMsg = {
+            role: 'system',
+            content: `你是一个会议助手。请根据以下会议内容回答用户的问题。如果问题不在会议内容范围内，请说明。\n\n${meetingContext}`
+        }
+        const messages: Array<{ role: string; content: string }> = [systemMsg as any]
         if (chatHistory && chatHistory.length) {
             messages.push(...chatHistory)
         }

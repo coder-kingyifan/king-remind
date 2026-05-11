@@ -39,11 +39,13 @@
                 @change="(val: boolean) => handleToggle(channel.key, val)"
             />
             <el-tooltip
-              v-if="channel.key !== 'desktop' && !isConfigured(channel.key)"
-              :content="channel.key === 'wechat_bot' ? '请先连接微信后再启用' : '请先配置后再启用'"
-              placement="top"
+                v-if="channel.key !== 'desktop' && !isConfigured(channel.key)"
+                :content="channel.key === 'wechat_bot' ? '请先连接微信后再启用' : '请先配置后再启用'"
+                placement="top"
             >
-              <el-icon :size="14" class="config-warn-icon"><WarningFilled/></el-icon>
+              <el-icon :size="14" class="config-warn-icon">
+                <WarningFilled/>
+              </el-icon>
             </el-tooltip>
             <span
                 v-if="(notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key) || channel.key === 'wechat_bot') && channel.key !== 'desktop'"
@@ -62,8 +64,9 @@
         </div>
 
         <!-- 邮件配置 -->
-        <div v-if="channel.key === 'email' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['email']"
-             class="channel-config">
+        <div
+            v-if="channel.key === 'email' && (notificationsStore.isEnabled(channel.key) || !isConfigured(channel.key)) && expandedChannels['email']"
+            class="channel-config">
           <el-form :model="emailConfig" label-position="top" size="small">
             <div class="config-row">
               <el-form-item label="SMTP 服务器">
@@ -311,7 +314,9 @@
               <li>访问 <b>微信公众平台测试号</b>（mp.weixin.qq.com/debug/cgi-bin/sandbox?t=sandbox/login）扫码登录</li>
               <li>获取 <b>appID</b> 和 <b>appsecret</b>，填写到下方</li>
               <li>关注测试号二维码，获取 <b>用户 OpenID</b>（多个用逗号分隔）</li>
-              <li>如需模板消息：在测试号页面点击"新增测试模板"，模板内容格式如 <code v-pre>{{first.DATA}}</code> <code v-pre>{{keyword1.DATA}}</code> <code v-pre>{{remark.DATA}}</code>，每个 <code v-pre>{{xxx.DATA}}</code> 对应下方一个字段名 <code>xxx</code></li>
+              <li>如需模板消息：在测试号页面点击"新增测试模板"，模板内容格式如 <code v-pre>{{first.DATA}}</code> <code
+                  v-pre>{{keyword1.DATA}}</code> <code v-pre>{{remark.DATA}}</code>，每个 <code v-pre>{{xxx.DATA}}</code>
+                对应下方一个字段名 <code>xxx</code></li>
             </ol>
           </div>
           <el-form :model="wechatTestConfig" label-position="top" size="small">
@@ -346,15 +351,19 @@
                   <span class="template-header-title">模板字段</span>
                 </div>
                 <div class="template-vars-tip">
-                  对应微信模板中的变量：<code>字段名</code> 就是模板里 <code v-pre>{{xxx.DATA}}</code> 中的 <code>xxx</code>，<code>字段值</code> 支持变量
-                  <code v-pre>{{title}}</code> <code v-pre>{{body}}</code> <code v-pre>{{icon}}</code> <code v-pre>{{time}}</code> <code v-pre>{{app_name}}</code>，<code>颜色</code> 可点击色块选择（可留空）
+                  对应微信模板中的变量：<code>字段名</code> 就是模板里 <code v-pre>{{xxx.DATA}}</code> 中的
+                  <code>xxx</code>，<code>字段值</code> 支持变量
+                  <code v-pre>{{title}}</code> <code v-pre>{{body}}</code> <code v-pre>{{icon}}</code> <code v-pre>{{time}}</code>
+                  <code v-pre>{{app_name}}</code>，<code>颜色</code> 可点击色块选择（可留空）
                 </div>
                 <div class="template-example">
-                  例：微信模板内容为 <code v-pre>{{first.DATA}} 标题：{{keyword1.DATA}} {{remark.DATA}}</code>，则下方填 3 行：first / keyword1 / remark
+                  例：微信模板内容为 <code v-pre>{{first.DATA}} 标题：{{keyword1.DATA}} {{remark.DATA}}</code>，则下方填 3
+                  行：first / keyword1 / remark
                 </div>
                 <div v-for="(field, index) in wechatTestTemplateFields" :key="index" class="template-field-row">
                   <el-input v-model="field.key" placeholder="字段名，如 keyword1" class="field-key"/>
-                  <el-input v-model="field.value" placeholder="字段值，如 &#123;&#123;title&#125;&#125;" class="field-value"/>
+                  <el-input v-model="field.value" placeholder="字段值，如 &#123;&#123;title&#125;&#125;"
+                            class="field-value"/>
                   <el-color-picker v-model="field.color" size="small" class="field-color" show-alpha/>
                   <el-button :icon="Delete" size="small" circle @click="wechatTestTemplateFields.splice(index, 1)"/>
                 </div>
@@ -498,7 +507,8 @@
             <div class="config-actions">
               <el-button size="small" @click="saveConfig('dingtalk', dingtalkConfig)">保存配置</el-button>
               <el-button size="small" type="success" plain :loading="testing === 'dingtalk'"
-                         @click="testChannel('dingtalk')">发送测试</el-button>
+                         @click="testChannel('dingtalk')">发送测试
+              </el-button>
             </div>
           </el-form>
         </div>
@@ -545,7 +555,8 @@
             <div class="config-actions">
               <el-button size="small" @click="saveConfig('feishu', feishuConfig)">保存配置</el-button>
               <el-button size="small" type="success" plain :loading="testing === 'feishu'"
-                         @click="testChannel('feishu')">发送测试</el-button>
+                         @click="testChannel('feishu')">发送测试
+              </el-button>
             </div>
           </el-form>
         </div>
@@ -581,7 +592,8 @@
             <div class="config-actions">
               <el-button size="small" @click="saveConfig('bark', barkConfig)">保存配置</el-button>
               <el-button size="small" type="success" plain :loading="testing === 'bark'"
-                         @click="testChannel('bark')">发送测试</el-button>
+                         @click="testChannel('bark')">发送测试
+              </el-button>
             </div>
           </el-form>
         </div>
@@ -631,7 +643,8 @@
             <div class="config-actions">
               <el-button size="small" @click="saveConfig('discord', discordConfig)">保存配置</el-button>
               <el-button size="small" type="success" plain :loading="testing === 'discord'"
-                         @click="testChannel('discord')">发送测试</el-button>
+                         @click="testChannel('discord')">发送测试
+              </el-button>
             </div>
           </el-form>
         </div>
@@ -698,7 +711,7 @@ import {onActivated, onMounted, reactive, ref, watch} from 'vue'
 import {useNotificationsStore} from '@/stores/notifications'
 import {CHANNELS} from '@/types/notification'
 import {ElMessage} from 'element-plus'
-import {ArrowDown, WarningFilled, Delete} from '@element-plus/icons-vue'
+import {ArrowDown, Delete, WarningFilled} from '@element-plus/icons-vue'
 import wechatWorkIcon from '@/../resources/wechat-work.png'
 import wechatTestIcon from '@/../resources/wechat.png'
 import dingtalkIcon from '@/../resources/dingding.ico'
@@ -767,7 +780,7 @@ const wechatTestConfig = ref({
   template_url: '',
   message_template: ''
 })
-const wechatTestTemplateFields = ref<Array<{key: string; value: string; color: string}>>([
+const wechatTestTemplateFields = ref<Array<{ key: string; value: string; color: string }>>([
   {key: 'first', value: '{{icon}} {{title}}', color: ''},
   {key: 'keyword1', value: '{{body}}', color: ''},
   {key: 'remark', value: '{{app_name}} · {{time}}', color: ''}

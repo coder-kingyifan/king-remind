@@ -7,21 +7,21 @@
 
       <div class="unlock-form" @keydown.enter="unlock">
         <el-input
-          v-model="password"
-          type="password"
-          placeholder="请输入数据库密码"
-          size="large"
-          show-password
-          :disabled="loading"
+            v-model="password"
+            type="password"
+            placeholder="请输入数据库密码"
+            size="large"
+            show-password
+            :disabled="loading"
         />
         <div v-if="errorMsg" class="unlock-error">{{ errorMsg }}</div>
         <el-button
-          type="primary"
-          size="large"
-          :loading="loading"
-          :disabled="!password.trim()"
-          @click="unlock"
-          style="width: 100%;"
+            type="primary"
+            size="large"
+            :loading="loading"
+            :disabled="!password.trim()"
+            @click="unlock"
+            style="width: 100%;"
         >
           解锁
         </el-button>

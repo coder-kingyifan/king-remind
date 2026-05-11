@@ -22,21 +22,25 @@
 
     <div class="sidebar-bottom">
       <div
-        class="nav-item"
-        :class="{ active: route.path === '/thanks' }"
-        @click="router.push('/thanks')"
+          class="nav-item"
+          :class="{ active: route.path === '/thanks' }"
+          @click="router.push('/thanks')"
       >
         <el-tooltip content="鸣谢" placement="right" :show-after="400">
-          <el-icon :size="20"><GoldMedal/></el-icon>
+          <el-icon :size="20">
+            <GoldMedal/>
+          </el-icon>
         </el-tooltip>
       </div>
       <div
-        class="nav-item"
-        :class="{ active: route.path.startsWith('/settings') || route.path === '/model-config' || route.path === '/notifications' }"
-        @click="router.push('/settings')"
+          class="nav-item"
+          :class="{ active: route.path.startsWith('/settings') || route.path === '/model-config' || route.path === '/notifications' }"
+          @click="router.push('/settings')"
       >
         <el-tooltip content="设置" placement="right" :show-after="400">
-          <el-icon :size="20"><Setting/></el-icon>
+          <el-icon :size="20">
+            <Setting/>
+          </el-icon>
         </el-tooltip>
       </div>
     </div>
@@ -47,7 +51,17 @@
 import {computed} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {useSettingsStore} from '@/stores/settings'
-import {Bell, Calendar, ChatDotRound, GoldMedal, Odometer, Setting, HomeFilled, List, Memo} from '@element-plus/icons-vue'
+import {
+  Bell,
+  Calendar,
+  ChatDotRound,
+  GoldMedal,
+  HomeFilled,
+  List,
+  Memo,
+  Odometer,
+  Setting
+} from '@element-plus/icons-vue'
 import logoIcon from '../../../resources/icon.png'
 
 const route = useRoute()

@@ -28,10 +28,13 @@
       </div>
 
       <div v-if="donations.length" class="donation-list">
-        <article v-for="item in donations" :key="itemKey(item)" class="donation-row" :class="{ featured: item.highlight }">
+        <article v-for="item in donations" :key="itemKey(item)" class="donation-row"
+                 :class="{ featured: item.highlight }">
           <div class="donation-line">
             <span class="donation-mainline">
-              <a v-if="item.link" :href="item.link" target="_blank" rel="noreferrer" class="donor-name">{{ item.name }}</a>
+              <a v-if="item.link" :href="item.link" target="_blank" rel="noreferrer" class="donor-name">{{
+                  item.name
+                }}</a>
               <span v-else class="donor-name">{{ item.name }}</span>
               <span class="donation-action">{{ item.platform ? `通过${item.platform}` : '' }}打赏：</span>
               <span class="donation-amount">{{ item.amount || '一份支持' }}</span>
@@ -60,18 +63,18 @@ import wechatpayImg from '@/../resources/wechatpay.jpg'
 import gzhqcodeImg from '@/../docs/gzhqcode.jpg'
 
 interface DonationItem {
-    name: string
-    message?: string
-    amount?: string
-    date?: string
-    link?: string
-    platform?: string
-    highlight?: boolean
+  name: string
+  message?: string
+  amount?: string
+  date?: string
+  link?: string
+  platform?: string
+  highlight?: boolean
 }
 
 interface AcknowledgementsData {
-    updatedAt?: string
-    donations: DonationItem[]
+  updatedAt?: string
+  donations: DonationItem[]
 }
 
 const REMOTE_ACKNOWLEDGEMENTS_URL = 'https://raw.githubusercontent.com/coder-kingyifan/king-mate/master/docs/acknowledgements.json'
@@ -87,120 +90,120 @@ const tipPreviewSrc = ref('')
 const donations = computed(() => acknowledgements.value.donations)
 
 function createFallbackData(): AcknowledgementsData {
-    return {
-        updatedAt: '2026-05-10',
-        donations: []
-    }
+  return {
+    updatedAt: '2026-05-10',
+    donations: []
+  }
 }
 
 function itemKey(item: DonationItem) {
-    return `${item.name}-${item.amount || item.date || item.message || ''}`
+  return `${item.name}-${item.amount || item.date || item.message || ''}`
 }
 
 function withCacheBuster(url: string) {
-    const separator = url.includes('?') ? '&' : '?'
-    return `${url}${separator}t=${Date.now()}`
+  const separator = url.includes('?') ? '&' : '?'
+  return `${url}${separator}t=${Date.now()}`
 }
 
 function normalizeAmount(value: unknown): string | undefined {
-    if (typeof value === 'number' && Number.isFinite(value)) return `￥${value}`
-    if (typeof value === 'string' && value.trim()) return value.trim()
-    return undefined
+  if (typeof value === 'number' && Number.isFinite(value)) return `￥${value}`
+  if (typeof value === 'string' && value.trim()) return value.trim()
+  return undefined
 }
 
 function normalizeItem(value: unknown): DonationItem | null {
-    if (!value || typeof value !== 'object') return null
-    const raw = value as Record<string, unknown>
-    const name = typeof raw.name === 'string' ? raw.name.trim() : ''
-    if (!name) return null
+  if (!value || typeof value !== 'object') return null
+  const raw = value as Record<string, unknown>
+  const name = typeof raw.name === 'string' ? raw.name.trim() : ''
+  if (!name) return null
 
-    const item: DonationItem = {name}
-    const amount = normalizeAmount(raw.amount)
-    if (amount) item.amount = amount
-    if (typeof raw.message === 'string' && raw.message.trim()) item.message = raw.message.trim()
-    if (typeof raw.date === 'string' && raw.date.trim()) item.date = raw.date.trim()
-    if (typeof raw.platform === 'string' && raw.platform.trim()) item.platform = raw.platform.trim()
-    if (typeof raw.link === 'string' && /^https?:\/\//.test(raw.link)) item.link = raw.link
-    if (typeof raw.highlight === 'boolean') item.highlight = raw.highlight
-    return item
+  const item: DonationItem = {name}
+  const amount = normalizeAmount(raw.amount)
+  if (amount) item.amount = amount
+  if (typeof raw.message === 'string' && raw.message.trim()) item.message = raw.message.trim()
+  if (typeof raw.date === 'string' && raw.date.trim()) item.date = raw.date.trim()
+  if (typeof raw.platform === 'string' && raw.platform.trim()) item.platform = raw.platform.trim()
+  if (typeof raw.link === 'string' && /^https?:\/\//.test(raw.link)) item.link = raw.link
+  if (typeof raw.highlight === 'boolean') item.highlight = raw.highlight
+  return item
 }
 
 function normalizeItems(value: unknown): DonationItem[] {
-    if (!Array.isArray(value)) return []
-    return value.map(normalizeItem).filter((item): item is DonationItem => !!item)
+  if (!Array.isArray(value)) return []
+  return value.map(normalizeItem).filter((item): item is DonationItem => !!item)
 }
 
 function normalizeData(value: unknown): AcknowledgementsData {
-    if (!value || typeof value !== 'object') {
-        throw new Error('invalid acknowledgement data')
-    }
+  if (!value || typeof value !== 'object') {
+    throw new Error('invalid acknowledgement data')
+  }
 
-    const raw = value as Record<string, unknown>
-    const rawDonations = Array.isArray(raw.donations) ? raw.donations : raw.supporters
-    return {
-        updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : undefined,
-        donations: normalizeItems(rawDonations)
-    }
+  const raw = value as Record<string, unknown>
+  const rawDonations = Array.isArray(raw.donations) ? raw.donations : raw.supporters
+  return {
+    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : undefined,
+    donations: normalizeItems(rawDonations)
+  }
 }
 
 async function fetchAcknowledgements(url: string) {
-    const controller = new AbortController()
-    const timer = window.setTimeout(() => controller.abort(), 8000)
+  const controller = new AbortController()
+  const timer = window.setTimeout(() => controller.abort(), 8000)
 
-    try {
-        const response = await fetch(withCacheBuster(url), {
-            cache: 'no-store',
-            signal: controller.signal
-        })
-        if (!response.ok) {
-            throw new Error('failed to load acknowledgements')
-        }
-        return normalizeData(await response.json())
-    } finally {
-        window.clearTimeout(timer)
+  try {
+    const response = await fetch(withCacheBuster(url), {
+      cache: 'no-store',
+      signal: controller.signal
+    })
+    if (!response.ok) {
+      throw new Error('failed to load acknowledgements')
     }
+    return normalizeData(await response.json())
+  } finally {
+    window.clearTimeout(timer)
+  }
 }
 
 async function loadAcknowledgements() {
-    if (loading.value) return
-    loading.value = true
+  if (loading.value) return
+  loading.value = true
 
+  try {
+    acknowledgements.value = await fetchAcknowledgements(REMOTE_ACKNOWLEDGEMENTS_URL)
+  } catch {
     try {
-        acknowledgements.value = await fetchAcknowledgements(REMOTE_ACKNOWLEDGEMENTS_URL)
+      acknowledgements.value = await fetchAcknowledgements(LOCAL_ACKNOWLEDGEMENTS_URL)
     } catch {
-        try {
-            acknowledgements.value = await fetchAcknowledgements(LOCAL_ACKNOWLEDGEMENTS_URL)
-        } catch {
-            acknowledgements.value = createFallbackData()
-        }
-    } finally {
-        lastLoadedAt.value = Date.now()
-        loading.value = false
+      acknowledgements.value = createFallbackData()
     }
+  } finally {
+    lastLoadedAt.value = Date.now()
+    loading.value = false
+  }
 }
 
 function openTipPreview(src: string) {
-    tipPreviewSrc.value = src
-    tipPreviewVisible.value = true
+  tipPreviewSrc.value = src
+  tipPreviewVisible.value = true
 }
 
 function formatDateTime(value: string) {
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return value
-    return date.toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    })
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 onMounted(loadAcknowledgements)
 onActivated(() => {
-    if (!lastLoadedAt.value || Date.now() - lastLoadedAt.value > REFRESH_INTERVAL) {
-        loadAcknowledgements()
-    }
+  if (!lastLoadedAt.value || Date.now() - lastLoadedAt.value > REFRESH_INTERVAL) {
+    loadAcknowledgements()
+  }
 })
 </script>
 

@@ -101,12 +101,30 @@ export const meetingSegmentsDb = {
     }>): MeetingSegmentRow | undefined {
         const fields: string[] = []
         const params: any[] = []
-        if (data.segment_type !== undefined) { fields.push('segment_type = ?'); params.push(data.segment_type) }
-        if (data.content !== undefined) { fields.push('content = ?'); params.push(data.content) }
-        if (data.speaker !== undefined) { fields.push('speaker = ?'); params.push(data.speaker) }
-        if (data.sort_order !== undefined) { fields.push('sort_order = ?'); params.push(data.sort_order) }
-        if (data.start_time !== undefined) { fields.push('start_time = ?'); params.push(data.start_time) }
-        if (data.end_time !== undefined) { fields.push('end_time = ?'); params.push(data.end_time) }
+        if (data.segment_type !== undefined) {
+            fields.push('segment_type = ?');
+            params.push(data.segment_type)
+        }
+        if (data.content !== undefined) {
+            fields.push('content = ?');
+            params.push(data.content)
+        }
+        if (data.speaker !== undefined) {
+            fields.push('speaker = ?');
+            params.push(data.speaker)
+        }
+        if (data.sort_order !== undefined) {
+            fields.push('sort_order = ?');
+            params.push(data.sort_order)
+        }
+        if (data.start_time !== undefined) {
+            fields.push('start_time = ?');
+            params.push(data.start_time)
+        }
+        if (data.end_time !== undefined) {
+            fields.push('end_time = ?');
+            params.push(data.end_time)
+        }
         if (fields.length === 0) return undefined
         params.push(id)
         run(`UPDATE meeting_segments SET ${fields.join(', ')} WHERE id = ?`, params)

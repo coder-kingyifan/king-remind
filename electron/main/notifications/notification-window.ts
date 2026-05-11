@@ -1,4 +1,4 @@
-import {BrowserWindow, screen, dialog} from 'electron'
+import {BrowserWindow, dialog, screen} from 'electron'
 import {join} from 'path'
 import {existsSync} from 'fs'
 import {execFile} from 'child_process'
@@ -66,7 +66,11 @@ foreach ($s in $sounds) {
     }
 }
 `
-        execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', psCmd], {timeout: 5000, windowsHide: true}, () => {})
+        execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', psCmd], {
+            timeout: 5000,
+            windowsHide: true
+        }, () => {
+        })
     } catch {
         const soundPath = getNotificationSoundPath()
         if (existsSync(soundPath)) playSoundFile(soundPath)
@@ -87,8 +91,13 @@ $player.Play()
 Start-Sleep -Milliseconds ($player.NaturalDuration.TimeSpan.TotalMilliseconds + 200)
 $player.Close()
 `
-        execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', psCmd], {timeout: 15000, windowsHide: true}, () => {})
-    } catch { /* ignore */ }
+        execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', psCmd], {
+            timeout: 15000,
+            windowsHide: true
+        }, () => {
+        })
+    } catch { /* ignore */
+    }
 }
 
 /** 打开文件选择对话框，选择自定义提示音文件 */
@@ -121,7 +130,13 @@ function getNotificationDuration(): number {
 // 当前显示的浮窗列表
 const activeNotifications: FloatNotification[] = []
 
-function getNotificationHTML(data: { title: string; body: string; icon: string; color: string; duration: number }): string {
+function getNotificationHTML(data: {
+    title: string;
+    body: string;
+    icon: string;
+    color: string;
+    duration: number
+}): string {
     const {title, body, icon, color, duration} = data
     // 转义 HTML
     const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -306,7 +321,7 @@ function repositionAll(): void {
         if (notif.window.isDestroyed()) continue
         const x = workAreaRight - NOTIFICATION_WIDTH - NOTIFICATION_GAP
         const y = workAreaBottom - notif.height - offsetY
-        notif.window.setBounds({ x: Math.round(x), y: Math.round(y), width: NOTIFICATION_WIDTH, height: notif.height })
+        notif.window.setBounds({x: Math.round(x), y: Math.round(y), width: NOTIFICATION_WIDTH, height: notif.height})
         offsetY += notif.height + NOTIFICATION_GAP
     }
 }

@@ -7,11 +7,15 @@
       </div>
       <div class="header-actions">
         <el-button type="primary" @click="router.push('/skill-store')">
-          <el-icon><ShoppingBag/></el-icon>
+          <el-icon>
+            <ShoppingBag/>
+          </el-icon>
           技能商店
         </el-button>
         <el-button @click="openCreateDialog">
-          <el-icon><Plus/></el-icon>
+          <el-icon>
+            <Plus/>
+          </el-icon>
           新建技能
         </el-button>
       </div>
@@ -21,33 +25,35 @@
     <div class="filter-bar">
       <div class="filter-chips">
         <span
-          class="chip"
-          :class="{ active: activeCategory === 'all' }"
-          @click="activeCategory = 'all'"
+            class="chip"
+            :class="{ active: activeCategory === 'all' }"
+            @click="activeCategory = 'all'"
         >全部 {{ enabledCount }}</span>
         <span
-          v-for="cat in SKILL_CATEGORIES"
-          :key="cat.key"
-          class="chip"
-          :class="{ active: activeCategory === cat.key }"
-          @click="activeCategory = cat.key"
+            v-for="cat in SKILL_CATEGORIES"
+            :key="cat.key"
+            class="chip"
+            :class="{ active: activeCategory === cat.key }"
+            @click="activeCategory = cat.key"
         >{{ cat.icon }} {{ cat.label }}</span>
       </div>
       <div class="filter-right">
-        <el-checkbox v-model="showDisabled" label="显示已禁用" size="small" />
+        <el-checkbox v-model="showDisabled" label="显示已禁用" size="small"/>
         <el-input
-          v-model="searchText"
-          placeholder="搜索技能..."
-          prefix-icon="Search"
-          clearable
-          style="width: 200px;"
+            v-model="searchText"
+            placeholder="搜索技能..."
+            prefix-icon="Search"
+            clearable
+            style="width: 200px;"
         />
       </div>
     </div>
 
     <!-- 加载态 -->
     <div v-if="skillsStore.loading" class="state-wrap">
-      <el-icon class="loading-icon" :size="26"><Loading /></el-icon>
+      <el-icon class="loading-icon" :size="26">
+        <Loading/>
+      </el-icon>
       <span>加载中...</span>
     </div>
 
@@ -64,18 +70,18 @@
     <!-- 技能网格 -->
     <div v-else class="skill-grid">
       <div
-        v-for="skill in filteredSkills"
-        :key="skill.skill_key"
-        class="skill-card"
-        :class="{ disabled: skill.is_enabled === 0 }"
+          v-for="skill in filteredSkills"
+          :key="skill.skill_key"
+          class="skill-card"
+          :class="{ disabled: skill.is_enabled === 0 }"
       >
-        <div class="card-bar" :style="{ background: categoryGradient(skill.category) }" />
+        <div class="card-bar" :style="{ background: categoryGradient(skill.category) }"/>
         <div class="card-top">
           <div class="card-icon" :style="{ background: categoryGradient(skill.category) }">{{ skill.icon }}</div>
           <el-switch
-            :model-value="skill.is_enabled === 1"
-            size="small"
-            @change="() => skillsStore.toggleSkill(skill.id)"
+              :model-value="skill.is_enabled === 1"
+              size="small"
+              @change="() => skillsStore.toggleSkill(skill.id)"
           />
         </div>
         <div class="card-name">{{ skill.name }}</div>
@@ -83,9 +89,13 @@
         <div class="card-bottom">
           <div class="card-tags">
             <el-tag v-if="skill.store_source" size="small" effect="plain" round>商店</el-tag>
-            <el-tag v-else-if="skill.action_type === 'api_call'" size="small" type="success" effect="plain" round>API</el-tag>
-            <el-tag v-else-if="skill.action_type === 'ai_prompt'" size="small" type="warning" effect="plain" round>AI</el-tag>
-            <el-tag v-else-if="skill.action_type === 'search_and_summarize'" size="small" type="danger" effect="plain" round>搜索</el-tag>
+            <el-tag v-else-if="skill.action_type === 'api_call'" size="small" type="success" effect="plain" round>API
+            </el-tag>
+            <el-tag v-else-if="skill.action_type === 'ai_prompt'" size="small" type="warning" effect="plain" round>AI
+            </el-tag>
+            <el-tag v-else-if="skill.action_type === 'search_and_summarize'" size="small" type="danger" effect="plain"
+                    round>搜索
+            </el-tag>
             <el-tag v-else size="small" type="info" effect="plain" round>自定义</el-tag>
           </div>
           <div class="card-btns">
@@ -100,19 +110,20 @@
 
     <!-- 配置对话框 -->
     <el-dialog
-      v-if="configDialogInited"
-      v-model="configDialogVisible"
-      :title="`配置 - ${configuringSkill?.name || ''}`"
-      width="480px"
-      :close-on-click-modal="false"
+        v-if="configDialogInited"
+        v-model="configDialogVisible"
+        :title="`配置 - ${configuringSkill?.name || ''}`"
+        width="480px"
+        :close-on-click-modal="false"
     >
       <div v-if="configFields.length > 0">
         <el-form label-position="top">
           <el-form-item v-for="field in configFields" :key="field.key" :label="field.label">
-            <el-input v-if="field.type === 'string'" v-model="configForm[field.key]" :placeholder="field.placeholder || ''" />
-            <el-input-number v-else-if="field.type === 'number'" v-model="configForm[field.key]" style="width: 100%;" />
+            <el-input v-if="field.type === 'string'" v-model="configForm[field.key]"
+                      :placeholder="field.placeholder || ''"/>
+            <el-input-number v-else-if="field.type === 'number'" v-model="configForm[field.key]" style="width: 100%;"/>
             <el-select v-else-if="field.type === 'select'" v-model="configForm[field.key]" style="width: 100%;">
-              <el-option v-for="opt in field.options" :key="String(opt.value)" :label="opt.label" :value="opt.value" />
+              <el-option v-for="opt in field.options" :key="String(opt.value)" :label="opt.label" :value="opt.value"/>
             </el-select>
           </el-form-item>
         </el-form>
@@ -127,7 +138,8 @@
     </el-dialog>
 
     <!-- 创建/编辑对话框 -->
-    <SkillForm v-if="createDialogVisible" v-model:visible="createDialogVisible" :skill="editingSkill" @saved="handleSaved" />
+    <SkillForm v-if="createDialogVisible" v-model:visible="createDialogVisible" :skill="editingSkill"
+               @saved="handleSaved"/>
 
     <!-- 测试结果对话框 -->
     <el-dialog v-if="testDialogVisible" v-model="testDialogVisible" title="技能测试结果" width="500px">
@@ -137,7 +149,9 @@
           <el-tag v-if="testResult" type="success" size="small">成功</el-tag>
         </div>
         <div v-if="testing" class="test-loading">
-          <el-icon class="is-loading" :size="20"><Loading/></el-icon>
+          <el-icon class="is-loading" :size="20">
+            <Loading/>
+          </el-icon>
           <span>执行中...</span>
         </div>
         <div v-else-if="testResult" class="test-content">{{ testResult }}</div>
@@ -155,8 +169,8 @@ import {computed, onActivated, onMounted, reactive, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {useSkillsStore} from '@/stores/skills'
 import {Delete, Edit, Loading, Plus, Setting, ShoppingBag, VideoPlay} from '@element-plus/icons-vue'
-import {SKILL_CATEGORIES} from '@/types/skill'
 import type {Skill, SkillConfigField} from '@/types/skill'
+import {SKILL_CATEGORIES} from '@/types/skill'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import SkillForm from '@/components/skill/SkillForm.vue'
 
@@ -175,6 +189,7 @@ const GRADIENTS: Record<string, string> = {
   tools: 'linear-gradient(135deg, #81ecec, #00cec9)',
   custom: 'linear-gradient(135deg, #fd79a8, #e84393)'
 }
+
 function categoryGradient(key: string): string {
   return GRADIENTS[key] || GRADIENTS.custom
 }
@@ -232,7 +247,10 @@ function openConfigDialog(skill: Skill) {
     configFields.value = []
   }
   let uc: Record<string, any> = {}
-  try { uc = JSON.parse(skill.user_config || '{}') } catch { /* ignore */ }
+  try {
+    uc = JSON.parse(skill.user_config || '{}')
+  } catch { /* ignore */
+  }
   for (const key of Object.keys(configForm)) delete configForm[key]
   for (const field of configFields.value) {
     configForm[field.key] = uc[field.key] !== undefined ? uc[field.key] : field.default
@@ -259,12 +277,13 @@ function editSkill(skill: Skill) {
 
 function deleteSkill(skill: Skill) {
   ElMessageBox.confirm(
-    `确定要删除技能「${skill.name}」吗？`, '删除确认',
-    {confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'}
+      `确定要删除技能「${skill.name}」吗？`, '删除确认',
+      {confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'}
   ).then(() => {
     skillsStore.deleteSkill(skill.id)
     ElMessage.success('删除成功')
-  }).catch(() => {})
+  }).catch(() => {
+  })
 }
 
 function handleSaved() {
@@ -604,12 +623,11 @@ onActivated(() => {
   border-radius: 2px;
   background: rgba(108, 92, 231, .35);
   transform: translateX(-50%);
-  box-shadow:
-    22px 12px 0 rgba(108, 92, 231, .35),
-    22px 34px 0 rgba(108, 92, 231, .35),
-    0px 44px 0 rgba(108, 92, 231, .35),
-    -22px 34px 0 rgba(108, 92, 231, .35),
-    -22px 12px 0 rgba(108, 92, 231, .35);
+  box-shadow: 22px 12px 0 rgba(108, 92, 231, .35),
+  22px 34px 0 rgba(108, 92, 231, .35),
+  0px 44px 0 rgba(108, 92, 231, .35),
+  -22px 34px 0 rgba(108, 92, 231, .35),
+  -22px 12px 0 rgba(108, 92, 231, .35);
   content: '';
 }
 
@@ -630,7 +648,10 @@ onActivated(() => {
 }
 
 /* 测试结果 */
-.test-result { min-height: 80px; }
+.test-result {
+  min-height: 80px;
+}
+
 .test-header {
   display: flex;
   align-items: center;
@@ -638,6 +659,7 @@ onActivated(() => {
   margin-bottom: 12px;
   font-weight: 600;
 }
+
 .test-loading {
   display: flex;
   align-items: center;
@@ -646,6 +668,7 @@ onActivated(() => {
   padding: 30px;
   color: var(--text-tertiary);
 }
+
 .test-content {
   background: var(--bg-card);
   border: 1px solid var(--border-color-light);

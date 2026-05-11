@@ -564,16 +564,29 @@ const OPENAI_TOOLS = [
                         enum: ['minutes', 'hours', 'days', 'months', 'years'],
                         description: '周期单位'
                     },
-                    weekdays: {type: 'array', items: {type: 'number'}, description: '指定星期几触发 0=周日~6=周六，如 [1,3,5]。与 workday_only 互斥，不能同时设置'},
-                    workday_only: {type: 'boolean', description: '仅中国法定工作日触发（自动识别法定节假日和调休补班，无需手动设 weekdays）。与 weekdays 互斥'},
+                    weekdays: {
+                        type: 'array',
+                        items: {type: 'number'},
+                        description: '指定星期几触发 0=周日~6=周六，如 [1,3,5]。与 workday_only 互斥，不能同时设置'
+                    },
+                    workday_only: {
+                        type: 'boolean',
+                        description: '仅中国法定工作日触发（自动识别法定节假日和调休补班，无需手动设 weekdays）。与 weekdays 互斥'
+                    },
                     holiday_only: {type: 'boolean', description: '仅法定节假日触发'},
                     icon: {type: 'string', description: 'emoji 图标'},
                     active_hours_start: {type: 'string', description: '活跃时段开始 HH:mm'},
                     active_hours_end: {type: 'string', description: '活跃时段结束 HH:mm'},
                     lunar_date: {type: 'string', description: '农历日期，格式 "MM-DD"，如 "09-03" 表示农历九月初三'},
                     channels: {type: 'array', items: {type: 'string'}, description: '通知渠道'},
-                    skill_id: {type: 'number', description: '绑定的技能ID，可选。绑定后每次触发时会先执行技能获取动态内容'},
-                    force_create: {type: 'boolean', description: '是否强制创建（跳过重复检查），用户确认重复创建时设为 true'}
+                    skill_id: {
+                        type: 'number',
+                        description: '绑定的技能ID，可选。绑定后每次触发时会先执行技能获取动态内容'
+                    },
+                    force_create: {
+                        type: 'boolean',
+                        description: '是否强制创建（跳过重复检查），用户确认重复创建时设为 true'
+                    }
                 }
             }
         }
@@ -1023,7 +1036,7 @@ async function chatOpenAIStream(
                     role = 'user'
                     const text = typeof content === 'string' ? content
                         : Array.isArray(content) ? content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('\n')
-                        : ''
+                            : ''
                     content = text ? [{type: 'text', text: `[AI]: ${text}`}] : []
                 } else if (typeof content === 'string') {
                     content = content ? [{type: 'text', text: content}] : []
@@ -1594,7 +1607,8 @@ function resolveDoubaoRealtimeHeaders(data: {
     if (apiKey.startsWith('{')) {
         try {
             parsed = JSON.parse(apiKey)
-        } catch {}
+        } catch {
+        }
     } else if (apiKey.includes('=')) {
         parsed = parseKeyValueSecret(apiKey)
     }

@@ -4,10 +4,10 @@
       <!-- 步骤指示器 -->
       <div class="setup-steps">
         <div
-          v-for="(step, idx) in steps"
-          :key="idx"
-          class="setup-step-dot"
-          :class="{ active: currentStep === idx, done: currentStep > idx }"
+            v-for="(step, idx) in steps"
+            :key="idx"
+            class="setup-step-dot"
+            :class="{ active: currentStep === idx, done: currentStep > idx }"
         />
       </div>
 
@@ -20,12 +20,12 @@
           <div class="setup-field">
             <label class="setup-label">怎么称呼你？</label>
             <el-input
-              v-model="nickname"
-              placeholder="请输入你的昵称"
-              maxlength="20"
-              show-word-limit
-              size="large"
-              @keydown.enter="nextStep"
+                v-model="nickname"
+                placeholder="请输入你的昵称"
+                maxlength="20"
+                show-word-limit
+                size="large"
+                @keydown.enter="nextStep"
             />
           </div>
         </div>
@@ -38,9 +38,9 @@
         <p class="setup-desc">根据你的需求选择合适的模式，后续可在设置中切换</p>
         <div class="setup-form">
           <div
-            class="role-card"
-            :class="{ active: appMode === 'simple' }"
-            @click="appMode = 'simple'"
+              class="role-card"
+              :class="{ active: appMode === 'simple' }"
+              @click="appMode = 'simple'"
           >
             <div class="role-card-icon">🔔</div>
             <div class="role-card-body">
@@ -57,9 +57,9 @@
           </div>
 
           <div
-            class="role-card"
-            :class="{ active: appMode === 'ai' }"
-            @click="appMode = 'ai'"
+              class="role-card"
+              :class="{ active: appMode === 'ai' }"
+              @click="appMode = 'ai'"
           >
             <div class="role-card-icon">🤖</div>
             <div class="role-card-body">
@@ -81,7 +81,9 @@
             <span class="tip-icon">💡</span>
             <div class="tip-content">
               <div class="tip-title">使用 AI 模式需要准备大模型 API Key</div>
-              <div class="tip-desc">支持 OpenAI、DeepSeek、通义千问、Kimi 等主流大模型服务商。进入应用后请在「模型配置」中添加你的 API Key。</div>
+              <div class="tip-desc">支持 OpenAI、DeepSeek、通义千问、Kimi 等主流大模型服务商。进入应用后请在「模型配置」中添加你的
+                API Key。
+              </div>
             </div>
           </div>
         </div>
@@ -96,22 +98,22 @@
           <div class="setup-field">
             <label class="setup-label">数据库加密密码</label>
             <el-input
-              v-model="dbPassword"
-              type="password"
-              placeholder="设置密码以加密数据库"
-              size="large"
-              show-password
+                v-model="dbPassword"
+                type="password"
+                placeholder="设置密码以加密数据库"
+                size="large"
+                show-password
             />
             <div class="setup-sublabel">留空则不加密。建议设置密码以保护你的隐私数据，密码将用于加密本地数据库文件</div>
           </div>
           <div v-if="dbPassword" class="setup-field">
             <label class="setup-label">确认密码</label>
             <el-input
-              v-model="dbPasswordConfirm"
-              type="password"
-              placeholder="再次输入密码确认"
-              size="large"
-              show-password
+                v-model="dbPasswordConfirm"
+                type="password"
+                placeholder="再次输入密码确认"
+                size="large"
+                show-password
             />
           </div>
           <div v-if="dbPassword && dbPasswordConfirm && dbPassword !== dbPasswordConfirm" class="setup-error">
@@ -121,7 +123,9 @@
             <span class="tip-icon">ℹ️</span>
             <div class="tip-content">
               <div class="tip-title">关于数据库加密</div>
-              <div class="tip-desc">密码设置后，数据库文件将被加密存储。请务必牢记此密码，忘记密码将无法恢复数据。如需修改或移除加密，可在后续「系统设置」中操作。</div>
+              <div class="tip-desc">
+                密码设置后，数据库文件将被加密存储。请务必牢记此密码，忘记密码将无法恢复数据。如需修改或移除加密，可在后续「系统设置」中操作。
+              </div>
             </div>
           </div>
         </div>
@@ -159,7 +163,7 @@
       <!-- 底部按钮 -->
       <div class="setup-actions">
         <el-button v-if="currentStep > 0" @click="prevStep">上一步</el-button>
-        <div style="flex:1;" />
+        <div style="flex:1;"/>
         <el-button v-if="currentStep < steps.length - 1" type="primary" @click="nextStep" :disabled="!canNext">
           下一步
         </el-button>
@@ -172,7 +176,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import {computed, ref} from 'vue'
 
 const emit = defineEmits<{
   (e: 'finish', data: {

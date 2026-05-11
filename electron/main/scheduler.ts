@@ -2,7 +2,6 @@ import {Reminder, remindersDb} from './db/reminders'
 import {workdaysDb} from './db/workdays'
 import {getSolarDateFromLunar} from 'chinese-days'
 import {NotificationDispatcher} from './notifications/dispatcher'
-import {skillsDb} from './db/skills'
 import {executeSkill} from './skills/executor'
 import {todosDb} from './db/todos'
 import {settingsDb} from './db/settings'
@@ -147,7 +146,8 @@ export class ReminderScheduler {
             try {
                 const raw = settingsDb.get('todo_notify_channels')
                 if (raw) channels = JSON.parse(raw)
-            } catch {}
+            } catch {
+            }
 
             const titles = dueToday.map((t: any) => t.title).join('、')
             this.dispatcher.sendToChannels(channels, {
@@ -190,7 +190,8 @@ export class ReminderScheduler {
             try {
                 const raw = settingsDb.get('todo_summary_channels')
                 if (raw) channels = JSON.parse(raw)
-            } catch {}
+            } catch {
+            }
 
             // 按分类汇总
             const catMap = new Map<string, number>()

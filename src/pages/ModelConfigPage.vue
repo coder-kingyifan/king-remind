@@ -6,7 +6,9 @@
         <p class="page-subtitle">管理 AI 模型，对话时可切换</p>
       </div>
       <el-button type="primary" @click="openForm()">
-        <el-icon><Plus/></el-icon>
+        <el-icon>
+          <Plus/>
+        </el-icon>
         添加模型
       </el-button>
     </div>
@@ -14,11 +16,11 @@
     <!-- 模型类型分组 -->
     <div class="type-tabs">
       <div
-        v-for="tab in typeTabs"
-        :key="tab.value"
-        class="type-tab"
-        :class="{ active: activeType === tab.value }"
-        @click="activeType = tab.value"
+          v-for="tab in typeTabs"
+          :key="tab.value"
+          class="type-tab"
+          :class="{ active: activeType === tab.value }"
+          @click="activeType = tab.value"
       >
         <span class="type-tab-icon">{{ tab.icon }}</span>
         <span class="type-tab-label">{{ tab.label }}</span>
@@ -39,12 +41,13 @@
             <div class="model-meta">{{ getProviderName(cfg.provider) }} &middot; {{ cfg.base_url || '未配置' }}</div>
             <div class="model-tags" v-if="parseModels(cfg.models).length">
               <el-tag
-                v-for="m in parseModels(cfg.models)"
-                :key="m"
-                size="small"
-                :type="m === cfg.model ? 'primary' : (isModelMultimodal(m, cfg.model_notes) ? 'warning' : 'info')"
-                class="model-tag"
-              >{{ m }}</el-tag>
+                  v-for="m in parseModels(cfg.models)"
+                  :key="m"
+                  size="small"
+                  :type="m === cfg.model ? 'primary' : (isModelMultimodal(m, cfg.model_notes) ? 'warning' : 'info')"
+                  class="model-tag"
+              >{{ m }}
+              </el-tag>
             </div>
           </div>
         </div>
@@ -62,10 +65,10 @@
 
     <!-- 编辑弹窗 -->
     <el-dialog
-      v-model="showForm"
-      :title="editingId ? '编辑模型' : '添加模型'"
-      width="580px"
-      :close-on-click-modal="false"
+        v-model="showForm"
+        :title="editingId ? '编辑模型' : '添加模型'"
+        width="580px"
+        :close-on-click-modal="false"
     >
       <el-form :model="form" label-position="top" size="default">
         <div class="form-row">
@@ -87,37 +90,41 @@
         </el-form-item>
 
         <!-- 对话模型才显示模型列表 -->
-        <el-form-item v-if="form.model_type !== 'web_search'" :label="isSttModelType(form.model_type) ? '实时转写模型名称' : '模型列表'" required>
+        <el-form-item v-if="form.model_type !== 'web_search'"
+                      :label="isSttModelType(form.model_type) ? '实时转写模型名称' : '模型列表'" required>
           <div class="model-input-list">
             <div class="model-list-header">
-              <span class="model-list-hint">{{ isSttModelType(form.model_type) ? '语音模型名称：实时填 realtime，批量按服务商填写' : '点击左侧星标设为默认模型，勾选多模态可识别图片' }}</span>
+              <span class="model-list-hint">{{
+                  isSttModelType(form.model_type) ? '语音模型名称：实时填 realtime，批量按服务商填写' : '点击左侧星标设为默认模型，勾选多模态可识别图片'
+                }}</span>
             </div>
             <div v-for="(m, idx) in form.models" :key="idx" class="model-input-row">
               <span
-                class="model-default-star"
-                :class="{ active: form.defaultModelIndex === idx }"
-                @click="form.defaultModelIndex = idx"
-                :title="form.defaultModelIndex === idx ? '当前默认模型' : '点击设为默认'"
+                  class="model-default-star"
+                  :class="{ active: form.defaultModelIndex === idx }"
+                  @click="form.defaultModelIndex = idx"
+                  :title="form.defaultModelIndex === idx ? '当前默认模型' : '点击设为默认'"
               >{{ form.defaultModelIndex === idx ? '\u2605' : '\u2606' }}</span>
               <el-input
-                v-model="form.models[idx]"
-                placeholder="输入模型名称"
-                @keydown.enter.prevent="addModelInput"
-                style="flex: 1;"
+                  v-model="form.models[idx]"
+                  placeholder="输入模型名称"
+                  @keydown.enter.prevent="addModelInput"
+                  style="flex: 1;"
               />
               <el-checkbox
-                v-if="form.model_type !== 'stt'"
-                :model-value="form.modelMultimodal[idx]"
-                @change="(val: boolean) => form.modelMultimodal[idx] = val"
-              >多模态</el-checkbox>
+                  v-if="form.model_type !== 'stt'"
+                  :model-value="form.modelMultimodal[idx]"
+                  @change="(val: boolean) => form.modelMultimodal[idx] = val"
+              >多模态
+              </el-checkbox>
               <el-button
-                v-if="form.models.length > 1"
-                :icon="Minus"
-                circle
-                size="small"
-                plain
-                type="danger"
-                @click="removeModelInput(idx)"
+                  v-if="form.models.length > 1"
+                  :icon="Minus"
+                  circle
+                  size="small"
+                  plain
+                  type="danger"
+                  @click="removeModelInput(idx)"
               />
             </div>
             <el-button size="small" plain @click="addModelInput" style="margin-top: 4px;">
@@ -230,9 +237,11 @@ const STT_PROVIDERS = [...REALTIME_STT_PROVIDERS, ...FILE_STT_PROVIDERS]
 function isRealtimeStt(c: ModelConfigRow): boolean {
   return c.model_type === 'realtime_stt' || (c.model_type === 'stt' && REALTIME_STT_PROVIDERS.includes(c.provider))
 }
+
 function isFileStt(c: ModelConfigRow): boolean {
   return c.model_type === 'file_stt' || (c.model_type === 'stt' && FILE_STT_PROVIDERS.includes(c.provider))
 }
+
 function isSttModelType(type: string): boolean {
   return type === 'stt' || type === 'realtime_stt' || type === 'file_stt'
 }
@@ -258,10 +267,10 @@ const filteredConfigs = computed(() => {
 })
 
 const currentProviderPreset = computed(() =>
-  providers.value.find(p => p.id === form.value.provider)
+    providers.value.find(p => p.id === form.value.provider)
 )
 const isRealtimeSttProvider = computed(() =>
-  ['realtime_stt', 'doubao_realtime_stt'].includes(form.value.provider)
+    ['realtime_stt', 'doubao_realtime_stt'].includes(form.value.provider)
 )
 
 // Filter providers based on model type
@@ -354,10 +363,10 @@ function onModelTypeChange(type: string) {
   }
   if (!list.find(p => p.id === form.value.provider)) {
     const defaultProvider = type === 'realtime_stt'
-      ? providers.value.find(p => p.id === 'realtime_stt')
-      : type === 'file_stt'
-        ? providers.value.find(p => p.id === 'doubao_stt')
-        : null
+        ? providers.value.find(p => p.id === 'realtime_stt')
+        : type === 'file_stt'
+            ? providers.value.find(p => p.id === 'doubao_stt')
+            : null
     form.value.provider = defaultProvider?.id || ''
     form.value.base_url = defaultProvider?.baseUrl || ''
     form.value.name = defaultProvider?.name || ''
@@ -424,7 +433,7 @@ function openForm(cfg?: ModelConfigRow) {
     }
     const notes = parseModelNotes(cfg.model_notes)
     const multimodal = models.map((m: string) =>
-      notes[m] === 'multimodal' || (notes[m] || '').includes('\u591A\u6A21\u6001')
+        notes[m] === 'multimodal' || (notes[m] || '').includes('\u591A\u6A21\u6001')
     )
     form.value = {
       name: cfg.name,

@@ -14,7 +14,9 @@
 
     <!-- 技能列表 -->
     <div v-if="skillsStore.loading" class="state-wrap">
-      <el-icon class="loading-icon" :size="26"><Loading /></el-icon>
+      <el-icon class="loading-icon" :size="26">
+        <Loading/>
+      </el-icon>
       <span>加载中...</span>
     </div>
 
@@ -26,7 +28,9 @@
       <strong>安装技能，让提醒更智能</strong>
       <p>前往技能商店安装技能，绑定后提醒触发时自动获取动态内容。</p>
       <el-button type="primary" @click="router.push('/skill-store')" style="margin-top: 12px;">
-        <el-icon><ShoppingBag/></el-icon>
+        <el-icon>
+          <ShoppingBag/>
+        </el-icon>
         浏览技能商店
       </el-button>
     </div>
@@ -39,16 +43,25 @@
           :class="{ inactive: skill.is_active === 0 }"
       >
         <div class="row-left">
-          <span class="row-icon" :style="{ background: categoryGradient(skill.category) + '20', color: categoryColor(skill.category) }">
+          <span class="row-icon"
+                :style="{ background: categoryGradient(skill.category) + '20', color: categoryColor(skill.category) }">
             {{ skill.icon || '⚡' }}
           </span>
           <div class="row-info">
             <div class="row-title">{{ skill.name }}</div>
             <div class="row-meta">
-              <el-tag v-if="skill.store_source" size="small" effect="plain" type="success" style="margin-right: 6px;">商店</el-tag>
-              <el-tag v-else-if="skill.action_type === 'api_call'" size="small" type="success" effect="plain" style="margin-right: 6px;">API</el-tag>
-              <el-tag v-else-if="skill.action_type === 'ai_prompt'" size="small" type="warning" effect="plain" style="margin-right: 6px;">AI</el-tag>
-              <el-tag v-else-if="skill.action_type === 'search_and_summarize'" size="small" type="danger" effect="plain" style="margin-right: 6px;">搜索</el-tag>
+              <el-tag v-if="skill.store_source" size="small" effect="plain" type="success" style="margin-right: 6px;">
+                商店
+              </el-tag>
+              <el-tag v-else-if="skill.action_type === 'api_call'" size="small" type="success" effect="plain"
+                      style="margin-right: 6px;">API
+              </el-tag>
+              <el-tag v-else-if="skill.action_type === 'ai_prompt'" size="small" type="warning" effect="plain"
+                      style="margin-right: 6px;">AI
+              </el-tag>
+              <el-tag v-else-if="skill.action_type === 'search_and_summarize'" size="small" type="danger" effect="plain"
+                      style="margin-right: 6px;">搜索
+              </el-tag>
               <el-tag v-else size="small" type="info" effect="plain" style="margin-right: 6px;">内置</el-tag>
               <span>{{ skill.description || '暂无描述' }}</span>
             </div>
@@ -63,16 +76,22 @@
           />
           <el-dropdown trigger="click" @command="(cmd: string) => handleSkillCommand(cmd, skill)">
             <el-button text circle>
-              <el-icon><MoreFilled/></el-icon>
+              <el-icon>
+                <MoreFilled/>
+              </el-icon>
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="edit">
-                  <el-icon><Edit/></el-icon>
+                  <el-icon>
+                    <Edit/>
+                  </el-icon>
                   编辑
                 </el-dropdown-item>
                 <el-dropdown-item command="delete" divided>
-                  <el-icon color="#F56C6C"><Delete/></el-icon>
+                  <el-icon color="#F56C6C">
+                    <Delete/>
+                  </el-icon>
                   <span style="color: #F56C6C;">删除</span>
                 </el-dropdown-item>
               </el-dropdown-menu>
@@ -176,7 +195,7 @@ onMounted(() => {
   skillsStore.fetchSkills()
 })
 
-defineExpose({ openCreateDialog })
+defineExpose({openCreateDialog})
 </script>
 
 <style scoped>
@@ -331,12 +350,11 @@ defineExpose({ openCreateDialog })
   border-radius: 2px;
   background: rgba(108, 92, 231, .35);
   transform: translateX(-50%);
-  box-shadow:
-    22px 12px 0 rgba(108, 92, 231, .35),
-    22px 34px 0 rgba(108, 92, 231, .35),
-    0px 44px 0 rgba(108, 92, 231, .35),
-    -22px 34px 0 rgba(108, 92, 231, .35),
-    -22px 12px 0 rgba(108, 92, 231, .35);
+  box-shadow: 22px 12px 0 rgba(108, 92, 231, .35),
+  22px 34px 0 rgba(108, 92, 231, .35),
+  0px 44px 0 rgba(108, 92, 231, .35),
+  -22px 34px 0 rgba(108, 92, 231, .35),
+  -22px 12px 0 rgba(108, 92, 231, .35);
   content: '';
 }
 
@@ -351,6 +369,8 @@ defineExpose({ openCreateDialog })
 }
 
 @keyframes rotate {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

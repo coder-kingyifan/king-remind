@@ -58,11 +58,11 @@ export interface StoreSkillWithStatus extends StoreSkill {
 }
 
 export const SKILL_CATEGORIES = [
-    { key: 'weather', label: '天气环境', icon: '🌤️' },
-    { key: 'daily', label: '每日内容', icon: '📰' },
-    { key: 'health', label: '健康生活', icon: '🍎' },
-    { key: 'finance', label: '财经理财', icon: '💰' },
-    { key: 'study', label: '学习成长', icon: '📚' },
-    { key: 'tools', label: '实用工具', icon: '🔧' },
-    { key: 'custom', label: '自定义', icon: '⚡' }
+    {key: 'weather', label: '天气环境', icon: '🌤️'},
+    {key: 'daily', label: '每日内容', icon: '📰'},
+    {key: 'health', label: '健康生活', icon: '🍎'},
+    {key: 'finance', label: '财经理财', icon: '💰'},
+    {key: 'study', label: '学习成长', icon: '📚'},
+    {key: 'tools', label: '实用工具', icon: '🔧'},
+    {key: 'custom', label: '自定义', icon: '⚡'}
 ] as const

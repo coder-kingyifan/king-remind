@@ -118,14 +118,38 @@ export const todosDb = {
         const fields: string[] = []
         const params: any[] = []
 
-        if (data.title !== undefined) { fields.push('title = ?'); params.push(data.title) }
-        if (data.description !== undefined) { fields.push('description = ?'); params.push(data.description) }
-        if (data.completed !== undefined) { fields.push('completed = ?'); params.push(data.completed) }
-        if (data.priority !== undefined) { fields.push('priority = ?'); params.push(data.priority) }
-        if (data.due_date !== undefined) { fields.push('due_date = ?'); params.push(data.due_date) }
-        if (data.category !== undefined) { fields.push('category = ?'); params.push(data.category) }
-        if (data.images !== undefined) { fields.push('images = ?'); params.push(JSON.stringify(data.images)) }
-        if (data.sort_order !== undefined) { fields.push('sort_order = ?'); params.push(data.sort_order) }
+        if (data.title !== undefined) {
+            fields.push('title = ?');
+            params.push(data.title)
+        }
+        if (data.description !== undefined) {
+            fields.push('description = ?');
+            params.push(data.description)
+        }
+        if (data.completed !== undefined) {
+            fields.push('completed = ?');
+            params.push(data.completed)
+        }
+        if (data.priority !== undefined) {
+            fields.push('priority = ?');
+            params.push(data.priority)
+        }
+        if (data.due_date !== undefined) {
+            fields.push('due_date = ?');
+            params.push(data.due_date)
+        }
+        if (data.category !== undefined) {
+            fields.push('category = ?');
+            params.push(data.category)
+        }
+        if (data.images !== undefined) {
+            fields.push('images = ?');
+            params.push(JSON.stringify(data.images))
+        }
+        if (data.sort_order !== undefined) {
+            fields.push('sort_order = ?');
+            params.push(data.sort_order)
+        }
 
         if (fields.length === 0) return todosDb.get(id)
 

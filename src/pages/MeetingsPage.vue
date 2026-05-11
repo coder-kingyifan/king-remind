@@ -10,10 +10,16 @@
       </div>
       <div class="header-actions">
         <el-button size="small" round @click="startQuickRecord" :disabled="isAnyRecording" class="rec-btn">
-          <el-icon style="margin-right:4px"><Microphone/></el-icon>录音
+          <el-icon style="margin-right:4px">
+            <Microphone/>
+          </el-icon>
+          录音
         </el-button>
         <el-button type="primary" size="small" round @click="openCreate">
-          <el-icon style="margin-right:4px"><Plus/></el-icon>新建会议
+          <el-icon style="margin-right:4px">
+            <Plus/>
+          </el-icon>
+          新建会议
         </el-button>
       </div>
     </div>
@@ -30,67 +36,84 @@
     <!-- 筛选 -->
     <div class="filters">
       <div class="tabs">
-        <span v-for="f in statusFilters" :key="f.value" class="tab" :class="{active: statusFilter === f.value}" @click="statusFilter = f.value; handleFilterChange()">{{ f.label }}</span>
+        <span v-for="f in statusFilters" :key="f.value" class="tab" :class="{active: statusFilter === f.value}"
+              @click="statusFilter = f.value; handleFilterChange()">{{ f.label }}</span>
       </div>
     </div>
 
     <!-- 列表 -->
     <div v-if="meetingsStore.loading" class="state-wrap">
-        <el-icon class="loading-icon" :size="26"><Loading /></el-icon>
-        <span>加载中...</span>
-      </div>
+      <el-icon class="loading-icon" :size="26">
+        <Loading/>
+      </el-icon>
+      <span>加载中...</span>
+    </div>
 
     <template v-else-if="meetingsStore.meetings.length">
-      <div v-for="meeting in meetingsStore.meetings" :key="meeting.id" class="meeting-card" @click="openDetail(meeting)">
+      <div v-for="meeting in meetingsStore.meetings" :key="meeting.id" class="meeting-card"
+           @click="openDetail(meeting)">
         <div class="card-top">
           <span class="card-status" :class="meeting.status">{{ statusLabel(meeting.status) }}</span>
           <span class="card-time">{{ fmtTime(meeting.start_time) }}</span>
         </div>
         <div class="card-title">{{ meeting.title }}</div>
         <div class="card-meta">
-          <span v-if="meeting.location" class="meta-item"><el-icon :size="12"><Location/></el-icon>{{ meeting.location }}</span>
-          <span v-if="parseParticipants(meeting.participants).length" class="meta-item"><el-icon :size="12"><User/></el-icon>{{ parseParticipants(meeting.participants).length }}人</span>
+          <span v-if="meeting.location" class="meta-item"><el-icon :size="12"><Location/></el-icon>{{
+              meeting.location
+            }}</span>
+          <span v-if="parseParticipants(meeting.participants).length" class="meta-item"><el-icon :size="12"><User/></el-icon>{{
+              parseParticipants(meeting.participants).length
+            }}人</span>
           <span v-if="meeting.has_recording" class="meta-item recording"><el-icon :size="12"><Microphone/></el-icon>有录音</span>
         </div>
-        <el-icon :size="14" class="card-del" @click.stop="handleDelete(meeting)"><Delete/></el-icon>
+        <el-icon :size="14" class="card-del" @click.stop="handleDelete(meeting)">
+          <Delete/>
+        </el-icon>
       </div>
     </template>
 
     <div v-else class="state-wrap empty">
-        <div class="empty-illustration" aria-hidden="true">
-          <div class="empty-mic"></div>
-          <div class="empty-bubble"></div>
-        </div>
-        <strong>记录会议，留存关键信息</strong>
-        <p>可以新建会议或直接录音，记录关键信息并生成 AI 摘要。</p>
+      <div class="empty-illustration" aria-hidden="true">
+        <div class="empty-mic"></div>
+        <div class="empty-bubble"></div>
       </div>
+      <strong>记录会议，留存关键信息</strong>
+      <p>可以新建会议或直接录音，记录关键信息并生成 AI 摘要。</p>
+    </div>
 
     <!-- 新建/编辑弹窗 -->
     <el-dialog v-model="detailVisible" width="680px" :close-on-click-modal="false" destroy-on-close top="4vh">
       <div class="detail-header">
         <input v-model="editForm.title" class="detail-title" placeholder="输入会议主题，例如：产品周会 / 客户复盘"/>
         <div class="detail-status-row">
-          <span class="card-status" :class="editForm.status" @click="cycleStatus" style="cursor:pointer">{{ statusLabel(editForm.status) }}</span>
-          <el-date-picker v-model="editForm.start_time" type="datetime" value-format="YYYY-MM-DD HH:mm" placeholder="开始时间" size="small" style="width:180px"/>
+          <span class="card-status" :class="editForm.status" @click="cycleStatus"
+                style="cursor:pointer">{{ statusLabel(editForm.status) }}</span>
+          <el-date-picker v-model="editForm.start_time" type="datetime" value-format="YYYY-MM-DD HH:mm"
+                          placeholder="开始时间" size="small" style="width:180px"/>
         </div>
       </div>
 
       <!-- 更多选项（折叠） -->
       <div class="more-options">
         <div class="more-toggle" @click="showMoreOptions = !showMoreOptions">
-          <el-icon :size="12"><component :is="showMoreOptions ? ArrowUp : ArrowDown"/></el-icon>
+          <el-icon :size="12">
+            <component :is="showMoreOptions ? ArrowUp : ArrowDown"/>
+          </el-icon>
           <span>{{ showMoreOptions ? '收起补充信息' : '补充信息' }}</span>
         </div>
         <div v-if="showMoreOptions" class="more-fields">
           <div class="field-row">
             <label>会议类型</label>
             <div class="type-chips">
-              <span v-for="t in typeFilters" :key="t.value" class="chip" :class="{active: editForm.meeting_type === t.value}" @click="editForm.meeting_type = t.value as any">{{ t.label }}</span>
+              <span v-for="t in typeFilters" :key="t.value" class="chip"
+                    :class="{active: editForm.meeting_type === t.value}"
+                    @click="editForm.meeting_type = t.value as any">{{ t.label }}</span>
             </div>
           </div>
           <div class="field-row">
             <label>结束时间</label>
-            <el-date-picker v-model="editForm.end_time" type="datetime" value-format="YYYY-MM-DD HH:mm" placeholder="选择结束时间" size="small" style="width:100%"/>
+            <el-date-picker v-model="editForm.end_time" type="datetime" value-format="YYYY-MM-DD HH:mm"
+                            placeholder="选择结束时间" size="small" style="width:100%"/>
           </div>
           <div class="field-row">
             <label>地点</label>
@@ -99,13 +122,16 @@
           <div class="field-row">
             <label>参会人</label>
             <div class="participant-input">
-              <span v-for="(p, i) in editForm.participants" :key="i" class="p-tag">{{ p }}<span @click="editForm.participants.splice(i, 1)">&times;</span></span>
-              <input v-model="newParticipant" class="p-input" placeholder="输入姓名后回车" @keydown.enter.prevent="addParticipant"/>
+              <span v-for="(p, i) in editForm.participants" :key="i" class="p-tag">{{ p }}<span
+                  @click="editForm.participants.splice(i, 1)">&times;</span></span>
+              <input v-model="newParticipant" class="p-input" placeholder="输入姓名后回车"
+                     @keydown.enter.prevent="addParticipant"/>
             </div>
           </div>
           <div class="field-row">
             <label>会议背景</label>
-            <textarea v-model="editForm.description" class="field-textarea" placeholder="这次会议要解决什么问题？" rows="2"/>
+            <textarea v-model="editForm.description" class="field-textarea" placeholder="这次会议要解决什么问题？"
+                      rows="2"/>
           </div>
         </div>
       </div>
@@ -130,7 +156,10 @@
           </template>
           <template v-else>
             <el-button size="small" round @click="startRecording">
-              <el-icon style="margin-right:4px"><Microphone/></el-icon>{{ editForm.recording_path ? '继续录音' : '开始录音' }}
+              <el-icon style="margin-right:4px">
+                <Microphone/>
+              </el-icon>
+              {{ editForm.recording_path ? '继续录音' : '开始录音' }}
             </el-button>
           </template>
           <div v-if="editForm.recording_path" class="recording-play">
@@ -145,13 +174,18 @@
         <label>附件</label>
         <div class="attachment-area">
           <div class="upload-btn" @click="triggerUpload" @dragover.prevent @drop.prevent="handleDrop">
-            <el-icon :size="16"><Upload/></el-icon>
+            <el-icon :size="16">
+              <Upload/>
+            </el-icon>
             <span>点击或拖拽上传</span>
-            <input ref="fileInputRef" type="file" multiple style="display:none" @change="handleFileSelect" accept=".txt,.md,.pdf,.doc,.docx,.mp3,.wav,.m4a,.ogg,.webm,.flac,.png,.jpg,.jpeg,.gif,.webp"/>
+            <input ref="fileInputRef" type="file" multiple style="display:none" @change="handleFileSelect"
+                   accept=".txt,.md,.pdf,.doc,.docx,.mp3,.wav,.m4a,.ogg,.webm,.flac,.png,.jpg,.jpeg,.gif,.webp"/>
           </div>
           <div v-if="editForm.attachments.length" class="attachment-list">
             <div v-for="(att, i) in editForm.attachments" :key="i" class="att-item">
-              <el-icon :size="14"><Document/></el-icon>
+              <el-icon :size="14">
+                <Document/>
+              </el-icon>
               <span class="att-name">{{ att.name }}</span>
               <span class="att-del" @click="editForm.attachments.splice(i, 1)">&times;</span>
             </div>
@@ -163,8 +197,12 @@
       <div class="detail-section" v-if="editForm.id && !isSimpleMode">
         <label>AI 摘要</label>
         <div class="ai-area">
-          <el-button size="small" round @click="generateSummary" :loading="summarizing" :disabled="!editForm.minutes && !(editForm as any).stt_text">
-            <el-icon style="margin-right:4px"><MagicStick/></el-icon>生成摘要
+          <el-button size="small" round @click="generateSummary" :loading="summarizing"
+                     :disabled="!editForm.minutes && !(editForm as any).stt_text">
+            <el-icon style="margin-right:4px">
+              <MagicStick/>
+            </el-icon>
+            生成摘要
           </el-button>
           <div v-if="aiSummary" class="summary-content">
             <div v-if="aiSummary.summary" class="summary-block">
@@ -173,23 +211,31 @@
             </div>
             <div v-if="aiSummary.topics?.length" class="summary-block">
               <span class="summary-label">议题</span>
-              <ul><li v-for="(t, i) in aiSummary.topics" :key="i">{{ t }}</li></ul>
+              <ul>
+                <li v-for="(t, i) in aiSummary.topics" :key="i">{{ t }}</li>
+              </ul>
             </div>
             <div v-if="aiSummary.decisions?.length" class="summary-block">
               <span class="summary-label">决议</span>
-              <ul><li v-for="(d, i) in aiSummary.decisions" :key="i">{{ d }}</li></ul>
+              <ul>
+                <li v-for="(d, i) in aiSummary.decisions" :key="i">{{ d }}</li>
+              </ul>
             </div>
             <div v-if="aiSummary.action_items?.length" class="summary-block">
               <span class="summary-label">待办</span>
               <ul>
                 <li v-for="(a, i) in aiSummary.action_items" :key="i">
-                  {{ a.task }}<span v-if="a.assignee"> - {{ a.assignee }}</span><span v-if="a.deadline"> ({{ a.deadline }})</span>
+                  {{ a.task }}<span v-if="a.assignee"> - {{ a.assignee }}</span><span v-if="a.deadline"> ({{
+                    a.deadline
+                  }})</span>
                 </li>
               </ul>
             </div>
             <div v-if="aiSummary.key_points?.length" class="summary-block">
               <span class="summary-label">要点</span>
-              <ul><li v-for="(k, i) in aiSummary.key_points" :key="i">{{ k }}</li></ul>
+              <ul>
+                <li v-for="(k, i) in aiSummary.key_points" :key="i">{{ k }}</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -206,8 +252,11 @@
             </div>
           </div>
           <div class="ai-chat-input">
-            <input v-model="aiQuestion" class="ai-input" placeholder="对会议内容提问..." @keydown.enter.prevent="sendAiChat" :disabled="aiChatLoading"/>
-            <el-button type="primary" size="small" round @click="sendAiChat" :loading="aiChatLoading" :disabled="!aiQuestion.trim()">发送</el-button>
+            <input v-model="aiQuestion" class="ai-input" placeholder="对会议内容提问..."
+                   @keydown.enter.prevent="sendAiChat" :disabled="aiChatLoading"/>
+            <el-button type="primary" size="small" round @click="sendAiChat" :loading="aiChatLoading"
+                       :disabled="!aiQuestion.trim()">发送
+            </el-button>
           </div>
         </div>
       </div>
@@ -224,7 +273,18 @@
 import {computed, onActivated, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {useMeetingsStore} from '@/stores/meetings'
-import {ArrowDown, ArrowUp, Location, Microphone, Plus, Upload, Document, MagicStick, User, EditPen, Delete} from '@element-plus/icons-vue'
+import {
+  ArrowDown,
+  ArrowUp,
+  Delete,
+  Document,
+  Location,
+  MagicStick,
+  Microphone,
+  Plus,
+  Upload,
+  User
+} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import type {AiSummary, Meeting, MeetingAttachment, MeetingSegment} from '@/types/meeting'
 import {useSettingsStore} from '@/stores/settings'
@@ -443,9 +503,9 @@ function mergeTranscriptText(existing: string, incoming: string): string {
 
 function textSegmentsTranscript(): string {
   return segments.value
-    .filter(s => s.segment_type === 'text' && s.content?.trim())
-    .map(s => s.speaker ? `${s.speaker}：${s.content.trim()}` : s.content.trim())
-    .join('\n')
+      .filter(s => s.segment_type === 'text' && s.content?.trim())
+      .map(s => s.speaker ? `${s.speaker}：${s.content.trim()}` : s.content.trim())
+      .join('\n')
 }
 
 function currentSavedTranscript(): string {
@@ -466,18 +526,18 @@ function parseTranscriptLine(line: string): { line: string; speaker: string; tex
 
 function parseTranscriptText(text?: string): Array<{ line: string; speaker: string; text: string; key: string }> {
   return cleanTranscriptText(text)
-    .split('\n')
-    .map(parseTranscriptLine)
-    .filter((item): item is { line: string; speaker: string; text: string; key: string } => !!item)
+      .split('\n')
+      .map(parseTranscriptLine)
+      .filter((item): item is { line: string; speaker: string; text: string; key: string } => !!item)
 }
 
 function appendRealtimeTranscriptLine(
-  item: {line?: string; speaker?: string; text?: string; start_time?: number; end_time?: number},
-  options: {skipExisting?: boolean} = {}
+    item: { line?: string; speaker?: string; text?: string; start_time?: number; end_time?: number },
+    options: { skipExisting?: boolean } = {}
 ): RealtimeTranscriptLine | null {
   let parsed = item.line
-    ? parseTranscriptLine(item.line)
-    : parseTranscriptLine(item.speaker ? `${item.speaker}：${item.text || ''}` : item.text || '')
+      ? parseTranscriptLine(item.line)
+      : parseTranscriptLine(item.speaker ? `${item.speaker}：${item.text || ''}` : item.text || '')
   if (!parsed) return null
 
   const now = Date.now()
@@ -517,7 +577,7 @@ function appendRealtimeTranscriptLine(
   return appended
 }
 
-function appendRealtimeTranscriptText(text?: string, options: {skipExisting?: boolean} = {}): number {
+function appendRealtimeTranscriptText(text?: string, options: { skipExisting?: boolean } = {}): number {
   let count = 0
   for (const item of parseTranscriptText(text)) {
     if (appendRealtimeTranscriptLine(item, options)) count++
@@ -551,9 +611,9 @@ function hasTranscriptOverlap(previous: string, incoming: string): boolean {
   if (!prev.length || !next.length) return false
   const prevLast = prev[prev.length - 1]
   return next.some(item =>
-    item.key === prevLast.key ||
-    !!getIncrementalText(prevLast.text, item.text) ||
-    !!getIncrementalText(item.text, prevLast.text)
+      item.key === prevLast.key ||
+      !!getIncrementalText(prevLast.text, item.text) ||
+      !!getIncrementalText(item.text, prevLast.text)
   )
 }
 
@@ -577,14 +637,14 @@ function realtimeTranscriptText(): string {
 
 function formatRealtimeEventUtterances(utterances: any[]): string {
   return utterances
-    .map(utt => {
-      const text = cleanTranscriptText(utt?.text)
-      if (!text) return ''
-      const speaker = cleanTranscriptText(utt?.speaker)
-      return speaker ? `${speaker}：${text}` : text
-    })
-    .filter(Boolean)
-    .join('\n')
+      .map(utt => {
+        const text = cleanTranscriptText(utt?.text)
+        if (!text) return ''
+        const speaker = cleanTranscriptText(utt?.speaker)
+        return speaker ? `${speaker}：${text}` : text
+      })
+      .filter(Boolean)
+      .join('\n')
 }
 
 function rememberRealtimeFinalEvent(event: any): number {
@@ -653,10 +713,10 @@ function pendingRealtimePartialText(text: string): string {
 
   const knownKeys = new Set(known.split('\n').map(transcriptLineKey))
   return partial
-    .split('\n')
-    .map(line => line.trim())
-    .filter(line => line && !knownKeys.has(transcriptLineKey(line)))
-    .join('\n')
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line && !knownKeys.has(transcriptLineKey(line)))
+      .join('\n')
 }
 
 function syncRealtimeTranscriptToForm(status: 'pending' | 'done' = 'pending'): void {
@@ -690,7 +750,7 @@ const realtimeStatusLabel = computed(() => {
 const aiSummary = ref<AiSummary | null>(null)
 const summarizing = ref(false)
 const aiQuestion = ref('')
-const aiChatHistory = ref<Array<{role: string; content: string}>>([])
+const aiChatHistory = ref<Array<{ role: string; content: string }>>([])
 const aiChatLoading = ref(false)
 
 // 工具函数
@@ -719,11 +779,19 @@ function formatDuration(seconds: number): string {
 }
 
 function parseParticipants(p: string): string[] {
-  try { return JSON.parse(p || '[]') } catch { return [] }
+  try {
+    return JSON.parse(p || '[]')
+  } catch {
+    return []
+  }
 }
 
 function parseAttachments(a: string): MeetingAttachment[] {
-  try { return JSON.parse(a || '[]') } catch { return [] }
+  try {
+    return JSON.parse(a || '[]')
+  } catch {
+    return []
+  }
 }
 
 function cycleStatus() {
@@ -932,7 +1000,8 @@ async function stopRealtimePipeline() {
   audioSource.value?.disconnect()
   audioGain.value?.disconnect()
   if (audioContext.value && audioContext.value.state !== 'closed') {
-    await audioContext.value.close().catch(() => {})
+    await audioContext.value.close().catch(() => {
+    })
   }
   audioContext.value = null
   audioSource.value = null
@@ -943,7 +1012,8 @@ async function stopRealtimePipeline() {
     try {
       const result = await window.electronAPI.meetings.stopRealtimeStt(realtimeSttSessionId.value)
       appendRealtimeTranscriptText(result?.full_text, {skipExisting: true})
-    } catch {}
+    } catch {
+    }
   }
   syncRealtimeTranscriptToForm('done')
   realtimeSttSessionId.value = ''
@@ -952,12 +1022,12 @@ async function stopRealtimePipeline() {
 async function saveRealtimeLinesAsSegments(lines: RealtimeTranscriptLine[], elapsed: number) {
   if (!lines.length) return
   const existingTexts = new Set(
-    segments.value.filter(s => s.segment_type === 'text').map(s => s.content?.trim()).filter(Boolean)
+      segments.value.filter(s => s.segment_type === 'text').map(s => s.content?.trim()).filter(Boolean)
   )
   // 计算已有分段的最后结束时间，用于避免时间戳重叠
   const lastEndTime = segments.value.length > 0
-    ? Math.max(...segments.value.map(s => s.end_time || 0))
-    : 0
+      ? Math.max(...segments.value.map(s => s.end_time || 0))
+      : 0
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     const text = line.text?.trim()
@@ -1098,7 +1168,10 @@ async function handleRealtimeSttEvent(event: any) {
       try {
         // 先停止旧会话（清理后端资源）
         if (realtimeSttSessionId.value) {
-          try { await window.electronAPI.meetings.stopRealtimeStt(realtimeSttSessionId.value) } catch {}
+          try {
+            await window.electronAPI.meetings.stopRealtimeStt(realtimeSttSessionId.value)
+          } catch {
+          }
         }
         const session = await window.electronAPI.meetings.startRealtimeStt()
         realtimeSttSessionId.value = session.sessionId
@@ -1134,7 +1207,10 @@ async function handleRealtimeSttEvent(event: any) {
         try {
           // 先停止旧会话
           if (realtimeSttSessionId.value) {
-            try { await window.electronAPI.meetings.stopRealtimeStt(realtimeSttSessionId.value) } catch {}
+            try {
+              await window.electronAPI.meetings.stopRealtimeStt(realtimeSttSessionId.value)
+            } catch {
+            }
           }
           const session = await window.electronAPI.meetings.startRealtimeStt()
           realtimeSttSessionId.value = session.sessionId
@@ -1220,7 +1296,9 @@ async function startRealtimeRecording(target: 'quick' | 'meeting' | 'segment') {
     isRecording.value = target !== 'segment'
     isSegmentRecording.value = target === 'segment'
     recordingDuration.value = 0
-    recordingTimer.value = setInterval(() => { recordingDuration.value++ }, 1000)
+    recordingTimer.value = setInterval(() => {
+      recordingDuration.value++
+    }, 1000)
   } catch (e: any) {
     stream?.getTracks().forEach(track => track.stop())
     await stopRealtimePipeline()
@@ -1243,7 +1321,9 @@ function audioBufferToWav(audioBuffer: AudioBuffer): Blob {
   const view = new DataView(arrayBuffer)
 
   // WAV header
-  const writeString = (offset: number, str: string) => { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)) }
+  const writeString = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i))
+  }
   writeString(0, 'RIFF')
   view.setUint32(4, totalLength - 8, true)
   writeString(8, 'WAVE')
@@ -1289,7 +1369,8 @@ async function mergeAudioBlobs(existing: Blob, appended: Blob): Promise<Blob> {
     }
     return audioBufferToWav(merged)
   } finally {
-    await ctx.close().catch(() => {})
+    await ctx.close().catch(() => {
+    })
   }
 }
 
@@ -1365,8 +1446,8 @@ async function startPlainRecording(target: 'quick' | 'detail' | 'segment') {
       try {
         const shouldUpdateMainRecording = target === 'detail'
         const path = await window.electronAPI.meetings.saveRecording(
-          dataUrl,
-          shouldUpdateMainRecording ? (editForm.id || undefined) : undefined
+            dataUrl,
+            shouldUpdateMainRecording ? (editForm.id || undefined) : undefined
         )
         if (path) {
           recordingUrl.value = dataUrl
@@ -1392,7 +1473,9 @@ async function startPlainRecording(target: 'quick' | 'detail' | 'segment') {
     isRecording.value = target !== 'segment'
     isSegmentRecording.value = target === 'segment'
     recordingDuration.value = 0
-    recordingTimer.value = setInterval(() => { recordingDuration.value++ }, 1000)
+    recordingTimer.value = setInterval(() => {
+      recordingDuration.value++
+    }, 1000)
     realtimeSttStatus.value = 'recording_only'
   } catch (e: any) {
     stream?.getTracks().forEach(track => track.stop())
@@ -1422,7 +1505,13 @@ function openCreateWithRecording(recordingPath: string, dataUrl: string) {
   editingMeeting.value = null
   Object.assign(editForm, {
     id: 0, title: '', description: '', meeting_type: 'regular', status: 'ongoing',
-    start_time: new Date().toLocaleString('sv-SE', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',', ''),
+    start_time: new Date().toLocaleString('sv-SE', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).replace(',', ''),
     end_time: '', location: '', participants: [], minutes: '',
     attachments: [], recording_path: recordingPath, has_recording: 1, todo_ids: [],
     stt_text: '', stt_status: 'none'
@@ -1559,7 +1648,7 @@ async function renameAllSpeaker(oldName: string) {
     if (seg.speaker === oldName) {
       seg.speaker = newName
       if (seg.id > 0) {
-        await window.electronAPI.meetings.segments.update(seg.id, { speaker: newName })
+        await window.electronAPI.meetings.segments.update(seg.id, {speaker: newName})
       }
     }
   }
@@ -1640,7 +1729,13 @@ function openCreate(date?: string) {
   editingMeeting.value = null
   Object.assign(editForm, {
     id: 0, title: '', description: '', meeting_type: 'regular', status: 'pending',
-    start_time: date ? `${date} 09:00` : new Date().toLocaleString('sv-SE', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',', ''),
+    start_time: date ? `${date} 09:00` : new Date().toLocaleString('sv-SE', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).replace(',', ''),
     end_time: '', location: '', participants: [], minutes: '',
     attachments: [], recording_path: '', has_recording: 0, todo_ids: [],
     stt_text: '', stt_status: 'none'
@@ -1694,11 +1789,16 @@ async function openDetail(meeting: Meeting) {
     stt_text: (meeting as any).stt_text || '',
     stt_status: (meeting as any).stt_status || 'none'
   })
-  try { editForm.todo_ids = JSON.parse(meeting.todo_ids || '[]') } catch {}
+  try {
+    editForm.todo_ids = JSON.parse(meeting.todo_ids || '[]')
+  } catch {
+  }
 
   try {
     aiSummary.value = meeting.ai_summary ? (typeof meeting.ai_summary === 'string' ? JSON.parse(meeting.ai_summary) : meeting.ai_summary) : null
-  } catch { aiSummary.value = null }
+  } catch {
+    aiSummary.value = null
+  }
 
   aiChatHistory.value = []
   recordingUrl.value = ''
@@ -1713,7 +1813,8 @@ async function openDetail(meeting: Meeting) {
       if (urls?.[0]) {
         recordingUrl.value = urls[0]
       }
-    } catch {}
+    } catch {
+    }
   }
 
   detailVisible.value = true
@@ -1729,13 +1830,20 @@ async function loadSegments(meetingId: number) {
       audioSegs.forEach((seg, i) => {
         if (urls?.[i]) segAudioUrls.value[seg.content] = urls[i]
       })
-    } catch {}
+    } catch {
+    }
   }
 }
 
 async function handleSave() {
   if (!editForm.start_time) {
-    editForm.start_time = new Date().toLocaleString('sv-SE', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',', '')
+    editForm.start_time = new Date().toLocaleString('sv-SE', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).replace(',', '')
   }
   const title = editForm.title.trim() || `会议记录 ${editForm.start_time}`
 
@@ -1774,7 +1882,10 @@ async function handleSave() {
 function handleDelete(meeting: Meeting) {
   ElMessageBox.confirm('确认要删除该会议吗？', '删除会议', {
     confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
-  }).then(() => { meetingsStore.deleteMeeting(meeting.id) }).catch(() => {})
+  }).then(() => {
+    meetingsStore.deleteMeeting(meeting.id)
+  }).catch(() => {
+  })
 }
 
 // 文件上传
@@ -1892,23 +2003,60 @@ watch(() => route.fullPath, () => applyCreateQuery())
 </script>
 
 <style scoped>
-.meetings-page { width: min(100%, 980px); margin: 0 auto; outline: none; }
+.meetings-page {
+  width: min(100%, 980px);
+  margin: 0 auto;
+  outline: none;
+}
 
-.page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
-.page-title { font-size: 22px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
-.page-subtitle { font-size: 13px; color: var(--text-tertiary); }
-.header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
 
 /* 录音浮窗 */
 .recording-float {
-  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-  display: flex; flex-direction: column; gap: 8px;
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   width: min(420px, calc(100vw - 48px));
-  padding: 12px 14px; border-radius: 12px;
-  background: var(--bg-primary); border: 1px solid rgba(245,108,108,.3);
-  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--bg-primary);
+  border: 1px solid rgba(245, 108, 108, .3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
 }
-.recording-float-main { display: flex; align-items: center; gap: 10px; }
+
+.recording-float-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .recording-live {
   max-height: 120px;
   overflow: auto;
@@ -1919,164 +2067,863 @@ watch(() => route.fullPath, () => applyCreateQuery())
   font-size: 12px;
   line-height: 1.5;
 }
-.rec-dot { width: 8px; height: 8px; border-radius: 50%; background: #F56C6C; animation: pulse 1s infinite; }
-.rec-dot-sm { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #F56C6C; animation: pulse 1s infinite; margin-right: 4px; }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
-.rec-time { font-size: 14px; font-weight: 600; color: #F56C6C; font-variant-numeric: tabular-nums; }
-.rt-state { font-size: 11px; padding: 2px 7px; border-radius: 4px; background: var(--bg-tertiary); color: var(--text-tertiary); }
-.rt-state.ready { color: #67C23A; background: rgba(103,194,58,.1); }
-.rt-state.connecting { color: #E6A23C; background: rgba(230,162,60,.1); }
-.rt-state.error { color: #F56C6C; background: rgba(245,108,108,.1); }
-.rt-state.recording_only { color: #909399; background: rgba(144,147,153,.12); }
+
+.rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #F56C6C;
+  animation: pulse 1s infinite;
+}
+
+.rec-dot-sm {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #F56C6C;
+  animation: pulse 1s infinite;
+  margin-right: 4px;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .4;
+  }
+}
+
+.rec-time {
+  font-size: 14px;
+  font-weight: 600;
+  color: #F56C6C;
+  font-variant-numeric: tabular-nums;
+}
+
+.rt-state {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+}
+
+.rt-state.ready {
+  color: #67C23A;
+  background: rgba(103, 194, 58, .1);
+}
+
+.rt-state.connecting {
+  color: #E6A23C;
+  background: rgba(230, 162, 60, .1);
+}
+
+.rt-state.error {
+  color: #F56C6C;
+  background: rgba(245, 108, 108, .1);
+}
+
+.rt-state.recording_only {
+  color: #909399;
+  background: rgba(144, 147, 153, .12);
+}
 
 /* 筛选 */
-.filters { margin-bottom: 16px; }
-.tabs { display: flex; gap: 4px; }
-.tab { font-size: 12px; padding: 4px 10px; border-radius: 4px; cursor: pointer; color: var(--text-tertiary); transition: all .15s; }
-.tab:hover { color: var(--text-secondary); }
-.tab.active { background: var(--bg-tertiary); color: var(--text-primary); font-weight: 500; }
+.filters {
+  margin-bottom: 16px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.tab {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  transition: all .15s;
+}
+
+.tab:hover {
+  color: var(--text-secondary);
+}
+
+.tab.active {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-weight: 500;
+}
 
 /* 会议卡片 */
-.meeting-card { padding: 12px 14px; border: 1px solid var(--border-color-light); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all .15s; position: relative; }
-.meeting-card:hover { border-color: var(--color-primary); box-shadow: 0 2px 8px rgba(0,0,0,.06); }
-.card-top { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-.card-status { font-size: 11px; padding: 1px 8px; border-radius: 4px; font-weight: 500; }
-.card-status.pending { background: rgba(64,158,255,.1); color: #409EFF; }
-.card-status.ongoing { background: rgba(103,194,58,.1); color: #67C23A; }
-.card-status.completed { background: rgba(144,147,153,.1); color: #909399; }
-.card-time { font-size: 11px; color: var(--text-tertiary); margin-left: auto; }
-.card-title { font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px; }
-.card-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.meta-item { font-size: 11px; color: var(--text-tertiary); display: flex; align-items: center; gap: 3px; }
-.meta-item.recording { color: #F56C6C; }
-.meta-item.stt { color: #67C23A; }
-.card-del { position: absolute; top: 8px; right: 8px; font-size: 14px; color: var(--text-placeholder); cursor: pointer; opacity: 0; transition: opacity .15s; }
-.meeting-card:hover .card-del { opacity: .5; }
-.card-del:hover { opacity: 1 !important; color: var(--color-danger); }
+.meeting-card {
+  padding: 12px 14px;
+  border: 1px solid var(--border-color-light);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all .15s;
+  position: relative;
+}
+
+.meeting-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.card-status {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.card-status.pending {
+  background: rgba(64, 158, 255, .1);
+  color: #409EFF;
+}
+
+.card-status.ongoing {
+  background: rgba(103, 194, 58, .1);
+  color: #67C23A;
+}
+
+.card-status.completed {
+  background: rgba(144, 147, 153, .1);
+  color: #909399;
+}
+
+.card-time {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-left: auto;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.meta-item {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.meta-item.recording {
+  color: #F56C6C;
+}
+
+.meta-item.stt {
+  color: #67C23A;
+}
+
+.card-del {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 14px;
+  color: var(--text-placeholder);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .15s;
+}
+
+.meeting-card:hover .card-del {
+  opacity: .5;
+}
+
+.card-del:hover {
+  opacity: 1 !important;
+  color: var(--color-danger);
+}
 
 /* 详情弹窗 */
-.detail-header { margin-bottom: 16px; }
-.detail-title { width: 100%; border: none; outline: none; font-size: 16px; font-weight: 600; color: var(--text-primary); background: transparent; padding: 0; border-bottom: 1px solid var(--border-color-light); padding-bottom: 8px; font-family: inherit; }
-.detail-title::placeholder { color: var(--text-placeholder); }
-.detail-status-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.detail-header {
+  margin-bottom: 16px;
+}
+
+.detail-title {
+  width: 100%;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: transparent;
+  padding: 0;
+  border-bottom: 1px solid var(--border-color-light);
+  padding-bottom: 8px;
+  font-family: inherit;
+}
+
+.detail-title::placeholder {
+  color: var(--text-placeholder);
+}
+
+.detail-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
 
 /* 更多选项 */
-.more-options { margin-bottom: 16px; }
-.more-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: var(--text-tertiary); padding: 4px 0; }
-.more-toggle:hover { color: var(--color-primary); }
-.more-fields { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; }
-.field-row { display: flex; flex-direction: column; gap: 4px; }
-.field-row label { font-size: 12px; color: var(--text-tertiary); }
-.field-input { width: 100%; border: 1px solid var(--border-color-light); border-radius: 4px; padding: 4px 8px; font-size: 13px; color: var(--text-primary); background: transparent; outline: none; font-family: inherit; }
-.field-input:focus { border-color: var(--color-primary); }
-.field-textarea { width: 100%; border: 1px solid var(--border-color-light); border-radius: 4px; padding: 8px; font-size: 13px; color: var(--text-primary); background: transparent; outline: none; resize: vertical; font-family: inherit; line-height: 1.5; }
-.field-textarea:focus { border-color: var(--color-primary); }
-.type-chips { display: flex; gap: 4px; }
-.chip { font-size: 11px; padding: 2px 8px; border-radius: 10px; cursor: pointer; border: 1px solid var(--border-color-light); color: var(--text-tertiary); transition: all .1s; user-select: none; }
-.chip:hover { border-color: var(--color-primary); color: var(--text-secondary); }
-.chip.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.more-options {
+  margin-bottom: 16px;
+}
+
+.more-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  padding: 4px 0;
+}
+
+.more-toggle:hover {
+  color: var(--color-primary);
+}
+
+.more-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field-row label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.field-input {
+  width: 100%;
+  border: 1px solid var(--border-color-light);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+}
+
+.field-input:focus {
+  border-color: var(--color-primary);
+}
+
+.field-textarea {
+  width: 100%;
+  border: 1px solid var(--border-color-light);
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: transparent;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.field-textarea:focus {
+  border-color: var(--color-primary);
+}
+
+.type-chips {
+  display: flex;
+  gap: 4px;
+}
+
+.chip {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid var(--border-color-light);
+  color: var(--text-tertiary);
+  transition: all .1s;
+  user-select: none;
+}
+
+.chip:hover {
+  border-color: var(--color-primary);
+  color: var(--text-secondary);
+}
+
+.chip.active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
 
 /* 参会人 */
-.participant-input { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; border: 1px solid var(--border-color-light); border-radius: 4px; padding: 4px 6px; min-height: 30px; }
-.participant-input:focus-within { border-color: var(--color-primary); }
-.p-tag { font-size: 12px; padding: 1px 6px; border-radius: 4px; background: var(--bg-tertiary); color: var(--text-primary); display: flex; align-items: center; gap: 4px; }
-.p-tag span { cursor: pointer; color: var(--text-tertiary); font-size: 12px; }
-.p-tag span:hover { color: var(--color-danger); }
-.p-input { border: none; outline: none; font-size: 13px; color: var(--text-primary); background: transparent; flex: 1; min-width: 80px; font-family: inherit; }
-.p-input::placeholder { color: var(--text-placeholder); }
+.participant-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  border: 1px solid var(--border-color-light);
+  border-radius: 4px;
+  padding: 4px 6px;
+  min-height: 30px;
+}
+
+.participant-input:focus-within {
+  border-color: var(--color-primary);
+}
+
+.p-tag {
+  font-size: 12px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.p-tag span {
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.p-tag span:hover {
+  color: var(--color-danger);
+}
+
+.p-input {
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: transparent;
+  flex: 1;
+  min-width: 80px;
+  font-family: inherit;
+}
+
+.p-input::placeholder {
+  color: var(--text-placeholder);
+}
 
 /* section */
-.detail-section { margin-bottom: 16px; }
-.detail-section > label { font-size: 12px; color: var(--text-tertiary); display: block; margin-bottom: 6px; }
-.section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.section-head label { font-size: 12px; color: var(--text-tertiary); margin-bottom: 0; }
-.section-actions { display: flex; gap: 4px; }
+.detail-section {
+  margin-bottom: 16px;
+}
+
+.detail-section > label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.section-head label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-bottom: 0;
+}
+
+.section-actions {
+  display: flex;
+  gap: 4px;
+}
 
 /* 旧版记录样式 */
-.segments-list { display: flex; flex-direction: column; gap: 8px; }
-.segment-item { border: 1px solid var(--border-color-light); border-radius: 6px; padding: 10px 12px; }
-.segment-item.audio { border-left: 3px solid #409EFF; }
-.segment-item.text { border-left: 3px solid #67C23A; }
-.seg-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.seg-time { white-space: nowrap; font-size: 12px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
-.seg-type-badge { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 500; }
-.seg-type-badge.audio { background: rgba(64,158,255,.1); color: #409EFF; }
-.seg-type-badge.text { background: rgba(103,194,58,.1); color: #67C23A; }
-.seg-speaker { flex: 0 0 112px; width: 112px; border: none; border-radius: 3px; padding: 1px 4px; font-size: 13px; font-weight: 600; color: var(--color-primary); background: transparent; outline: none; font-family: inherit; }
-.seg-speaker::placeholder { color: var(--color-primary); opacity: 1; }
-.seg-speaker:focus { border-color: var(--color-primary); }
-.seg-role { font-size: 11px; color: var(--color-primary); background: rgba(64,158,255,.08); border-radius: 3px; padding: 1px 5px; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.seg-rename-all { cursor: pointer; font-size: 12px; color: var(--text-placeholder); margin-left: 2px; }
-.seg-rename-all:hover { color: var(--color-primary); }
-.seg-actions { margin-left: auto; display: flex; align-items: center; gap: 4px; }
-.seg-move { cursor: pointer; color: var(--text-placeholder); font-size: 12px; }
-.seg-move:hover { color: var(--color-primary); }
-.seg-del { cursor: pointer; color: var(--text-placeholder); font-size: 14px; }
-.seg-del:hover { color: var(--color-danger); }
-.seg-textarea { width: 100%; border: none; border-radius: 4px; padding: 4px 0; font-size: 14px; color: var(--text-primary); background: transparent; outline: none; resize: vertical; font-family: inherit; line-height: 1.7; }
-.seg-textarea:focus { background: var(--bg-tertiary); padding: 6px 8px; }
-.seg-audio { }
-.seg-audio-path { font-size: 12px; color: var(--text-tertiary); }
-.legacy-minutes { }
-.detail-textarea { width: 100%; border: 1px solid var(--border-color-light); border-radius: 4px; padding: 8px; font-size: 13px; color: var(--text-primary); background: transparent; outline: none; resize: vertical; font-family: inherit; line-height: 1.5; }
-.detail-textarea:focus { border-color: var(--color-primary); }
+.segments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.segment-item {
+  border: 1px solid var(--border-color-light);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.segment-item.audio {
+  border-left: 3px solid #409EFF;
+}
+
+.segment-item.text {
+  border-left: 3px solid #67C23A;
+}
+
+.seg-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.seg-time {
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.seg-type-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.seg-type-badge.audio {
+  background: rgba(64, 158, 255, .1);
+  color: #409EFF;
+}
+
+.seg-type-badge.text {
+  background: rgba(103, 194, 58, .1);
+  color: #67C23A;
+}
+
+.seg-speaker {
+  flex: 0 0 112px;
+  width: 112px;
+  border: none;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+}
+
+.seg-speaker::placeholder {
+  color: var(--color-primary);
+  opacity: 1;
+}
+
+.seg-speaker:focus {
+  border-color: var(--color-primary);
+}
+
+.seg-role {
+  font-size: 11px;
+  color: var(--color-primary);
+  background: rgba(64, 158, 255, .08);
+  border-radius: 3px;
+  padding: 1px 5px;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seg-rename-all {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-placeholder);
+  margin-left: 2px;
+}
+
+.seg-rename-all:hover {
+  color: var(--color-primary);
+}
+
+.seg-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.seg-move {
+  cursor: pointer;
+  color: var(--text-placeholder);
+  font-size: 12px;
+}
+
+.seg-move:hover {
+  color: var(--color-primary);
+}
+
+.seg-del {
+  cursor: pointer;
+  color: var(--text-placeholder);
+  font-size: 14px;
+}
+
+.seg-del:hover {
+  color: var(--color-danger);
+}
+
+.seg-textarea {
+  width: 100%;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 0;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: transparent;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.7;
+}
+
+.seg-textarea:focus {
+  background: var(--bg-tertiary);
+  padding: 6px 8px;
+}
+
+.seg-audio {
+}
+
+.seg-audio-path {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.legacy-minutes {
+}
+
+.detail-textarea {
+  width: 100%;
+  border: 1px solid var(--border-color-light);
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: transparent;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.detail-textarea:focus {
+  border-color: var(--color-primary);
+}
 
 /* 录音 */
-.recording-area { display: flex; align-items: center; gap: 10px; }
-.recording-play { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-tertiary); }
+.recording-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.recording-play {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
 
 /* STT */
-.stt-area { }
-.stt-status { font-size: 11px; padding: 1px 6px; border-radius: 3px; }
-.stt-status.done { background: rgba(103,194,58,.1); color: #67C23A; }
-.stt-status.pending { background: rgba(230,162,60,.1); color: #E6A23C; }
-.stt-text { margin-top: 8px; padding: 8px; background: var(--bg-tertiary); border-radius: 4px; font-size: 13px; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; }
-.transcript-list { margin-top: 8px; max-height: 260px; overflow: auto; border: 1px solid var(--border-color-light); border-radius: 6px; background: var(--bg-primary); }
-.transcript-list.live { max-height: 180px; border-color: rgba(64,158,255,.18); background: var(--color-primary-bg); }
-.transcript-row { padding: 10px 12px; border-bottom: 1px solid var(--border-color-light); }
-.transcript-row:last-child { border-bottom: none; }
-.transcript-row.compact { padding: 6px 0; border-bottom-color: rgba(0,0,0,.06); }
-.transcript-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; min-width: 0; }
-.transcript-speaker { color: var(--color-primary); font-size: 13px; font-weight: 600; }
-.transcript-time { color: var(--text-tertiary); font-size: 12px; font-variant-numeric: tabular-nums; }
-.transcript-content { color: var(--text-primary); font-size: 14px; line-height: 1.7; word-break: break-word; }
-.transcript-row.compact .transcript-meta { margin-bottom: 2px; }
+.stt-area {
+}
+
+.stt-status {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.stt-status.done {
+  background: rgba(103, 194, 58, .1);
+  color: #67C23A;
+}
+
+.stt-status.pending {
+  background: rgba(230, 162, 60, .1);
+  color: #E6A23C;
+}
+
+.stt-text {
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.transcript-list {
+  margin-top: 8px;
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid var(--border-color-light);
+  border-radius: 6px;
+  background: var(--bg-primary);
+}
+
+.transcript-list.live {
+  max-height: 180px;
+  border-color: rgba(64, 158, 255, .18);
+  background: var(--color-primary-bg);
+}
+
+.transcript-row {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color-light);
+}
+
+.transcript-row:last-child {
+  border-bottom: none;
+}
+
+.transcript-row.compact {
+  padding: 6px 0;
+  border-bottom-color: rgba(0, 0, 0, .06);
+}
+
+.transcript-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  min-width: 0;
+}
+
+.transcript-speaker {
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.transcript-time {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.transcript-content {
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.transcript-row.compact .transcript-meta {
+  margin-bottom: 2px;
+}
+
 .transcript-row.compact .transcript-speaker,
-.transcript-row.compact .transcript-time { font-size: 11px; }
-.transcript-row.compact .transcript-content { font-size: 12px; line-height: 1.5; }
-.stt-error { margin-top: 6px; color: var(--color-danger); font-size: 12px; }
+.transcript-row.compact .transcript-time {
+  font-size: 11px;
+}
+
+.transcript-row.compact .transcript-content {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.stt-error {
+  margin-top: 6px;
+  color: var(--color-danger);
+  font-size: 12px;
+}
 
 /* 附件 */
-.attachment-area { }
-.upload-btn { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px dashed var(--border-color-light); border-radius: 6px; cursor: pointer; color: var(--text-tertiary); font-size: 12px; transition: all .15s; }
-.upload-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
-.attachment-list { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
-.att-item { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; background: var(--bg-tertiary); font-size: 12px; color: var(--text-primary); }
-.att-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.att-del { cursor: pointer; color: var(--text-tertiary); }
-.att-del:hover { color: var(--color-danger); }
+.attachment-area {
+}
+
+.upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px dashed var(--border-color-light);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  transition: all .15s;
+}
+
+.upload-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.attachment-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.att-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.att-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.att-del {
+  cursor: pointer;
+  color: var(--text-tertiary);
+}
+
+.att-del:hover {
+  color: var(--color-danger);
+}
 
 /* AI 摘要 */
-.ai-area { }
-.summary-content { margin-top: 10px; }
-.summary-block { margin-bottom: 10px; }
-.summary-label { font-size: 12px; font-weight: 600; color: var(--color-primary); display: block; margin-bottom: 4px; }
-.summary-block p { font-size: 13px; color: var(--text-primary); line-height: 1.5; margin: 0; }
-.summary-block ul { margin: 0; padding-left: 16px; }
-.summary-block li { font-size: 13px; color: var(--text-primary); line-height: 1.6; }
+.ai-area {
+}
+
+.summary-content {
+  margin-top: 10px;
+}
+
+.summary-block {
+  margin-bottom: 10px;
+}
+
+.summary-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.summary-block p {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.summary-block ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.summary-block li {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
 
 /* AI 问答 */
-.ai-chat-area { }
-.ai-chat-list { max-height: 200px; overflow-y: auto; margin-bottom: 8px; }
-.ai-msg { padding: 6px 10px; border-radius: 6px; margin-bottom: 4px; font-size: 13px; line-height: 1.5; }
-.ai-msg.user { background: var(--color-primary-bg); color: var(--text-primary); }
-.ai-msg.assistant { background: var(--bg-tertiary); color: var(--text-primary); }
-.ai-msg-role { font-size: 11px; font-weight: 600; color: var(--text-tertiary); display: block; margin-bottom: 2px; }
-.ai-msg-text { white-space: pre-wrap; word-break: break-word; }
-.ai-chat-input { display: flex; gap: 6px; }
-.ai-input { flex: 1; border: 1px solid var(--border-color-light); border-radius: 4px; padding: 4px 8px; font-size: 13px; color: var(--text-primary); background: transparent; outline: none; font-family: inherit; }
-.ai-input:focus { border-color: var(--color-primary); }
-.ai-input::placeholder { color: var(--text-placeholder); }
+.ai-chat-area {
+}
+
+.ai-chat-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.ai-msg {
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ai-msg.user {
+  background: var(--color-primary-bg);
+  color: var(--text-primary);
+}
+
+.ai-msg.assistant {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.ai-msg-role {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.ai-msg-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ai-chat-input {
+  display: flex;
+  gap: 6px;
+}
+
+.ai-input {
+  flex: 1;
+  border: 1px solid var(--border-color-light);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+}
+
+.ai-input:focus {
+  border-color: var(--color-primary);
+}
+
+.ai-input::placeholder {
+  color: var(--text-placeholder);
+}
 
 /* 空/加载 */
 .state-wrap {

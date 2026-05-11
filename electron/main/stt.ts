@@ -51,7 +51,9 @@ export interface RealtimeSttUtterance {
 
 export interface RealtimeSttSession {
     id: string
+
     sendAudio(buffer: Buffer): void
+
     stop(): Promise<string>
 }
 
@@ -134,7 +136,8 @@ function resolveDoubaoAuth(config: SttConfig, sessionId: string, resourceOverrid
     if (apiKey.startsWith('{')) {
         try {
             parsed = JSON.parse(apiKey)
-        } catch {}
+        } catch {
+        }
     } else if (apiKey.includes('=')) {
         parsed = parseKeyValueSecret(apiKey)
     }
@@ -360,12 +363,12 @@ function normalizeRealtimeUtterances(data: any, resolveSpeaker = createSpeakerLa
             // 提取时间戳（毫秒转秒）
             const startTime = item?.start_time != null ? Number(item.start_time) / 1000
                 : item?.startTime != null ? Number(item.startTime) / 1000
-                : item?.begin != null ? Number(item.begin) / 1000
-                : undefined
+                    : item?.begin != null ? Number(item.begin) / 1000
+                        : undefined
             const endTime = item?.end_time != null ? Number(item.end_time) / 1000
                 : item?.endTime != null ? Number(item.endTime) / 1000
-                : item?.end != null ? Number(item.end) / 1000
-                : undefined
+                    : item?.end != null ? Number(item.end) / 1000
+                        : undefined
             return {
                 speaker: resolveSpeaker(item, index + 1, data),
                 text,
@@ -430,7 +433,12 @@ function mergeRealtimeText(existing: string, incoming: string): string {
     return merged.join('\n')
 }
 
-function extractRealtimeText(data: any, resolveSpeaker = createSpeakerLabeler()): { text: string; final: boolean; speaker?: string; utterances?: RealtimeSttUtterance[] } {
+function extractRealtimeText(data: any, resolveSpeaker = createSpeakerLabeler()): {
+    text: string;
+    final: boolean;
+    speaker?: string;
+    utterances?: RealtimeSttUtterance[]
+} {
     if (typeof data === 'string') return {text: data, final: true}
 
     const utterances = normalizeRealtimeUtterances(data, resolveSpeaker)
@@ -561,7 +569,8 @@ export function createRealtimeSttSession(onEvent: (event: RealtimeSttEvent) => v
             raw = message.toString()
             try {
                 raw = JSON.parse(raw)
-            } catch {}
+            } catch {
+            }
         }
 
         if (raw?.error) {

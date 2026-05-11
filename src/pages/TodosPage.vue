@@ -10,12 +10,12 @@
       </div>
       <div class="head-actions">
         <button
-          v-for="f in filterOptions"
-          :key="f.value"
-          class="filter-btn"
-          :class="{ active: statusFilter === f.value }"
-          type="button"
-          @click="setFilter(f.value)"
+            v-for="f in filterOptions"
+            :key="f.value"
+            class="filter-btn"
+            :class="{ active: statusFilter === f.value }"
+            type="button"
+            @click="setFilter(f.value)"
         >
           {{ f.label }}
         </button>
@@ -25,56 +25,67 @@
     <section class="composer" :class="{ active: newTitle.trim() || newDescription.trim() }">
       <div class="composer-main">
         <textarea
-          ref="addInputRef"
-          v-model="newTitle"
-          class="composer-input"
-          placeholder="写下你的待办事项..."
-          rows="1"
-          @keydown.enter.exact.prevent="handleAdd"
+            ref="addInputRef"
+            v-model="newTitle"
+            class="composer-input"
+            placeholder="写下你的待办事项..."
+            rows="1"
+            @keydown.enter.exact.prevent="handleAdd"
         />
         <button class="submit-btn" type="button" :disabled="!newTitle.trim()" title="提交待办" @click="handleAdd">
-          <el-icon :size="18"><Back /></el-icon>
+          <el-icon :size="18">
+            <Back/>
+          </el-icon>
         </button>
       </div>
 
       <textarea
-        v-if="showDescription || newDescription.trim()"
-        v-model="newDescription"
-        class="description-input"
-        placeholder="补充描述..."
-        rows="2"
+          v-if="showDescription || newDescription.trim()"
+          v-model="newDescription"
+          class="description-input"
+          placeholder="补充描述..."
+          rows="2"
       />
 
       <div v-if="pasteImages.length" class="paste-row">
         <div v-for="(img, i) in pasteImages" :key="i" class="paste-thumb">
-          <img :src="img" alt="待办图片" />
+          <img :src="img" alt="待办图片"/>
           <button type="button" title="移除图片" @click="pasteImages.splice(i, 1)">
-            <el-icon :size="11"><Close /></el-icon>
+            <el-icon :size="11">
+              <Close/>
+            </el-icon>
           </button>
         </div>
       </div>
 
       <div class="composer-tools">
         <button class="tool-btn" :class="{ active: newDueDate }" type="button" @click="cycleDueDate">
-          <el-icon :size="14"><Calendar /></el-icon>
+          <el-icon :size="14">
+            <Calendar/>
+          </el-icon>
           <span>{{ dueDateLabel }}</span>
         </button>
         <el-date-picker
-          ref="datePickerRef"
-          v-model="customDate"
-          type="date"
-          value-format="YYYY-MM-DD"
-          size="small"
-          style="position: absolute; visibility: hidden; width: 0; height: 0"
-          :disabled-date="disablePastDate"
-          @change="onCustomDate"
+            ref="datePickerRef"
+            v-model="customDate"
+            type="date"
+            value-format="YYYY-MM-DD"
+            size="small"
+            style="position: absolute; visibility: hidden; width: 0; height: 0"
+            :disabled-date="disablePastDate"
+            @change="onCustomDate"
         />
-        <button class="tool-btn" :class="{ active: showDescription || newDescription.trim() }" type="button" @click="showDescription = !showDescription">
-          <el-icon :size="14"><Document /></el-icon>
+        <button class="tool-btn" :class="{ active: showDescription || newDescription.trim() }" type="button"
+                @click="showDescription = !showDescription">
+          <el-icon :size="14">
+            <Document/>
+          </el-icon>
           <span>描述</span>
         </button>
         <button class="tool-btn priority-btn" :class="newPriority" type="button" @click="cyclePriority">
-          <el-icon :size="14"><Flag /></el-icon>
+          <el-icon :size="14">
+            <Flag/>
+          </el-icon>
           <span>{{ priLabel(newPriority) }}</span>
         </button>
       </div>
@@ -87,12 +98,16 @@
           <span class="panel-count">{{ visibleTodoCount }} 项</span>
         </div>
         <button class="refresh-btn" type="button" title="刷新" @click="refreshTodos">
-          <el-icon :size="16"><Refresh /></el-icon>
+          <el-icon :size="16">
+            <Refresh/>
+          </el-icon>
         </button>
       </div>
 
       <div v-if="todosStore.loading" class="state-wrap">
-        <el-icon class="loading-icon" :size="26"><Loading /></el-icon>
+        <el-icon class="loading-icon" :size="26">
+          <Loading/>
+        </el-icon>
         <span>加载中...</span>
       </div>
 
@@ -104,14 +119,14 @@
               <span class="group-num">{{ group.items.length }}</span>
             </div>
             <article
-              v-for="todo in group.items"
-              :key="todo.id"
-              class="todo-item"
-              :class="{ done: todo.completed === 1, ['p-' + todo.priority]: todo.completed === 0 }"
+                v-for="todo in group.items"
+                :key="todo.id"
+                class="todo-item"
+                :class="{ done: todo.completed === 1, ['p-' + todo.priority]: todo.completed === 0 }"
             >
               <button class="check" type="button" title="切换完成状态" @click="handleToggle(todo.id)">
                 <span v-if="todo.completed === 1" class="check-on">
-                  <el-icon :size="12"><Check /></el-icon>
+                  <el-icon :size="12"><Check/></el-icon>
                 </span>
                 <span v-else class="check-off"></span>
               </button>
@@ -121,36 +136,38 @@
                 <p v-if="todo.description" class="item-desc">{{ todo.description }}</p>
                 <div class="item-meta">
                   <span v-if="todo.due_date" class="meta-tag date-tag" :class="{ late: isOverdue(todo) }">
-                    <el-icon :size="12"><Calendar /></el-icon>
+                    <el-icon :size="12"><Calendar/></el-icon>
                     {{ fmtDate(todo.due_date) }}
                   </span>
                   <button
-                    v-if="todo.completed === 0 && todo.priority !== 'normal'"
-                    class="meta-tag pri-tag"
-                    :class="todo.priority"
-                    type="button"
-                    @click.stop="cycleTodoPriority(todo)"
+                      v-if="todo.completed === 0 && todo.priority !== 'normal'"
+                      class="meta-tag pri-tag"
+                      :class="todo.priority"
+                      type="button"
+                      @click.stop="cycleTodoPriority(todo)"
                   >
                     {{ priLabel(todo.priority) }}
                   </button>
                   <span v-if="todoImages(todo).length" class="meta-tag">
-                    <el-icon :size="12"><Picture /></el-icon>
+                    <el-icon :size="12"><Picture/></el-icon>
                     {{ todoImages(todo).length }}
                   </span>
                 </div>
                 <div v-if="todoImages(todo).length" class="imgs">
                   <img
-                    v-for="(img, i) in todoImages(todo).slice(0, 3)"
-                    :key="i"
-                    :src="img"
-                    alt="待办图片"
-                    @click.stop="previewImage(img)"
+                      v-for="(img, i) in todoImages(todo).slice(0, 3)"
+                      :key="i"
+                      :src="img"
+                      alt="待办图片"
+                      @click.stop="previewImage(img)"
                   />
                 </div>
               </div>
 
               <button class="item-del" type="button" title="删除" @click.stop="handleDeleteTodo(todo)">
-                <el-icon :size="15"><Delete /></el-icon>
+                <el-icon :size="15">
+                  <Delete/>
+                </el-icon>
               </button>
             </article>
           </div>
@@ -173,23 +190,25 @@
       <div v-if="completedCount && statusFilter !== 'completed'" class="completed-toggle-row">
         <button class="completed-toggle" type="button" @click="showCompleted = !showCompleted">
           {{ showCompleted ? '隐藏已完成事项' : '显示已完成事项' }}
-          <el-icon :size="13" :class="{ expanded: showCompleted }"><ArrowDown /></el-icon>
+          <el-icon :size="13" :class="{ expanded: showCompleted }">
+            <ArrowDown/>
+          </el-icon>
         </button>
       </div>
     </section>
 
     <el-dialog
-      v-model="editVisible"
-      width="440px"
-      :close-on-click-modal="true"
-      destroy-on-close
-      class="todo-edit-dialog"
+        v-model="editVisible"
+        width="440px"
+        :close-on-click-modal="true"
+        destroy-on-close
+        class="todo-edit-dialog"
     >
       <template #header>
         <div class="dialog-head">
           <button class="edit-check" type="button" @click="editForm.completed = editForm.completed === 1 ? 0 : 1">
             <span v-if="editForm.completed === 1" class="check-on">
-              <el-icon :size="12"><Check /></el-icon>
+              <el-icon :size="12"><Check/></el-icon>
             </span>
             <span v-else class="check-off"></span>
           </button>
@@ -197,31 +216,31 @@
         </div>
       </template>
 
-      <textarea v-model="editForm.title" class="edit-title" placeholder="待办内容" rows="2" />
-      <textarea v-model="editForm.description" class="edit-description" placeholder="描述" rows="3" />
+      <textarea v-model="editForm.title" class="edit-title" placeholder="待办内容" rows="2"/>
+      <textarea v-model="editForm.description" class="edit-description" placeholder="描述" rows="3"/>
 
       <div class="edit-row">
         <span class="edit-label">截止时间</span>
         <div class="edit-chips">
           <button
-            v-for="opt in dueOptions"
-            :key="opt.value"
-            class="chip"
-            :class="{ active: editForm.due_date === opt.value }"
-            type="button"
-            @click="editForm.due_date = opt.value"
+              v-for="opt in dueOptions"
+              :key="opt.value"
+              class="chip"
+              :class="{ active: editForm.due_date === opt.value }"
+              type="button"
+              @click="editForm.due_date = opt.value"
           >
             {{ opt.label }}
           </button>
           <el-date-picker
-            v-model="editCustomDate"
-            type="date"
-            value-format="YYYY-MM-DD"
-            size="small"
-            placeholder="选日期"
-            style="width: 116px"
-            :disabled-date="disablePastDate"
-            @change="(v: string) => { editForm.due_date = v || '' }"
+              v-model="editCustomDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              size="small"
+              placeholder="选日期"
+              style="width: 116px"
+              :disabled-date="disablePastDate"
+              @change="(v: string) => { editForm.due_date = v || '' }"
           />
         </div>
       </div>
@@ -230,12 +249,12 @@
         <span class="edit-label">优先级</span>
         <div class="edit-chips">
           <button
-            v-for="opt in priOptions"
-            :key="opt.value"
-            class="chip pri"
-            :class="[opt.value, { active: editForm.priority === opt.value }]"
-            type="button"
-            @click="editForm.priority = opt.value"
+              v-for="opt in priOptions"
+              :key="opt.value"
+              class="chip pri"
+              :class="[opt.value, { active: editForm.priority === opt.value }]"
+              type="button"
+              @click="editForm.priority = opt.value"
           >
             {{ opt.label }}
           </button>
@@ -246,9 +265,11 @@
         <span class="edit-label">图片</span>
         <div class="edit-imgs">
           <div v-for="(img, i) in editForm.images" :key="i" class="ei">
-            <img :src="img" alt="待办图片" @click.stop="previewImage(img)" />
+            <img :src="img" alt="待办图片" @click.stop="previewImage(img)"/>
             <button type="button" title="移除图片" @click="editForm.images.splice(i, 1)">
-              <el-icon :size="11"><Close /></el-icon>
+              <el-icon :size="11">
+                <Close/>
+              </el-icon>
             </button>
           </div>
         </div>
@@ -260,7 +281,7 @@
       </template>
     </el-dialog>
 
-    <el-image-viewer v-if="previewVisible" :url-list="[previewUrl]" @close="previewVisible = false" />
+    <el-image-viewer v-if="previewVisible" :url-list="[previewUrl]" @close="previewVisible = false"/>
   </div>
 </template>
 
@@ -483,7 +504,8 @@ async function resolveImages() {
       for (const path of JSON.parse(todo.images || '[]') as string[]) {
         if (!imgCache.has(path) && !path.startsWith('data:')) pendingPaths.push(path)
       }
-    } catch {}
+    } catch {
+    }
   }
   if (!pendingPaths.length) return
   try {
@@ -491,7 +513,8 @@ async function resolveImages() {
     for (let i = 0; i < pendingPaths.length; i++) {
       if (urls[i]) imgCache.set(pendingPaths[i], urls[i])
     }
-  } catch {}
+  } catch {
+  }
 }
 
 async function handlePaste(event: ClipboardEvent) {
@@ -518,7 +541,8 @@ async function saveImgs(base64Images: string[]): Promise<string[]> {
       try {
         const result = await window.electronAPI.ai.saveImages([image])
         if (result?.length) paths.push(...result)
-      } catch {}
+      } catch {
+      }
     } else {
       paths.push(image)
     }
@@ -566,11 +590,12 @@ function handleDeleteTodo(todo: Todo) {
     cancelButtonText: '取消',
     type: 'warning'
   })
-    .then(async () => {
-      await todosStore.deleteTodo(todo.id)
-      await handleFilterChange()
-    })
-    .catch(() => {})
+      .then(async () => {
+        await todosStore.deleteTodo(todo.id)
+        await handleFilterChange()
+      })
+      .catch(() => {
+      })
 }
 
 function openEdit(todo: Todo) {

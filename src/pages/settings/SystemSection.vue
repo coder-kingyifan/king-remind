@@ -40,10 +40,10 @@
           </div>
           <div class="setting-actions">
             <el-select
-              :model-value="settingsStore.settings.app_mode || 'simple'"
-              @change="onAppModeChange"
-              size="small"
-              style="width: 140px;"
+                :model-value="settingsStore.settings.app_mode || 'simple'"
+                @change="onAppModeChange"
+                size="small"
+                style="width: 140px;"
             >
               <el-option label="AI 模式" value="ai"/>
               <el-option label="普通模式" value="simple"/>
@@ -114,7 +114,9 @@
               <el-option label="自定义音乐" value="custom"/>
               <el-option label="关闭" value="off"/>
             </el-select>
-            <el-button size="small" plain @click="previewSound" :disabled="(settingsStore.settings.notification_sound || 'on') === 'off'">试听</el-button>
+            <el-button size="small" plain @click="previewSound"
+                       :disabled="(settingsStore.settings.notification_sound || 'on') === 'off'">试听
+            </el-button>
           </div>
         </div>
 
@@ -201,7 +203,8 @@
                 collapse-tags
                 collapse-tags-tooltip
             >
-              <el-option v-for="ch in todoChannelOptions" :key="ch.key" :label="ch.icon + ' ' + ch.name" :value="ch.key"/>
+              <el-option v-for="ch in todoChannelOptions" :key="ch.key" :label="ch.icon + ' ' + ch.name"
+                         :value="ch.key"/>
             </el-select>
           </div>
         </template>
@@ -247,7 +250,8 @@
                 collapse-tags
                 collapse-tags-tooltip
             >
-              <el-option v-for="ch in todoChannelOptions" :key="ch.key" :label="ch.icon + ' ' + ch.name" :value="ch.key"/>
+              <el-option v-for="ch in todoChannelOptions" :key="ch.key" :label="ch.icon + ' ' + ch.name"
+                         :value="ch.key"/>
             </el-select>
           </div>
         </template>
@@ -875,7 +879,8 @@ print(resp.json())</pre>
           </div>
           <div class="setting-actions">
             <el-button size="small" @click="saveNetworkProxy" :loading="savingProxy">保存</el-button>
-            <el-button size="small" type="success" plain @click="testNetworkProxy" :loading="testingProxy">检测 GitHub</el-button>
+            <el-button size="small" type="success" plain @click="testNetworkProxy" :loading="testingProxy">检测 GitHub
+            </el-button>
           </div>
         </div>
       </div>
@@ -1025,7 +1030,7 @@ print(resp.json())</pre>
 </template>
 
 <script setup lang="ts">
-import {onMounted, ref, computed} from 'vue'
+import {computed, onMounted, ref} from 'vue'
 import {useSettingsStore} from '@/stores/settings'
 import {ElMessage} from 'element-plus'
 import {ArrowDown} from '@element-plus/icons-vue'
@@ -1053,8 +1058,14 @@ const testingProxy = ref(false)
 const appVersion = ref('')
 const checkingUpdate = ref(false)
 const showUpdateDialog = ref(false)
-const updateInfo = ref<{ hasUpdate: boolean; currentVersion: string; latestVersion: string; downloadUrl: string; releaseNotes: string }>({
-    hasUpdate: false, currentVersion: '', latestVersion: '', downloadUrl: '', releaseNotes: ''
+const updateInfo = ref<{
+  hasUpdate: boolean;
+  currentVersion: string;
+  latestVersion: string;
+  downloadUrl: string;
+  releaseNotes: string
+}>({
+  hasUpdate: false, currentVersion: '', latestVersion: '', downloadUrl: '', releaseNotes: ''
 })
 
 onMounted(async () => {
@@ -1156,7 +1167,9 @@ const todoNotifyChannels = computed(() => {
   try {
     const raw = settingsStore.settings.todo_notify_channels
     return raw ? JSON.parse(raw) : ['desktop']
-  } catch { return ['desktop'] }
+  } catch {
+    return ['desktop']
+  }
 })
 
 async function onTodoNotifyChannelsChange(val: string[]) {
@@ -1167,7 +1180,9 @@ const todoSummaryChannels = computed(() => {
   try {
     const raw = settingsStore.settings.todo_summary_channels
     return raw ? JSON.parse(raw) : ['desktop']
-  } catch { return ['desktop'] }
+  } catch {
+    return ['desktop']
+  }
 })
 
 async function onTodoSummaryChannelsChange(val: string[]) {
@@ -1360,13 +1375,13 @@ function downloadUpdate() {
 /** 简单的 Markdown 渲染（仅处理标题、列表、加粗） */
 function renderMarkdown(text: string): string {
   return text
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
-    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^# (.+)$/gm, '<h2>$1</h2>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/\n/g, '<br/>')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+      .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/^- (.+)$/gm, '<li>$1</li>')
+      .replace(/\n/g, '<br/>')
 }
 </script>
 

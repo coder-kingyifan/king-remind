@@ -7,14 +7,20 @@
       </div>
       <div class="head-actions">
         <button class="icon-btn" type="button" title="上个月" @click="changeMonth(-1)">
-          <el-icon :size="17"><ArrowLeft /></el-icon>
+          <el-icon :size="17">
+            <ArrowLeft/>
+          </el-icon>
         </button>
         <button class="today-btn" type="button" @click="goToday">本月</button>
         <button class="icon-btn" type="button" title="下个月" @click="changeMonth(1)">
-          <el-icon :size="17"><ArrowRight /></el-icon>
+          <el-icon :size="17">
+            <ArrowRight/>
+          </el-icon>
         </button>
         <button class="icon-btn" type="button" title="刷新" @click="refresh">
-          <el-icon :size="17"><Refresh /></el-icon>
+          <el-icon :size="17">
+            <Refresh/>
+          </el-icon>
         </button>
       </div>
     </div>
@@ -46,44 +52,47 @@
       </div>
 
       <div v-if="isLoading" class="state-wrap">
-        <el-icon class="loading-icon" :size="26"><Loading /></el-icon>
+        <el-icon class="loading-icon" :size="26">
+          <Loading/>
+        </el-icon>
         <span>加载中...</span>
       </div>
 
       <div v-else class="month-grid">
         <div
-          v-for="day in calendarDays"
-          :key="day.key"
-          class="day-cell"
-          :style="day.gridColumnStart ? {gridColumnStart: day.gridColumnStart} : undefined"
-          :class="{
+            v-for="day in calendarDays"
+            :key="day.key"
+            class="day-cell"
+            :style="day.gridColumnStart ? {gridColumnStart: day.gridColumnStart} : undefined"
+            :class="{
             today: day.key === todayKey,
             selected: day.key === selectedDate
           }"
-          role="button"
-          tabindex="0"
-          @click="handleDayClick(day.key)"
-          @keydown.enter.prevent="handleDayClick(day.key)"
+            role="button"
+            tabindex="0"
+            @click="handleDayClick(day.key)"
+            @keydown.enter.prevent="handleDayClick(day.key)"
         >
           <div class="day-top">
             <span class="day-num">{{ day.day }}</span>
             <span class="cell-add-wrap" @click.stop>
-              <el-dropdown trigger="click" placement="bottom-end" @command="(type: CalendarEventType) => openQuickAdd(type, day.key)">
+              <el-dropdown trigger="click" placement="bottom-end"
+                           @command="(type: CalendarEventType) => openQuickAdd(type, day.key)">
                 <button class="cell-add" type="button" title="快速添加">
-                  <el-icon :size="13"><Plus /></el-icon>
+                  <el-icon :size="13"><Plus/></el-icon>
                 </button>
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="todo">
-                      <el-icon><List /></el-icon>
+                      <el-icon><List/></el-icon>
                       待办
                     </el-dropdown-item>
                     <el-dropdown-item command="meeting">
-                      <el-icon><Memo /></el-icon>
+                      <el-icon><Memo/></el-icon>
                       会议
                     </el-dropdown-item>
                     <el-dropdown-item command="reminder">
-                      <el-icon><Bell /></el-icon>
+                      <el-icon><Bell/></el-icon>
                       我的提醒
                     </el-dropdown-item>
                   </el-dropdown-menu>
@@ -94,21 +103,21 @@
 
           <div v-if="eventsByDate[day.key]?.length" class="event-stack">
             <div
-              v-for="event in eventsByDate[day.key]"
-              :key="event.key"
-              class="event-pill"
-              :class="[event.type, {done: event.done}]"
-              :title="`${event.typeLabel}${event.time ? ' ' + event.time : ''}：${event.title}`"
-              @click.stop="openEventDetail(event)"
+                v-for="event in eventsByDate[day.key]"
+                :key="event.key"
+                class="event-pill"
+                :class="[event.type, {done: event.done}]"
+                :title="`${event.typeLabel}${event.time ? ' ' + event.time : ''}：${event.title}`"
+                @click.stop="openEventDetail(event)"
             >
               <span v-if="event.time" class="event-time">{{ event.time }}</span>
               <span class="event-title">{{ event.title }}</span>
             </div>
             <button
-              v-if="eventsByDate[day.key].length > visibleEventLimit"
-              class="more-count"
-              type="button"
-              @click.stop="openDayEvents(day.key)"
+                v-if="eventsByDate[day.key].length > visibleEventLimit"
+                class="more-count"
+                type="button"
+                @click.stop="openDayEvents(day.key)"
             >
               +{{ eventsByDate[day.key].length - visibleEventLimit }}
             </button>
@@ -125,27 +134,29 @@
             <span>{{ group.events.length }}</span>
           </div>
           <div
-            v-for="event in group.events"
-            :key="event.key"
-            class="day-event-row"
-            :class="[event.type, {done: event.done}]"
-            role="button"
-            tabindex="0"
-            @click="openEventDetail(event)"
-            @keydown.enter.prevent="openEventDetail(event)"
+              v-for="event in group.events"
+              :key="event.key"
+              class="day-event-row"
+              :class="[event.type, {done: event.done}]"
+              role="button"
+              tabindex="0"
+              @click="openEventDetail(event)"
+              @keydown.enter.prevent="openEventDetail(event)"
           >
             <span v-if="event.time" class="row-time">{{ event.time }}</span>
             <span class="row-title">{{ event.title }}</span>
             <span v-if="event.extra" class="row-extra">{{ event.extra }}</span>
             <button
-              v-if="event.type === 'todo'"
-              class="todo-complete-btn"
-              :class="{done: event.done}"
-              type="button"
-              :title="event.done ? '取消完成' : '完成待办'"
-              @click.stop="toggleTodoEvent(event)"
+                v-if="event.type === 'todo'"
+                class="todo-complete-btn"
+                :class="{done: event.done}"
+                type="button"
+                :title="event.done ? '取消完成' : '完成待办'"
+                @click.stop="toggleTodoEvent(event)"
             >
-              <el-icon :size="12"><Check /></el-icon>
+              <el-icon :size="12">
+                <Check/>
+              </el-icon>
               <span>{{ event.done ? '已完成' : '完成' }}</span>
             </button>
           </div>
@@ -175,14 +186,15 @@
       <template #footer>
         <el-button size="small" @click="eventDetailVisible = false">关闭</el-button>
         <el-button
-          v-if="selectedEvent?.type === 'todo'"
-          size="small"
-          :type="selectedEvent.done ? 'default' : 'success'"
-          @click="toggleTodoEvent(selectedEvent)"
+            v-if="selectedEvent?.type === 'todo'"
+            size="small"
+            :type="selectedEvent.done ? 'default' : 'success'"
+            @click="toggleTodoEvent(selectedEvent)"
         >
           {{ selectedEvent.done ? '标记未完成' : '标记完成' }}
         </el-button>
-        <el-button v-if="selectedEvent" size="small" type="primary" @click="openSource(selectedEvent)">去查看</el-button>
+        <el-button v-if="selectedEvent" size="small" type="primary" @click="openSource(selectedEvent)">去查看
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -247,17 +259,17 @@ const todayLabel = computed(() => {
 })
 const dayEvents = computed(() => eventsByDate.value[dayEventsDate.value] || [])
 const dayEventGroups = computed(() => {
-  const order: Array<{type: CalendarEventType; label: string}> = [
+  const order: Array<{ type: CalendarEventType; label: string }> = [
     {type: 'meeting', label: '会议'},
     {type: 'reminder', label: '提醒'},
     {type: 'todo', label: '待办'}
   ]
   return order
-    .map(group => ({
-      ...group,
-      events: dayEvents.value.filter(event => event.type === group.type)
-    }))
-    .filter(group => group.events.length > 0)
+      .map(group => ({
+        ...group,
+        events: dayEvents.value.filter(event => event.type === group.type)
+      }))
+      .filter(group => group.events.length > 0)
 })
 const dayEventsTitle = computed(() => {
   if (!dayEventsDate.value) return '全部事项'

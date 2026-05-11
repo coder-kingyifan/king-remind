@@ -73,7 +73,7 @@ services:
       - KING_WEBHOOK_ENABLED=${KING_WEBHOOK_ENABLED:-false}
       - KING_WEBHOOK_URL=${KING_WEBHOOK_URL:-}
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:33333/api/ping"]
+      test: [ "CMD", "curl", "-sf", "http://localhost:33333/api/ping" ]
       interval: 30s
       timeout: 5s
       start_period: 15s

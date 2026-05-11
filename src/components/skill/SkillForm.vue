@@ -1,11 +1,11 @@
 <template>
   <el-dialog
-    :model-value="visible"
-    :title="skill ? '编辑技能' : '新建自定义技能'"
-    width="540px"
-    :close-on-click-modal="false"
-    @update:model-value="$emit('update:visible', $event)"
-    @open="onOpened"
+      :model-value="visible"
+      :title="skill ? '编辑技能' : '新建自定义技能'"
+      width="540px"
+      :close-on-click-modal="false"
+      @update:model-value="$emit('update:visible', $event)"
+      @open="onOpened"
   >
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" size="default">
       <el-form-item label="技能名称" prop="name">
@@ -22,11 +22,11 @@
             </template>
             <div class="icon-grid">
               <span
-                v-for="emoji in skillEmojis"
-                :key="emoji"
-                class="icon-option"
-                :class="{ active: form.icon === emoji }"
-                @click="form.icon = emoji"
+                  v-for="emoji in skillEmojis"
+                  :key="emoji"
+                  class="icon-option"
+                  :class="{ active: form.icon === emoji }"
+                  @click="form.icon = emoji"
               >{{ emoji }}</span>
             </div>
           </el-popover>
@@ -62,10 +62,12 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item label="请求头（可选，JSON格式）">
-          <el-input v-model="form.api_headers" type="textarea" :rows="2" placeholder='如：{"Authorization": "Bearer xxx"}'/>
+          <el-input v-model="form.api_headers" type="textarea" :rows="2"
+                    placeholder='如：{"Authorization": "Bearer xxx"}'/>
         </el-form-item>
         <el-form-item label="响应模板（可选）">
-          <el-input v-model="form.api_template" type="textarea" :rows="2" placeholder="用 {{key}} 引用返回数据中的字段"/>
+          <el-input v-model="form.api_template" type="textarea" :rows="2"
+                    placeholder="用 {{key}} 引用返回数据中的字段"/>
         </el-form-item>
         <el-form-item>
           <el-switch v-model="form.api_enable_ai_summary" active-text="AI 总结接口返回"/>
@@ -73,10 +75,10 @@
         <template v-if="form.api_enable_ai_summary">
           <el-form-item label="AI 总结提示词（可选）">
             <el-input
-              v-model="form.summary_prompt"
-              type="textarea"
-              :rows="3"
-              placeholder="如：请根据以下 API 返回的数据，总结关键信息。不填则使用默认提示词"
+                v-model="form.summary_prompt"
+                type="textarea"
+                :rows="3"
+                placeholder="如：请根据以下 API 返回的数据，总结关键信息。不填则使用默认提示词"
             />
           </el-form-item>
           <div class="form-tip">开启后，API 返回结果会经过 AI 总结后再通知，结果包含标题和正文</div>
@@ -86,7 +88,8 @@
       <!-- AI 提示词配置 -->
       <template v-if="form.action_type === 'ai_prompt'">
         <el-form-item label="提示词模板" prop="ai_prompt">
-          <el-input v-model="form.ai_prompt" type="textarea" :rows="4" placeholder="如：请根据今天的日期，推荐一条适合今天的运动建议"/>
+          <el-input v-model="form.ai_prompt" type="textarea" :rows="4"
+                    placeholder="如：请根据今天的日期，推荐一条适合今天的运动建议"/>
         </el-form-item>
         <div class="form-tip">
           可用变量：{&#123;date&#125;}（当前日期）、{&#123;time&#125;}（当前时间）
@@ -104,10 +107,10 @@
         <el-form-item label="联网搜索模型" prop="search_model_id">
           <el-select v-model="form.search_model_id" style="width: 100%;" placeholder="选择联网搜索模型">
             <el-option
-              v-for="m in webSearchModels"
-              :key="m.id"
-              :label="m.name + ' · ' + m.model"
-              :value="m.id"
+                v-for="m in webSearchModels"
+                :key="m.id"
+                :label="m.name + ' · ' + m.model"
+                :value="m.id"
             />
             <template #empty>
               <div class="empty-provider-tip">请先在「模型配置」中添加联网搜索模型</div>
@@ -116,10 +119,10 @@
         </el-form-item>
         <el-form-item label="AI 总结提示词（可选）">
           <el-input
-            v-model="form.summary_prompt"
-            type="textarea"
-            :rows="3"
-            placeholder="如：请根据以下搜索结果，用简洁的中文总结今日热点新闻，提炼3-5条要点"
+              v-model="form.summary_prompt"
+              type="textarea"
+              :rows="3"
+              placeholder="如：请根据以下搜索结果，用简洁的中文总结今日热点新闻，提炼3-5条要点"
           />
         </el-form-item>
         <div class="form-tip">
@@ -139,8 +142,8 @@
 <script setup lang="ts">
 import {ref} from 'vue'
 import {useSkillsStore} from '@/stores/skills'
-import {SKILL_CATEGORIES} from '@/types/skill'
 import type {Skill} from '@/types/skill'
+import {SKILL_CATEGORIES} from '@/types/skill'
 import {ElMessage} from 'element-plus'
 
 const props = defineProps<{
@@ -208,7 +211,10 @@ async function onOpened() {
   await loadWebSearchModels()
   if (props.skill) {
     let actionConfig: Record<string, any> = {}
-    try { actionConfig = JSON.parse(props.skill.action_config || '{}') } catch { /* ignore */ }
+    try {
+      actionConfig = JSON.parse(props.skill.action_config || '{}')
+    } catch { /* ignore */
+    }
     form.value = {
       name: props.skill.name, description: props.skill.description, icon: props.skill.icon,
       category: props.skill.category, action_type: props.skill.action_type as any,
@@ -237,7 +243,11 @@ async function handleSave() {
         actionConfig.url = form.value.api_url
         actionConfig.method = form.value.api_method
         if (form.value.api_headers) {
-          try { actionConfig.headers = JSON.parse(form.value.api_headers) } catch { actionConfig.headers = {} }
+          try {
+            actionConfig.headers = JSON.parse(form.value.api_headers)
+          } catch {
+            actionConfig.headers = {}
+          }
         }
         if (form.value.api_template) actionConfig.response_template = form.value.api_template
         actionConfig.enable_ai_summary = form.value.api_enable_ai_summary

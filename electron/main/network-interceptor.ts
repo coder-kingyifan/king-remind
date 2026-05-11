@@ -41,7 +41,8 @@ function extractHeaders(headers: any): Record<string, string> {
             return Object.fromEntries(
                 Object.entries(obj).filter(([, v]) => typeof v === 'string')
             )
-        } catch { /* fallback */ }
+        } catch { /* fallback */
+        }
     }
     return Object.fromEntries(
         Object.entries(headers).filter(([, v]) => typeof v === 'string')

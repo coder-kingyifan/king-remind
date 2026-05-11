@@ -3,8 +3,8 @@ import {app} from 'electron'
 import {remindersDb} from './db/reminders'
 import {settingsDb} from './db/settings'
 import {ReminderScheduler} from './scheduler'
-import {chatWithLLM} from './llm'
 import type {StreamEvent} from './llm'
+import {chatWithLLM} from './llm'
 import {modelConfigsDb} from './db/model-configs'
 import {notificationConfigsDb} from './db/notification-configs'
 import {weChatBot} from './wechat-bot/wechat-bot'
@@ -210,10 +210,13 @@ export function startApiServer(scheduler: ReminderScheduler, dispatcher?: Notifi
                 if (!body.message) return err(res, 400, '缺少必填字段: message')
 
                 // 构建消息列表
-                const history: Array<{ role: string; content: string }> = Array.isArray(body.history) ? body.history : []
+                const history: Array<{
+                    role: string;
+                    content: string
+                }> = Array.isArray(body.history) ? body.history : []
                 const messages = [
                     ...history,
-                    { role: 'user', content: String(body.message) }
+                    {role: 'user', content: String(body.message)}
                 ]
 
                 const configId = body.model_config_id ? Number(body.model_config_id) : undefined

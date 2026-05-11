@@ -7,15 +7,21 @@
       </div>
       <div class="header-actions">
         <el-button v-if="!isSimpleMode && activeTab === 'skills'" type="primary" @click="router.push('/skill-store')">
-          <el-icon><ShoppingBag/></el-icon>
+          <el-icon>
+            <ShoppingBag/>
+          </el-icon>
           技能商店
         </el-button>
         <el-button v-if="!isSimpleMode && activeTab === 'skills'" @click="openSkillCreateDialog">
-          <el-icon><Plus/></el-icon>
+          <el-icon>
+            <Plus/>
+          </el-icon>
           新建技能
         </el-button>
         <el-button v-if="activeTab === 'reminders'" type="primary" @click="openCreateDialog()">
-          <el-icon><Plus/></el-icon>
+          <el-icon>
+            <Plus/>
+          </el-icon>
           新建提醒
         </el-button>
       </div>
@@ -30,7 +36,9 @@
           :class="{ active: activeTab === tab.key }"
           @click="activeTab = tab.key"
       >
-        <el-icon :size="16"><component :is="tab.icon"/></el-icon>
+        <el-icon :size="16">
+          <component :is="tab.icon"/>
+        </el-icon>
         <span>{{ tab.label }}</span>
       </div>
     </div>
@@ -51,7 +59,9 @@
 
       <!-- 提醒列表 -->
       <div v-if="remindersStore.loading" class="state-wrap">
-        <el-icon class="loading-icon" :size="26"><Loading /></el-icon>
+        <el-icon class="loading-icon" :size="26">
+          <Loading/>
+        </el-icon>
         <span>加载中...</span>
       </div>
 
@@ -78,7 +88,8 @@
             <div class="row-info">
               <div class="row-title">{{ reminder.title }}</div>
               <div class="row-meta">
-                <el-tag v-if="!isSimpleMode && reminder.skill_id" size="small" effect="plain" type="success" style="margin-right: 6px;">
+                <el-tag v-if="!isSimpleMode && reminder.skill_id" size="small" effect="plain" type="success"
+                        style="margin-right: 6px;">
                   ⚡ {{ getSkillName(reminder.skill_id) }}
                 </el-tag>
                 <el-tag
@@ -153,8 +164,8 @@
 
     <div v-if="!isSimpleMode && activeTab === 'skills'" class="tab-content">
       <SkillsTabContent
-        ref="skillsTabRef"
-        :hide-header="true"
+          ref="skillsTabRef"
+          :hide-header="true"
       />
     </div>
 
@@ -413,8 +424,12 @@ function getSkillName(skillId: number): string {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .filter-bar {

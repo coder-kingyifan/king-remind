@@ -40,7 +40,8 @@
 
         <template v-if="botState.status === 'connected'">
           <div class="connected-actions">
-            <el-button type="danger" plain size="small" @click="handleLogout" :loading="logoutLoading">断开连接</el-button>
+            <el-button type="danger" plain size="small" @click="handleLogout" :loading="logoutLoading">断开连接
+            </el-button>
           </div>
         </template>
       </div>
@@ -69,7 +70,7 @@ interface BotState {
   status: 'disconnected' | 'waiting_qrcode' | 'connecting' | 'connected'
   nickname?: string
   headImgUrl?: string
-  recentContacts: Array<{uin: string; nickname: string}>
+  recentContacts: Array<{ uin: string; nickname: string }>
 }
 
 const botState = ref<BotState>({
@@ -317,8 +318,12 @@ onUnmounted(() => {
 }
 
 @keyframes blink {
-  0%, 80%, 100% { opacity: 0.3; }
-  40% { opacity: 1; }
+  0%, 80%, 100% {
+    opacity: 0.3;
+  }
+  40% {
+    opacity: 1;
+  }
 }
 
 .status-text {
@@ -364,8 +369,13 @@ onUnmounted(() => {
   animation: blink 1.4s ease-in-out infinite;
 }
 
-.loading-dot:nth-child(2) { animation-delay: 0.2s; }
-.loading-dot:nth-child(3) { animation-delay: 0.4s; }
+.loading-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loading-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
 
 .qrcode-container {
   display: flex;

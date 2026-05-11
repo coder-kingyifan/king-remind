@@ -1,7 +1,7 @@
 <template>
   <div class="app-root">
     <!-- 首次启动向导 -->
-    <SetupWizard v-if="showSetup" @finish="onSetupFinish" />
+    <SetupWizard v-if="showSetup" @finish="onSetupFinish"/>
 
     <!-- 主界面 -->
     <template v-else>
@@ -149,18 +149,64 @@ function dismissNotification() {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
 }
 
-.notif-icon { font-size: 24px; flex-shrink: 0; }
-.notif-content { flex: 1; min-width: 0; }
-.notif-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
-.notif-body { font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.notif-close {
-  font-size: 18px; color: var(--text-tertiary); cursor: pointer; flex-shrink: 0;
-  width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 50%;
+.notif-icon {
+  font-size: 24px;
+  flex-shrink: 0;
 }
-.notif-close:hover { background: var(--bg-hover); color: var(--text-primary); }
 
-.notification-slide-enter-active { transition: all 0.3s ease-out; }
-.notification-slide-leave-active { transition: all 0.3s ease-in; }
-.notification-slide-enter-from { opacity: 0; transform: translateX(100%); }
-.notification-slide-leave-to { opacity: 0; transform: translateX(100%); }
+.notif-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.notif-body {
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notif-close {
+  font-size: 18px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.notif-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.notification-slide-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.notification-slide-leave-active {
+  transition: all 0.3s ease-in;
+}
+
+.notification-slide-enter-from {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.notification-slide-leave-to {
+  opacity: 0;
+  transform: translateX(100%);
+}
 </style>

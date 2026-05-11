@@ -1,4 +1,4 @@
-const { execFileSync, execSync } = require('child_process')
+const {execFileSync, execSync} = require('child_process')
 const path = require('path')
 const fs = require('fs')
 
@@ -25,7 +25,7 @@ function main() {
     // 1. 尝试强制结束可能占用的进程
     try {
         console.log('正在检查并清理残留进程...')
-        execSync('taskkill /F /IM king-mate.exe /T', { stdio: 'ignore' })
+        execSync('taskkill /F /IM king-mate.exe /T', {stdio: 'ignore'})
     } catch (e) {
         // 进程不存在会报错，直接忽略即可
     }
@@ -55,7 +55,7 @@ function main() {
 
     try {
         // 3. 执行修改
-        execFileSync(rceditBin, args, { stdio: 'inherit' })
+        execFileSync(rceditBin, args, {stdio: 'inherit'})
         console.log('✅ 修改成功！')
     } catch (err) {
         console.error('❌ 注入失败：文件可能仍被锁定或杀毒软件拦截。')

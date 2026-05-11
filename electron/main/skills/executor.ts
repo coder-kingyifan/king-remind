@@ -51,7 +51,7 @@ async function executeApiCall(actionConfig: Record<string, any>, userConfig: Rec
             finalUrl = finalUrl.replace(`{{${key}}}`, String(value))
         }
 
-        const res = await axios({ method, url: finalUrl, headers, timeout: 10000 })
+        const res = await axios({method, url: finalUrl, headers, timeout: 10000})
         const data = res.data
 
         let apiResult: string
@@ -186,13 +186,15 @@ export async function executeSkill(skillId: number, options?: { skipEnabledCheck
     let userConfig: Record<string, any> = {}
     try {
         userConfig = JSON.parse(skill.user_config || '{}')
-    } catch { /* ignore */ }
+    } catch { /* ignore */
+    }
 
     try {
         let actionConfig: Record<string, any> = {}
         try {
             actionConfig = JSON.parse(skill.action_config || '{}')
-        } catch { /* ignore */ }
+        } catch { /* ignore */
+        }
 
         if (skill.action_type === 'api_call') {
             return await executeApiCall(actionConfig, userConfig)

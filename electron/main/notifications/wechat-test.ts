@@ -68,7 +68,7 @@ export class WeChatTestNotifier implements NotificationChannel {
         const openIds = this.parseOpenIds(config.to_openid)
 
         const templateData: Record<string, { value: string; color?: string }> = {}
-        const fields: Array<{key: string; value: string; color?: string}> = config.template_fields || []
+        const fields: Array<{ key: string; value: string; color?: string }> = config.template_fields || []
 
         if (fields.length > 0) {
             for (const field of fields) {

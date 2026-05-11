@@ -3,21 +3,29 @@
     <div class="page-header">
       <div class="page-header-row">
         <div class="page-title-area">
-          <h1 class="page-title">{{ timeGreeting }}<span v-if="userNickname" class="user-nickname">，{{ userNickname }}</span></h1>
+          <h1 class="page-title">{{ timeGreeting }}<span v-if="userNickname" class="user-nickname">，{{
+              userNickname
+            }}</span></h1>
           <p v-if="encouragement" class="page-encouragement">{{ encouragement }}</p>
         </div>
         <div class="page-header-actions">
           <el-button size="small" plain @click="openWechatDialog">
-            <el-icon style="margin-right:4px"><ChatLineSquare/></el-icon>
+            <el-icon style="margin-right:4px">
+              <ChatLineSquare/>
+            </el-icon>
             微信
             <span class="wechat-status-dot" :class="wechatConnected ? 'on' : 'off'"></span>
           </el-button>
           <el-button size="small" plain @click="showHistory = true">
-            <el-icon style="margin-right:4px"><Clock/></el-icon>
+            <el-icon style="margin-right:4px">
+              <Clock/>
+            </el-icon>
             历史
           </el-button>
           <el-button size="small" plain @click="newChat">
-            <el-icon style="margin-right:4px"><Plus/></el-icon>
+            <el-icon style="margin-right:4px">
+              <Plus/>
+            </el-icon>
             新对话
           </el-button>
         </div>
@@ -29,23 +37,23 @@
       <div ref="messageList" class="message-list">
         <!-- 空态 -->
         <ChatEmptyState
-          v-if="messages.length === 0"
-          :suggestions="displaySuggestions"
-          :has-model="modelList.length > 0"
-          @send-suggestion="sendSuggestion"
+            v-if="messages.length === 0"
+            :suggestions="displaySuggestions"
+            :has-model="modelList.length > 0"
+            @send-suggestion="sendSuggestion"
         />
 
         <!-- 消息列表 -->
         <ChatMessage
-          v-for="(msg, idx) in messages"
-          :key="idx"
-          :message="msg"
-          :index="idx"
-          :is-thinking-open="openThinkingSet.has(idx)"
-          :nickname="userNickname"
-          :time-ago="msg.created_at ? formatRelativeTime(msg.created_at) : ''"
-          @toggle-thinking="toggleThinking"
-          @preview-image="previewImage"
+            v-for="(msg, idx) in messages"
+            :key="idx"
+            :message="msg"
+            :index="idx"
+            :is-thinking-open="openThinkingSet.has(idx)"
+            :nickname="userNickname"
+            :time-ago="msg.created_at ? formatRelativeTime(msg.created_at) : ''"
+            @toggle-thinking="toggleThinking"
+            @preview-image="previewImage"
         />
 
         <!-- Streaming: thinking + content -->
@@ -62,7 +70,8 @@
               </div>
               <div v-if="streamThinkingOpen" class="thinking-content">{{ streamingThinking }}</div>
             </div>
-            <div v-if="streamingContent" class="message-content streaming" v-html="renderContent(streamingContent)"></div>
+            <div v-if="streamingContent" class="message-content streaming"
+                 v-html="renderContent(streamingContent)"></div>
             <div v-if="streamStatus && !streamingContent" class="stream-status">
               <span class="stream-status-dot"></span>
               {{ streamStatus }}
@@ -96,14 +105,15 @@
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item v-for="m in modelList" :key="m.id" :command="m.id"
-                :class="{ 'is-active': selectedConfigId === m.id }">
+                                :class="{ 'is-active': selectedConfigId === m.id }">
                 {{ getProviderIcon(m.provider) }} {{ m.name }}
                 <el-tag v-if="m.is_default" size="small" type="success" style="margin-left:6px;">默认</el-tag>
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
-        <el-select v-model="selectedModel" size="small" class="model-inline-select" placeholder="模型" filterable allow-create default-first-option>
+        <el-select v-model="selectedModel" size="small" class="model-inline-select" placeholder="模型" filterable
+                   allow-create default-first-option>
           <el-option v-for="m in currentModels" :key="m" :label="m" :value="m"/>
         </el-select>
       </div>
@@ -118,14 +128,14 @@
         </div>
         <div class="input-row">
           <el-input
-            ref="inputRef"
-            v-model="inputText"
-            placeholder="说点什么吧，我可以帮你快速创建提醒（我也可以通粘贴图片创建提醒）"
-            :disabled="loading"
-            @keydown.enter.exact.prevent="send"
-            @paste="onInputPaste"
-            size="large"
-            clearable
+              ref="inputRef"
+              v-model="inputText"
+              placeholder="说点什么吧，我可以帮你快速创建提醒（我也可以通粘贴图片创建提醒）"
+              :disabled="loading"
+              @keydown.enter.exact.prevent="send"
+              @paste="onInputPaste"
+              size="large"
+              clearable
           >
             <template #append>
               <el-button :icon="Promotion" :loading="loading" @click="send"/>
@@ -187,7 +197,8 @@
               <p v-if="wechatBotState.status === 'waiting_qrcode'" class="wechat-qrcode-waiting">等待扫码中...</p>
             </div>
             <div v-else class="wechat-qrcode-placeholder">
-              <el-button type="primary" @click="fetchWechatQRCode" :loading="wechatQrcodeLoading">获取登录二维码</el-button>
+              <el-button type="primary" @click="fetchWechatQRCode" :loading="wechatQrcodeLoading">获取登录二维码
+              </el-button>
             </div>
           </div>
         </template>
@@ -195,7 +206,9 @@
         <!-- 已连接：断开按钮 -->
         <template v-if="wechatBotState.status === 'connected'">
           <div class="wechat-connected-actions">
-            <el-button type="danger" plain size="small" @click="handleWechatLogout" :loading="wechatLogoutLoading">断开连接</el-button>
+            <el-button type="danger" plain size="small" @click="handleWechatLogout" :loading="wechatLogoutLoading">
+              断开连接
+            </el-button>
           </div>
         </template>
 
@@ -211,7 +224,7 @@
 
 <script setup lang="ts">
 import {computed, nextTick, onActivated, onMounted, onUnmounted, reactive, ref, watch} from 'vue'
-import {Clock, Delete, Plus, Promotion, ChatLineSquare} from '@element-plus/icons-vue'
+import {ChatLineSquare, Clock, Delete, Plus, Promotion} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import ChatAvatar from '@/components/chat/ChatAvatar.vue'
 import ChatMessage from '@/components/chat/ChatMessage.vue'
@@ -262,7 +275,7 @@ interface WechatBotState {
   status: 'disconnected' | 'waiting_qrcode' | 'connecting' | 'connected'
   nickname?: string
   headImgUrl?: string
-  recentContacts: Array<{uin: string; nickname: string}>
+  recentContacts: Array<{ uin: string; nickname: string }>
 }
 
 const showWechatDialog = ref(false)
@@ -303,7 +316,8 @@ async function loadWechatState() {
   try {
     const state = await window.electronAPI.wechatBot.getState()
     if (state) Object.assign(wechatBotState.value, state)
-  } catch { /* ignore */ }
+  } catch { /* ignore */
+  }
 }
 
 async function fetchWechatQRCode() {
@@ -354,8 +368,10 @@ function startWechatPollingStatus() {
           await loadWechatState()
         }
       }
-    } catch { /* ignore */ }
-    finally { wechatIsCheckingStatus = false }
+    } catch { /* ignore */
+    } finally {
+      wechatIsCheckingStatus = false
+    }
   }, 3000)
 }
 
@@ -440,7 +456,7 @@ const timeGreeting = computed(() => {
 })
 
 const currentConfig = computed(() =>
-  modelList.value.find(m => m.id === selectedConfigId.value)
+    modelList.value.find(m => m.id === selectedConfigId.value)
 )
 
 const currentModels = computed(() => {
@@ -449,7 +465,8 @@ const currentModels = computed(() => {
   try {
     const arr = JSON.parse(cfg.models || '[]')
     if (Array.isArray(arr) && arr.filter(Boolean).length > 0) return arr.filter(Boolean)
-  } catch { /* ignore */ }
+  } catch { /* ignore */
+  }
   return cfg.model ? [cfg.model] : []
 })
 
@@ -512,10 +529,10 @@ function getProviderIcon(id?: string): string {
 
 function renderContent(text: string): string {
   return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\n/g, '<br/>')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br/>')
 }
 
 function formatRelativeTime(dateStr: string): string {
@@ -573,14 +590,22 @@ function toggleThinking(idx: number) {
 
 // Image handling
 function readFileAsBase64(file: File) {
-  if (!file.type.startsWith('image/')) { ElMessage.warning('仅支持图片文件'); return }
-  if (file.size > 10 * 1024 * 1024) { ElMessage.warning('图片不能超过 10MB'); return }
+  if (!file.type.startsWith('image/')) {
+    ElMessage.warning('仅支持图片文件');
+    return
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    ElMessage.warning('图片不能超过 10MB');
+    return
+  }
   const reader = new FileReader()
   reader.onload = () => pendingImages.value.push(reader.result as string)
   reader.readAsDataURL(file)
 }
 
-function removePendingImage(idx: number) { pendingImages.value.splice(idx, 1) }
+function removePendingImage(idx: number) {
+  pendingImages.value.splice(idx, 1)
+}
 
 function onInputPaste(e: ClipboardEvent) {
   const items = e.clipboardData?.items
@@ -597,16 +622,31 @@ function onInputPaste(e: ClipboardEvent) {
 // Stream handler
 function handleStreamEvent(event: any) {
   switch (event.type) {
-    case 'status': streamStatus.value = event.text; break
-    case 'chunk': streamingContent.value += event.text; streamStatus.value = ''; scrollToBottom(); break
-    case 'thinking': streamingThinking.value += event.text; streamStatus.value = ''; scrollToBottom(); break
-    case 'tool_start': streamStatus.value = `正在${getToolDisplayName(event.name)}...`; scrollToBottom(); break
+    case 'status':
+      streamStatus.value = event.text;
+      break
+    case 'chunk':
+      streamingContent.value += event.text;
+      streamStatus.value = '';
+      scrollToBottom();
+      break
+    case 'thinking':
+      streamingThinking.value += event.text;
+      streamStatus.value = '';
+      scrollToBottom();
+      break
+    case 'tool_start':
+      streamStatus.value = `正在${getToolDisplayName(event.name)}...`;
+      scrollToBottom();
+      break
     case 'tool_result':
       streamStatus.value = `${getToolDisplayName(event.name)}完成`
       if (event.name === 'create_skill') skillsStore.refreshSkills()
       scrollToBottom()
       break
-    case 'error': streamStatus.value = ''; break
+    case 'error':
+      streamStatus.value = '';
+      break
   }
 }
 
@@ -627,7 +667,8 @@ async function loadNickname() {
     if (nick) {
       userNickname.value = nick
     }
-  } catch { /* ignore */ }
+  } catch { /* ignore */
+  }
 }
 
 // Greeting
@@ -666,10 +707,10 @@ async function loadGreeting() {
       encouragement.value = fallbackEncouragements[Math.floor(Math.random() * fallbackEncouragements.length)]
     }
     // 写入缓存
-    greetingCache = { encouragement: encouragement.value, suggestions: suggestions.value }
+    greetingCache = {encouragement: encouragement.value, suggestions: suggestions.value}
   } catch {
     encouragement.value = fallbackEncouragements[Math.floor(Math.random() * fallbackEncouragements.length)]
-    greetingCache = { encouragement: encouragement.value, suggestions: [] }
+    greetingCache = {encouragement: encouragement.value, suggestions: []}
   } finally {
     greetingLoading.value = false
     aiSuggestionsLoaded.value = true
@@ -712,13 +753,16 @@ watch(currentModels, (models) => {
   }
   if (!models.includes(selectedModel.value)) {
     selectedModel.value = currentConfig.value?.model && models.includes(currentConfig.value.model)
-      ? currentConfig.value.model
-      : models[0]
+        ? currentConfig.value.model
+        : models[0]
   }
 })
 
 async function loadSessions() {
-  try { sessions.value = await window.electronAPI.ai.listSessions() } catch { /* ignore */ }
+  try {
+    sessions.value = await window.electronAPI.ai.listSessions()
+  } catch { /* ignore */
+  }
 }
 
 // 每次打开历史抽屉时自动刷新会话列表
@@ -730,7 +774,10 @@ watch(showWechatDialog, (val) => {
   if (!val) stopWechatStatePolling()
 })
 
-function sendSuggestion(text: string) { inputText.value = text; send() }
+function sendSuggestion(text: string) {
+  inputText.value = text;
+  send()
+}
 
 function newChat() {
   currentSessionId.value = null
@@ -755,17 +802,22 @@ async function loadSession(s: SessionItem) {
     messages.value = msgs as ChatMessage[]
     showHistory.value = false
     scrollToBottom()
-  } catch { /* ignore */ }
+  } catch { /* ignore */
+  }
 }
 
 async function handleDeleteSession(s: SessionItem) {
   try {
     await ElMessageBox.confirm(`确定删除「${s.title}」？`, '删除确认', {type: 'warning'})
     await window.electronAPI.ai.deleteSession(s.id)
-    if (currentSessionId.value === s.id) { currentSessionId.value = null; messages.value = [] }
+    if (currentSessionId.value === s.id) {
+      currentSessionId.value = null;
+      messages.value = []
+    }
     await loadSessions()
     ElMessage.success('已删除')
-  } catch { /* cancel */ }
+  } catch { /* cancel */
+  }
 }
 
 async function handleClearAllHistory() {
@@ -776,23 +828,34 @@ async function handleClearAllHistory() {
     messages.value = []
     await loadSessions()
     ElMessage.success('已清除全部记录')
-  } catch { /* cancel */ }
+  } catch { /* cancel */
+  }
 }
 
 async function send() {
   const text = inputText.value.trim()
   const images = [...pendingImages.value]
   if ((!text && images.length === 0) || loading.value) return
-  if (!selectedConfigId.value) { ElMessage.warning('请先在「模型配置」中添加模型'); return }
-  if (!selectedModel.value) { ElMessage.warning('请选择一个模型'); return }
+  if (!selectedConfigId.value) {
+    ElMessage.warning('请先在「模型配置」中添加模型');
+    return
+  }
+  if (!selectedModel.value) {
+    ElMessage.warning('请选择一个模型');
+    return
+  }
 
   let savedImagePaths: string[] = []
   if (images.length > 0) {
-    try { savedImagePaths = await window.electronAPI.ai.saveImages(images) }
-    catch (e: any) { ElMessage.error('图片保存失败: ' + (e.message || '未知错误')); return }
+    try {
+      savedImagePaths = await window.electronAPI.ai.saveImages(images)
+    } catch (e: any) {
+      ElMessage.error('图片保存失败: ' + (e.message || '未知错误'));
+      return
+    }
   }
 
-  const userMsg: ChatMessage = { role: 'user', content: text || '(图片)', images: images.length > 0 ? images : undefined }
+  const userMsg: ChatMessage = {role: 'user', content: text || '(图片)', images: images.length > 0 ? images : undefined}
   messages.value.push(userMsg)
   inputText.value = ''
   pendingImages.value = []
@@ -804,26 +867,29 @@ async function send() {
   await scrollToBottom()
 
   if (!currentSessionId.value) {
-    try { const session = await window.electronAPI.ai.createSession('新对话', selectedConfigId.value); currentSessionId.value = session.id }
-    catch { /* ignore */ }
+    try {
+      const session = await window.electronAPI.ai.createSession('新对话', selectedConfigId.value);
+      currentSessionId.value = session.id
+    } catch { /* ignore */
+    }
   }
 
   const isFirstMsg = messages.value.filter(m => m.role === 'user').length === 1
 
   const apiMessages = messages.value.map((m, idx) => {
     if (m.role === 'user' && idx === messages.value.length - 1 && savedImagePaths.length > 0) {
-      return { role: m.role, content: m.content || '(图片)', image_paths: savedImagePaths }
+      return {role: m.role, content: m.content || '(图片)', image_paths: savedImagePaths}
     }
-    return { role: m.role, content: m.content }
+    return {role: m.role, content: m.content}
   })
 
   try {
     const result = await window.electronAPI.ai.chat(
-      JSON.parse(JSON.stringify(apiMessages)), selectedConfigId.value, currentSessionId.value || undefined, selectedModel.value
+        JSON.parse(JSON.stringify(apiMessages)), selectedConfigId.value, currentSessionId.value || undefined, selectedModel.value
     )
     const reply = result.reply || streamingContent.value || '已为你完成操作！'
     const thinking = streamingThinking.value
-    messages.value.push({ role: 'assistant', content: reply, thinking: thinking || undefined })
+    messages.value.push({role: 'assistant', content: reply, thinking: thinking || undefined})
 
     if (isFirstMsg && currentSessionId.value) {
       try {
@@ -832,11 +898,15 @@ async function send() {
         await loadSessions()
       } catch {
         const fallbackTitle = text.length > 20 ? text.substring(0, 20) + '...' : text
-        try { await window.electronAPI.ai.updateSessionTitle(currentSessionId.value, fallbackTitle); await loadSessions() } catch { /* ignore */ }
+        try {
+          await window.electronAPI.ai.updateSessionTitle(currentSessionId.value, fallbackTitle);
+          await loadSessions()
+        } catch { /* ignore */
+        }
       }
     }
   } catch (e: any) {
-    messages.value.push({ role: 'assistant', content: `请求失败: ${e.message || '请检查模型配置'}` })
+    messages.value.push({role: 'assistant', content: `请求失败: ${e.message || '请检查模型配置'}`})
   } finally {
     loading.value = false
     streamingContent.value = ''
@@ -988,8 +1058,12 @@ async function send() {
 }
 
 @keyframes pulse-border {
-  0%, 100% { border-left-color: var(--color-primary); }
-  50% { border-left-color: transparent; }
+  0%, 100% {
+    border-left-color: var(--color-primary);
+  }
+  50% {
+    border-left-color: transparent;
+  }
 }
 
 .typing {
@@ -1007,12 +1081,21 @@ async function send() {
   animation: blink 1.4s ease-in-out infinite;
 }
 
-.dot:nth-child(2) { animation-delay: 0.2s; }
-.dot:nth-child(3) { animation-delay: 0.4s; }
+.dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
 
 @keyframes blink {
-  0%, 80%, 100% { opacity: 0.3; }
-  40% { opacity: 1; }
+  0%, 80%, 100% {
+    opacity: 0.3;
+  }
+  40% {
+    opacity: 1;
+  }
 }
 
 .thinking-block {
@@ -1024,7 +1107,9 @@ async function send() {
   transition: border-color 0.2s;
 }
 
-.thinking-block:hover { border-color: var(--color-primary); }
+.thinking-block:hover {
+  border-color: var(--color-primary);
+}
 
 .thinking-header {
   display: flex;
@@ -1036,8 +1121,15 @@ async function send() {
   user-select: none;
 }
 
-.thinking-toggle { font-size: 10px; color: var(--text-tertiary); }
-.thinking-label { color: var(--text-secondary); font-weight: 500; }
+.thinking-toggle {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.thinking-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
 
 .thinking-content {
   padding: 10px 12px;
@@ -1106,8 +1198,17 @@ async function send() {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
-.model-selector-icon { font-size: 14px; flex-shrink: 0; }
-.model-selector-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-selector-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.model-selector-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .model-inline-select {
   width: 120px;
@@ -1175,8 +1276,13 @@ async function send() {
   align-items: center;
 }
 
-.input-row .el-input { flex: 1; }
-.input-area :deep(.el-input-group__append) { padding: 0 12px; }
+.input-row .el-input {
+  flex: 1;
+}
+
+.input-area :deep(.el-input-group__append) {
+  padding: 0 12px;
+}
 
 /* History drawer */
 .history-header {
@@ -1192,7 +1298,9 @@ async function send() {
   color: var(--text-primary);
 }
 
-.history-toolbar { padding: 0 20px 8px; }
+.history-toolbar {
+  padding: 0 20px 8px;
+}
 
 .history-list {
   display: flex;
@@ -1211,10 +1319,20 @@ async function send() {
   border: 1px solid var(--border-color-light);
 }
 
-.history-item:hover { border-color: var(--color-primary); background: var(--color-primary-bg); }
-.history-item.active { border-color: var(--color-primary); background: var(--color-primary-bg); }
+.history-item:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
 
-.history-item-info { flex: 1; min-width: 0; }
+.history-item.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+
+.history-item-info {
+  flex: 1;
+  min-width: 0;
+}
 
 .history-item-title {
   font-size: 14px;
@@ -1237,7 +1355,9 @@ async function send() {
   transition: opacity 0.2s;
 }
 
-.history-item:hover .history-item-delete { opacity: 1; }
+.history-item:hover .history-item-delete {
+  opacity: 1;
+}
 
 .history-empty {
   text-align: center;

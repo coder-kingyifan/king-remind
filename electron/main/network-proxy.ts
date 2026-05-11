@@ -238,8 +238,16 @@ export async function saveNetworkProxyConfig(config: NetworkProxyConfig): Promis
 export async function testNetworkProxy(): Promise<{ success: boolean; error?: string }> {
     const config = getNetworkProxyConfig()
     const probes: NetworkProbe[] = [
-        {name: 'GitHub 主站', url: GITHUB_HOME_URL, validate: (body) => body.includes('github') || body.includes('GitHub')},
-        {name: 'GitHub Releases', url: GITHUB_RELEASES_URL, validate: (body) => body.includes('/releases') || body.includes('Releases')},
+        {
+            name: 'GitHub 主站',
+            url: GITHUB_HOME_URL,
+            validate: (body) => body.includes('github') || body.includes('GitHub')
+        },
+        {
+            name: 'GitHub Releases',
+            url: GITHUB_RELEASES_URL,
+            validate: (body) => body.includes('/releases') || body.includes('Releases')
+        },
         {name: '技能商店清单', url: STORE_MANIFEST_URL, validate: isStoreManifest}
     ]
 

@@ -7,11 +7,15 @@
       </div>
       <div class="header-actions">
         <el-button @click="router.push('/reminders')">
-          <el-icon><ArrowLeft/></el-icon>
+          <el-icon>
+            <ArrowLeft/>
+          </el-icon>
           返回提醒管理
         </el-button>
         <el-button @click="loadStoreData" :loading="skillStoreStore.fetching">
-          <el-icon><Refresh/></el-icon>
+          <el-icon>
+            <Refresh/>
+          </el-icon>
           刷新
         </el-button>
       </div>
@@ -21,30 +25,32 @@
     <div class="filter-bar">
       <div class="filter-chips">
         <span
-          class="chip"
-          :class="{ active: activeCategory === 'all' }"
-          @click="activeCategory = 'all'"
+            class="chip"
+            :class="{ active: activeCategory === 'all' }"
+            @click="activeCategory = 'all'"
         >全部 {{ filteredStoreSkills.length }}</span>
         <span
-          v-for="cat in SKILL_CATEGORIES"
-          :key="cat.key"
-          class="chip"
-          :class="{ active: activeCategory === cat.key }"
-          @click="activeCategory = cat.key"
+            v-for="cat in SKILL_CATEGORIES"
+            :key="cat.key"
+            class="chip"
+            :class="{ active: activeCategory === cat.key }"
+            @click="activeCategory = cat.key"
         >{{ cat.icon }} {{ cat.label }}</span>
       </div>
       <el-input
-        v-model="searchText"
-        placeholder="搜索技能..."
-        prefix-icon="Search"
-        clearable
-        style="width: 200px;"
+          v-model="searchText"
+          placeholder="搜索技能..."
+          prefix-icon="Search"
+          clearable
+          style="width: 200px;"
       />
     </div>
 
     <!-- 加载态 -->
     <div v-if="skillStoreStore.fetching" class="loading-state">
-      <el-icon class="is-loading" :size="24"><Loading/></el-icon>
+      <el-icon class="is-loading" :size="24">
+        <Loading/>
+      </el-icon>
       <span>正在从商店加载技能...</span>
     </div>
 
@@ -53,14 +59,18 @@
       <div v-if="isNetworkError" class="error-icon-svg">
         <svg viewBox="0 0 80 80" width="64" height="64" fill="none" xmlns="http://www.w3.org/2000/svg">
           <!-- GitHub 图标 -->
-          <path d="M40 8C22.327 8 8 22.327 8 40c0 14.127 9.152 26.098 21.846 30.335 1.598.295 2.18-.693 2.18-1.538 0-.758-.028-3.265-.043-5.92-8.887 1.933-10.762-3.77-10.762-3.77-1.454-3.695-3.55-4.678-3.55-4.678-2.9-1.982.22-1.942.22-1.942 3.208.226 4.896 3.292 4.896 3.292 2.85 4.885 7.475 3.473 9.3 2.656.29-2.063 1.115-3.473 2.03-4.272-7.1-.808-14.565-3.55-14.565-15.82 0-3.494 1.248-6.35 3.292-8.59-.33-.808-1.426-4.064.312-8.47 0 0 2.686-.86 8.8 3.284a30.6 30.6 0 0 1 8.004-1.076c2.718.012 5.46.367 8.004 1.076 6.11-4.144 8.792-3.284 8.792-3.284 1.742 4.406.646 7.662.316 8.47 2.05 2.24 3.29 5.096 3.29 8.59 0 12.3-7.476 15.003-14.598 15.795 1.148.99 2.17 2.94 2.17 5.924 0 4.278-.04 7.724-.04 8.78 0 .852.574 1.848 2.196 1.535C62.854 66.092 72 54.122 72 40 72 22.327 57.673 8 40 8z" fill="currentColor" opacity="0.5"/>
+          <path
+              d="M40 8C22.327 8 8 22.327 8 40c0 14.127 9.152 26.098 21.846 30.335 1.598.295 2.18-.693 2.18-1.538 0-.758-.028-3.265-.043-5.92-8.887 1.933-10.762-3.77-10.762-3.77-1.454-3.695-3.55-4.678-3.55-4.678-2.9-1.982.22-1.942.22-1.942 3.208.226 4.896 3.292 4.896 3.292 2.85 4.885 7.475 3.473 9.3 2.656.29-2.063 1.115-3.473 2.03-4.272-7.1-.808-14.565-3.55-14.565-15.82 0-3.494 1.248-6.35 3.292-8.59-.33-.808-1.426-4.064.312-8.47 0 0 2.686-.86 8.8 3.284a30.6 30.6 0 0 1 8.004-1.076c2.718.012 5.46.367 8.004 1.076 6.11-4.144 8.792-3.284 8.792-3.284 1.742 4.406.646 7.662.316 8.47 2.05 2.24 3.29 5.096 3.29 8.59 0 12.3-7.476 15.003-14.598 15.795 1.148.99 2.17 2.94 2.17 5.924 0 4.278-.04 7.724-.04 8.78 0 .852.574 1.848 2.196 1.535C62.854 66.092 72 54.122 72 40 72 22.327 57.673 8 40 8z"
+              fill="currentColor" opacity="0.5"/>
           <!-- 斜杠断开线 -->
           <line x1="14" y1="66" x2="66" y2="14" stroke="#F56C6C" stroke-width="4" stroke-linecap="round"/>
         </svg>
       </div>
       <div v-else class="error-icon">⚠️</div>
       <p class="error-title">{{ isNetworkError ? '无法访问 GitHub' : '加载失败' }}</p>
-      <p class="error-text">{{ isNetworkError ? '当前无法访问 GitHub，请检查网络连接或系统设置里的网络代理' : skillStoreStore.fetchError }}</p>
+      <p class="error-text">{{
+          isNetworkError ? '当前无法访问 GitHub，请检查网络连接或系统设置里的网络代理' : skillStoreStore.fetchError
+        }}</p>
       <el-button type="primary" @click="loadStoreData">重试</el-button>
     </div>
 
@@ -74,14 +84,15 @@
     <!-- 商店技能网格 -->
     <div v-else class="skill-grid">
       <div
-        v-for="skill in filteredStoreSkills"
-        :key="skill.skill_key"
-        class="store-skill-card"
+          v-for="skill in filteredStoreSkills"
+          :key="skill.skill_key"
+          class="store-skill-card"
       >
-        <div class="card-bar" :style="{ background: categoryGradient(skill.category) }" />
+        <div class="card-bar" :style="{ background: categoryGradient(skill.category) }"/>
         <div class="card-top">
           <div class="card-icon" :style="{ background: categoryGradient(skill.category) }">{{ skill.icon }}</div>
-          <el-tag v-if="skill.installed && !skill.hasUpdate" type="success" size="small" effect="plain" round>已安装</el-tag>
+          <el-tag v-if="skill.installed && !skill.hasUpdate" type="success" size="small" effect="plain" round>已安装
+          </el-tag>
           <el-tag v-else-if="skill.hasUpdate" type="warning" size="small" effect="plain" round>可更新</el-tag>
         </div>
         <div class="card-name">{{ skill.name }}</div>
@@ -94,19 +105,21 @@
           <div class="card-meta">v{{ skill.version }}</div>
           <div class="card-btns">
             <el-button
-              v-if="!skill.installed"
-              type="primary"
-              size="small"
-              @click="handleInstall(skill)"
-              :loading="installingKey === skill.skill_key"
-            >安装</el-button>
+                v-if="!skill.installed"
+                type="primary"
+                size="small"
+                @click="handleInstall(skill)"
+                :loading="installingKey === skill.skill_key"
+            >安装
+            </el-button>
             <el-button
-              v-else-if="skill.hasUpdate"
-              type="warning"
-              size="small"
-              @click="handleUpdate(skill)"
-              :loading="installingKey === skill.skill_key"
-            >更新</el-button>
+                v-else-if="skill.hasUpdate"
+                type="warning"
+                size="small"
+                @click="handleUpdate(skill)"
+                :loading="installingKey === skill.skill_key"
+            >更新
+            </el-button>
             <span v-else class="installed-text">已安装</span>
           </div>
         </div>
@@ -121,8 +134,8 @@ import {useRouter} from 'vue-router'
 import {useSkillStoreStore} from '@/stores/skill-store'
 import {useSkillsStore} from '@/stores/skills'
 import {ArrowLeft, Loading, Refresh} from '@element-plus/icons-vue'
-import {SKILL_CATEGORIES} from '@/types/skill'
 import type {StoreSkillWithStatus} from '@/types/skill'
+import {SKILL_CATEGORIES} from '@/types/skill'
 import {ElMessage} from 'element-plus'
 
 const router = useRouter()
@@ -164,9 +177,9 @@ const filteredStoreSkills = computed(() => {
   if (searchText.value) {
     const q = searchText.value.toLowerCase()
     list = list.filter(s =>
-      s.name.toLowerCase().includes(q) ||
-      s.description.toLowerCase().includes(q) ||
-      s.tags.some(t => t.toLowerCase().includes(q))
+        s.name.toLowerCase().includes(q) ||
+        s.description.toLowerCase().includes(q) ||
+        s.tags.some(t => t.toLowerCase().includes(q))
     )
   }
   return list
@@ -398,10 +411,28 @@ onMounted(() => {
   text-align: center;
 }
 
-.error-icon { font-size: 48px; margin-bottom: 16px; }
-.error-icon-svg { margin-bottom: 16px; color: var(--text-tertiary); }
-.error-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
-.error-text { font-size: 13px; color: var(--text-tertiary); margin-bottom: 16px; }
+.error-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.error-icon-svg {
+  margin-bottom: 16px;
+  color: var(--text-tertiary);
+}
+
+.error-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.error-text {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-bottom: 16px;
+}
 
 /* 空状态 */
 .empty-state {
@@ -412,7 +443,20 @@ onMounted(() => {
   text-align: center;
 }
 
-.empty-icon { font-size: 48px; margin-bottom: 16px; }
-.empty-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
-.empty-text { font-size: 13px; color: var(--text-tertiary); }
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.empty-text {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
 </style>

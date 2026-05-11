@@ -152,22 +152,70 @@ export const meetingsDb = {
         const fields: string[] = []
         const params: any[] = []
 
-        if (data.title !== undefined) { fields.push('title = ?'); params.push(data.title) }
-        if (data.description !== undefined) { fields.push('description = ?'); params.push(data.description) }
-        if (data.meeting_type !== undefined) { fields.push('meeting_type = ?'); params.push(data.meeting_type) }
-        if (data.status !== undefined) { fields.push('status = ?'); params.push(data.status) }
-        if (data.start_time !== undefined) { fields.push('start_time = ?'); params.push(data.start_time) }
-        if (data.end_time !== undefined) { fields.push('end_time = ?'); params.push(data.end_time) }
-        if (data.location !== undefined) { fields.push('location = ?'); params.push(data.location) }
-        if (data.participants !== undefined) { fields.push('participants = ?'); params.push(JSON.stringify(data.participants)) }
-        if (data.minutes !== undefined) { fields.push('minutes = ?'); params.push(data.minutes) }
-        if (data.ai_summary !== undefined) { fields.push('ai_summary = ?'); params.push(typeof data.ai_summary === 'string' ? data.ai_summary : JSON.stringify(data.ai_summary)) }
-        if (data.attachments !== undefined) { fields.push('attachments = ?'); params.push(JSON.stringify(data.attachments)) }
-        if (data.recording_path !== undefined) { fields.push('recording_path = ?'); params.push(data.recording_path) }
-        if (data.has_recording !== undefined) { fields.push('has_recording = ?'); params.push(data.has_recording) }
-        if (data.todo_ids !== undefined) { fields.push('todo_ids = ?'); params.push(JSON.stringify(data.todo_ids)) }
-        if (data.stt_text !== undefined) { fields.push('stt_text = ?'); params.push(data.stt_text) }
-        if (data.stt_status !== undefined) { fields.push('stt_status = ?'); params.push(data.stt_status) }
+        if (data.title !== undefined) {
+            fields.push('title = ?');
+            params.push(data.title)
+        }
+        if (data.description !== undefined) {
+            fields.push('description = ?');
+            params.push(data.description)
+        }
+        if (data.meeting_type !== undefined) {
+            fields.push('meeting_type = ?');
+            params.push(data.meeting_type)
+        }
+        if (data.status !== undefined) {
+            fields.push('status = ?');
+            params.push(data.status)
+        }
+        if (data.start_time !== undefined) {
+            fields.push('start_time = ?');
+            params.push(data.start_time)
+        }
+        if (data.end_time !== undefined) {
+            fields.push('end_time = ?');
+            params.push(data.end_time)
+        }
+        if (data.location !== undefined) {
+            fields.push('location = ?');
+            params.push(data.location)
+        }
+        if (data.participants !== undefined) {
+            fields.push('participants = ?');
+            params.push(JSON.stringify(data.participants))
+        }
+        if (data.minutes !== undefined) {
+            fields.push('minutes = ?');
+            params.push(data.minutes)
+        }
+        if (data.ai_summary !== undefined) {
+            fields.push('ai_summary = ?');
+            params.push(typeof data.ai_summary === 'string' ? data.ai_summary : JSON.stringify(data.ai_summary))
+        }
+        if (data.attachments !== undefined) {
+            fields.push('attachments = ?');
+            params.push(JSON.stringify(data.attachments))
+        }
+        if (data.recording_path !== undefined) {
+            fields.push('recording_path = ?');
+            params.push(data.recording_path)
+        }
+        if (data.has_recording !== undefined) {
+            fields.push('has_recording = ?');
+            params.push(data.has_recording)
+        }
+        if (data.todo_ids !== undefined) {
+            fields.push('todo_ids = ?');
+            params.push(JSON.stringify(data.todo_ids))
+        }
+        if (data.stt_text !== undefined) {
+            fields.push('stt_text = ?');
+            params.push(data.stt_text)
+        }
+        if (data.stt_status !== undefined) {
+            fields.push('stt_status = ?');
+            params.push(data.stt_status)
+        }
 
         if (fields.length === 0) return meetingsDb.get(id)
 

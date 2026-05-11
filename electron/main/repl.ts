@@ -3,16 +3,9 @@ import {app} from 'electron'
 import {settingsDb} from './db/settings'
 import {modelConfigsDb} from './db/model-configs'
 import {remindersDb} from './db/reminders'
-import {chatWithLLM, PROVIDERS, testModelConnection} from './llm'
 import type {StreamEvent} from './llm'
+import {chatWithLLM, PROVIDERS, testModelConnection} from './llm'
 import {ReminderScheduler} from './scheduler'
-import {
-    isDatabaseEncrypted,
-    setEncryptionPassword,
-    verifyEncryptionPassword,
-    removeEncryption as removeDbEncryption,
-    saveDatabase
-} from './db/connection'
 import {runMigrations} from './db/migrations'
 import {NotificationDispatcher} from './notifications/dispatcher'
 import {startApiServer} from './api-server'
@@ -149,6 +142,7 @@ function handleHelp(args: string[] = []): void {
     }
     log('')
 }
+
 async function handleConfig(rl: readline.Interface, args: string[]): Promise<void> {
     const subCmd = args[0]
 
@@ -322,7 +316,7 @@ async function handleChat(rl: readline.Interface, scheduler: ReminderScheduler |
     log(`${C.cyan}进入聊天模式 (输入 /exit 或空行退出)${C.reset}`)
     log('')
 
-    const history: Array<{role: string; content: string}> = []
+    const history: Array<{ role: string; content: string }> = []
 
     while (true) {
         const input = await question(rl, `${C.green}chat> ${C.reset}`)
@@ -347,8 +341,8 @@ async function handleChat(rl: readline.Interface, scheduler: ReminderScheduler |
 
 async function streamChat(
     scheduler: ReminderScheduler | null,
-    messages: Array<{role: string; content: string}>
-): Promise<{reply: string}> {
+    messages: Array<{ role: string; content: string }>
+): Promise<{ reply: string }> {
     let lastStatus = ''
 
     try {
