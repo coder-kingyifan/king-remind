@@ -62,9 +62,7 @@ const router = createRouter({
         },
         {
             path: '/skills',
-            name: 'skills',
-            component: () => import('@/pages/SkillsPage.vue'),
-            meta: {title: '技能中心', icon: 'MagicStick'}
+            redirect: {path: '/reminders', query: {tab: 'skills'}}
         },
         {
             path: '/skill-store',

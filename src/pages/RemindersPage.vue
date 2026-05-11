@@ -21,131 +21,142 @@
       </div>
     </div>
 
-    <!-- Tab 切换 -->
-    <el-tabs v-model="activeTab" class="page-tabs">
-      <el-tab-pane label="提醒" name="reminders">
-        <!-- 过滤栏 -->
-        <div class="filter-bar">
-          <el-input
-              v-model="searchText"
-              placeholder="搜索提醒..."
-              prefix-icon="Search"
-              clearable
-              style="width: 240px;"
-              @input="handleSearch"
-          />
-          <el-segmented v-model="statusFilter" :options="filterOptions" @change="handleFilterChange"/>
+    <!-- 二级菜单 -->
+    <div class="page-tabs">
+      <div
+          v-for="tab in tabs"
+          :key="tab.key"
+          class="page-tab"
+          :class="{ active: activeTab === tab.key }"
+          @click="activeTab = tab.key"
+      >
+        <el-icon :size="16"><component :is="tab.icon"/></el-icon>
+        <span>{{ tab.label }}</span>
+      </div>
+    </div>
+
+    <div v-if="activeTab === 'reminders'" class="tab-content">
+      <!-- 过滤栏 -->
+      <div class="filter-bar">
+        <el-input
+            v-model="searchText"
+            placeholder="搜索提醒..."
+            prefix-icon="Search"
+            clearable
+            style="width: 240px;"
+            @input="handleSearch"
+        />
+        <el-segmented v-model="statusFilter" :options="filterOptions" @change="handleFilterChange"/>
+      </div>
+
+      <!-- 提醒列表 -->
+      <div v-if="remindersStore.loading" class="state-wrap">
+        <el-icon class="loading-icon" :size="26"><Loading /></el-icon>
+        <span>加载中...</span>
+      </div>
+
+      <div v-else-if="remindersStore.reminders.length === 0" class="state-wrap empty">
+        <div class="empty-illustration" aria-hidden="true">
+          <div class="empty-bell"></div>
+          <div class="empty-ring"></div>
         </div>
+        <strong>设置提醒，不再错过重要事项</strong>
+        <p>支持定时和循环提醒，可推送到桌面或企业微信。</p>
+      </div>
 
-        <!-- 提醒列表 -->
-        <div v-if="remindersStore.loading" class="state-wrap">
-          <el-icon class="loading-icon" :size="26"><Loading /></el-icon>
-          <span>加载中...</span>
-        </div>
-
-        <div v-else-if="remindersStore.reminders.length === 0" class="state-wrap empty">
-          <div class="empty-illustration" aria-hidden="true">
-            <div class="empty-bell"></div>
-            <div class="empty-ring"></div>
-          </div>
-          <strong>设置提醒，不再错过重要事项</strong>
-          <p>支持定时和循环提醒，可推送到桌面或企业微信。</p>
-        </div>
-
-        <div v-else class="reminder-list">
-          <div
-              v-for="reminder in remindersStore.reminders"
-              :key="reminder.id"
-              class="reminder-row"
-              :class="{ inactive: reminder.is_active === 0 }"
-          >
-            <div class="row-left">
-              <span class="row-icon" :style="{ background: reminder.color + '20', color: reminder.color }">
-                {{ reminder.icon }}
-              </span>
-              <div class="row-info">
-                <div class="row-title">{{ reminder.title }}</div>
-                <div class="row-meta">
-                  <el-tag v-if="!isSimpleMode && reminder.skill_id" size="small" effect="plain" type="success" style="margin-right: 6px;">
-                    ⚡ {{ getSkillName(reminder.skill_id) }}
-                  </el-tag>
-                  <el-tag
-                      :type="reminder.remind_type === 'scheduled' ? 'warning' : 'primary'"
-                      size="small"
-                      effect="plain"
-                      style="margin-right: 6px;"
-                  >{{ reminder.remind_type === 'scheduled' ? '定时' : '循环' }}
-                  </el-tag>
-                  <span v-if="reminder.remind_type === 'interval'">每 {{
-                      reminder.interval_value
-                    }} {{ unitLabel(reminder.interval_unit) }}</span>
-                  <span v-else>{{ formatTime(reminder.start_time) }}</span>
-                  <span v-if="reminder.active_hours_start && reminder.active_hours_end" class="meta-divider">
-                    · {{ reminder.active_hours_start }} - {{ reminder.active_hours_end }}
-                  </span>
-                  <span v-if="reminder.next_trigger_at" class="meta-divider">
-                    · 下次 {{ formatTime(reminder.next_trigger_at) }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="row-right">
-              <div class="channel-badges">
-                <span
-                    v-for="ch in parseChannels(reminder.channels)"
-                    :key="ch"
-                    class="channel-badge"
-                    :title="channelName(ch)"
-                >
-                  <img v-if="ch === 'wechat_work'" :src="wechatWorkIcon" class="channel-badge-img"/>
-                  <img v-else-if="ch === 'wechat_test'" :src="wechatTestIcon" class="channel-badge-img"/>
-                  <img v-else-if="ch === 'wechat_bot'" :src="wechatTestIcon" class="channel-badge-img"/>
-                  <img v-else-if="ch === 'dingtalk'" :src="dingtalkIcon" class="channel-badge-img"/>
-                  <img v-else-if="ch === 'feishu'" :src="feishuIcon" class="channel-badge-img"/>
-                  <template v-else>{{ channelIcon(ch) }}</template>
+      <div v-else class="reminder-list">
+        <div
+            v-for="reminder in remindersStore.reminders"
+            :key="reminder.id"
+            class="reminder-row"
+            :class="{ inactive: reminder.is_active === 0 }"
+        >
+          <div class="row-left">
+            <span class="row-icon" :style="{ background: reminder.color + '20', color: reminder.color }">
+              {{ reminder.icon }}
+            </span>
+            <div class="row-info">
+              <div class="row-title">{{ reminder.title }}</div>
+              <div class="row-meta">
+                <el-tag v-if="!isSimpleMode && reminder.skill_id" size="small" effect="plain" type="success" style="margin-right: 6px;">
+                  ⚡ {{ getSkillName(reminder.skill_id) }}
+                </el-tag>
+                <el-tag
+                    :type="reminder.remind_type === 'scheduled' ? 'warning' : 'primary'"
+                    size="small"
+                    effect="plain"
+                    style="margin-right: 6px;"
+                >{{ reminder.remind_type === 'scheduled' ? '定时' : '循环' }}
+                </el-tag>
+                <span v-if="reminder.remind_type === 'interval'">每 {{
+                    reminder.interval_value
+                  }} {{ unitLabel(reminder.interval_unit) }}</span>
+                <span v-else>{{ formatTime(reminder.start_time) }}</span>
+                <span v-if="reminder.active_hours_start && reminder.active_hours_end" class="meta-divider">
+                  · {{ reminder.active_hours_start }} - {{ reminder.active_hours_end }}
+                </span>
+                <span v-if="reminder.next_trigger_at" class="meta-divider">
+                  · 下次 {{ formatTime(reminder.next_trigger_at) }}
                 </span>
               </div>
-              <el-switch
-                  :model-value="reminder.is_active === 1"
-                  size="small"
-                  @change="() => handleToggle(reminder.id)"
-              />
-              <el-dropdown trigger="click" @command="(cmd: string) => handleCommand(cmd, reminder)">
-                <el-button text circle>
-                  <el-icon>
-                    <MoreFilled/>
-                  </el-icon>
-                </el-button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item command="edit">
-                      <el-icon>
-                        <Edit/>
-                      </el-icon>
-                      编辑
-                    </el-dropdown-item>
-                    <el-dropdown-item command="delete" divided>
-                      <el-icon color="#F56C6C">
-                        <Delete/>
-                      </el-icon>
-                      <span style="color: #F56C6C;">删除</span>
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
             </div>
           </div>
-        </div>
-      </el-tab-pane>
 
-      <el-tab-pane v-if="!isSimpleMode" label="技能中心" name="skills">
-        <SkillsTabContent
-          ref="skillsTabRef"
-          :hide-header="true"
-        />
-      </el-tab-pane>
-    </el-tabs>
+          <div class="row-right">
+            <div class="channel-badges">
+              <span
+                  v-for="ch in parseChannels(reminder.channels)"
+                  :key="ch"
+                  class="channel-badge"
+                  :title="channelName(ch)"
+              >
+                <img v-if="ch === 'wechat_work'" :src="wechatWorkIcon" class="channel-badge-img"/>
+                <img v-else-if="ch === 'wechat_test'" :src="wechatTestIcon" class="channel-badge-img"/>
+                <img v-else-if="ch === 'wechat_bot'" :src="wechatTestIcon" class="channel-badge-img"/>
+                <img v-else-if="ch === 'dingtalk'" :src="dingtalkIcon" class="channel-badge-img"/>
+                <img v-else-if="ch === 'feishu'" :src="feishuIcon" class="channel-badge-img"/>
+                <template v-else>{{ channelIcon(ch) }}</template>
+              </span>
+            </div>
+            <el-switch
+                :model-value="reminder.is_active === 1"
+                size="small"
+                @change="() => handleToggle(reminder.id)"
+            />
+            <el-dropdown trigger="click" @command="(cmd: string) => handleCommand(cmd, reminder)">
+              <el-button text circle>
+                <el-icon>
+                  <MoreFilled/>
+                </el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="edit">
+                    <el-icon>
+                      <Edit/>
+                    </el-icon>
+                    编辑
+                  </el-dropdown-item>
+                  <el-dropdown-item command="delete" divided>
+                    <el-icon color="#F56C6C">
+                      <Delete/>
+                    </el-icon>
+                    <span style="color: #F56C6C;">删除</span>
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="!isSimpleMode && activeTab === 'skills'" class="tab-content">
+      <SkillsTabContent
+        ref="skillsTabRef"
+        :hide-header="true"
+      />
+    </div>
 
     <!-- 创建/编辑提醒对话框 -->
     <ReminderForm
@@ -163,7 +174,7 @@ import {useRoute, useRouter} from 'vue-router'
 import {useRemindersStore} from '@/stores/reminders'
 import {useSkillsStore} from '@/stores/skills'
 import {useSettingsStore} from '@/stores/settings'
-import {Delete, Edit, Loading, MoreFilled, Plus, ShoppingBag} from '@element-plus/icons-vue'
+import {Bell, Delete, Edit, Loading, MagicStick, MoreFilled, Plus, ShoppingBag} from '@element-plus/icons-vue'
 import {CHANNELS} from '@/types/notification'
 import type {Reminder} from '@/types/reminder'
 import ReminderForm from '@/components/reminder/ReminderForm.vue'
@@ -187,6 +198,13 @@ const editingReminder = ref<Reminder | null>(null)
 const createInitialDate = ref('')
 const activeTab = ref('reminders')
 const skillsTabRef = ref()
+
+const allTabs = [
+  {key: 'reminders', label: '提醒', icon: Bell},
+  {key: 'skills', label: '技能中心', icon: MagicStick}
+]
+
+const tabs = computed(() => isSimpleMode.value ? allTabs.filter(t => t.key !== 'skills') : allTabs)
 
 const filterOptions = [
   {label: '全部', value: 'all'},
@@ -303,6 +321,20 @@ onMounted(() => {
   applyCreateQuery()
 })
 
+watch([() => route.path, () => route.query.tab, isSimpleMode], ([path, tab]) => {
+  if (path !== '/reminders') return
+  if (typeof tab === 'string' && tabs.value.some(t => t.key === tab)) {
+    activeTab.value = tab
+  } else if (!tabs.value.some(t => t.key === activeTab.value)) {
+    activeTab.value = 'reminders'
+  }
+}, {immediate: true})
+
+watch(activeTab, (tab) => {
+  if (route.path !== '/reminders' || route.query.tab === tab) return
+  router.replace({path: '/reminders', query: {...route.query, tab}})
+})
+
 watch(() => route.fullPath, () => applyCreateQuery())
 watch(isSimpleMode, (simple) => {
   if (simple && activeTab.value === 'skills') {
@@ -346,44 +378,43 @@ function getSkillName(skillId: number): string {
 }
 
 .page-tabs {
-  margin-bottom: 0;
-}
-
-.page-tabs :deep(.el-tabs__header) {
-  margin: 0 0 14px;
-}
-
-.page-tabs :deep(.el-tabs__nav-wrap::after),
-.page-tabs :deep(.el-tabs__active-bar) {
-  display: none;
-}
-
-.page-tabs :deep(.el-tabs__nav) {
+  display: flex;
   gap: 4px;
-  padding: 3px;
-  border: 1px solid var(--border-color-light);
-  border-radius: 8px;
-  background: var(--bg-card);
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-color-light);
+  padding-bottom: 0;
 }
 
-.page-tabs :deep(.el-tabs__item) {
-  height: 28px;
-  padding: 0 13px;
-  border-radius: 6px;
+.page-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
   color: var(--text-tertiary);
-  font-size: 12px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.2s;
+}
+
+.page-tab:hover {
+  color: var(--text-secondary);
+}
+
+.page-tab.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
   font-weight: 500;
-  line-height: 28px;
 }
 
-.page-tabs :deep(.el-tabs__item:hover) {
-  color: var(--text-primary);
+.tab-content {
+  animation: fadeIn 0.15s ease;
 }
 
-.page-tabs :deep(.el-tabs__item.is-active) {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  font-weight: 700;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .filter-bar {
