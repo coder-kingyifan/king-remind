@@ -240,14 +240,17 @@ const greeting = computed(() => {
 })
 
 const nextReminderText = computed(() => {
-  const active = activeReminders.value.filter(r => r.next_trigger_at).sort((a, b) => new Date(a.next_trigger_at!).getTime() - new Date(b.next_trigger_at!).getTime())
-  if (!active.length) return '--'
-  const diff = new Date(active[0].next_trigger_at!).getTime() - Date.now()
+  const next = activeReminders.value
+    .map(r => parseReminderDate(r.next_trigger_at))
+    .filter((time): time is Date => !!time && !Number.isNaN(time.getTime()))
+    .sort((a, b) => a.getTime() - b.getTime())[0]
+  if (!next) return '--'
+
+  const diff = next.getTime() - Date.now()
   if (diff < 0) return '即将'
   if (diff < 60000) return '< 1分'
-  if (diff < 3600000) return `${Math.round(diff / 60000)}分`
-  if (diff < 86400000) return `${Math.round(diff / 3600000)}时`
-  return `${Math.round(diff / 86400000)}天`
+  if (diff < 3600000) return `${Math.ceil(diff / 60000)}分后`
+  return formatReminderDue(next)
 })
 
 function unitLabel(unit: string): string {
@@ -266,8 +269,37 @@ function channelIcon(key: string): string {
   return CHANNELS.find(c => c.key === key)?.icon || '📌'
 }
 
+function parseReminderDate(value?: string | null): Date | null {
+  if (!value) return null
+  if (/[zZ]|[+-]\d{2}:\d{2}$/.test(value)) return new Date(value)
+  return new Date(value.replace(' ', 'T'))
+}
+
+function isSameDate(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
+function formatClock(date: Date): string {
+  return date.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit', hour12: false})
+}
+
+function formatReminderDue(date: Date): string {
+  const now = new Date()
+  const tomorrow = new Date(now)
+  tomorrow.setDate(now.getDate() + 1)
+  if (isSameDate(date, now)) return `今天 ${formatClock(date)}`
+  if (isSameDate(date, tomorrow)) return `明天 ${formatClock(date)}`
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })
+}
+
 function formatTime(iso: string): string {
-  const d = new Date(iso), now = new Date()
+  const d = parseReminderDate(iso) || new Date(iso), now = new Date()
   if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('zh-CN', {
     hour: '2-digit',
     minute: '2-digit'
